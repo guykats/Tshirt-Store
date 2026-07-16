@@ -30,7 +30,10 @@ export default function Layout({ children }) {
                     {user ? (
                         <button onClick={handleLogout}>{t('nav_logout')}</button>
                     ) : (
-                        <Link to="/login">{t('nav_login')}</Link>
+                        <>
+                            <Link to="/login">{t('nav_login')}</Link>
+                            <Link to="/register">{t('nav_register')}</Link>
+                        </>
                     )}
                     <button onClick={toggleLocale} className="rounded border border-neutral-300 px-2 py-1">
                         {i18n.language === 'en' ? 'עברית' : 'English'}

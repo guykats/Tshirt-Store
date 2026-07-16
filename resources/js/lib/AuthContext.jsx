@@ -21,13 +21,19 @@ export function AuthProvider({ children }) {
         setUser(res.data.data);
     }
 
+    async function register(payload) {
+        await ensureCsrfCookie();
+        const res = await api.post('/api/register', payload);
+        setUser(res.data.data);
+    }
+
     async function logout() {
         await api.post('/api/logout');
         setUser(null);
     }
 
     return (
-        <AuthContext.Provider value={{ user, loading, login, logout }}>
+        <AuthContext.Provider value={{ user, loading, login, register, logout }}>
             {children}
         </AuthContext.Provider>
     );

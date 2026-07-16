@@ -1,8 +1,11 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { PayPalScriptProvider } from '@paypal/react-paypal-js';
 import { AuthProvider, useAuth } from './lib/AuthContext';
 import Layout from './Layout';
 import Catalog from './pages/Catalog';
 import Login from './pages/Login';
+import Register from './pages/Register';
+import Checkout from './pages/Checkout';
 import Dashboard from './pages/Dashboard';
 
 function RequireAdmin({ children }) {
@@ -17,22 +20,28 @@ function RequireAdmin({ children }) {
 export default function App() {
     return (
         <AuthProvider>
-            <BrowserRouter>
-                <Layout>
-                    <Routes>
-                        <Route path="/" element={<Catalog />} />
-                        <Route path="/login" element={<Login />} />
-                        <Route
-                            path="/dashboard"
-                            element={
-                                <RequireAdmin>
-                                    <Dashboard />
-                                </RequireAdmin>
-                            }
-                        />
-                    </Routes>
-                </Layout>
-            </BrowserRouter>
+            <PayPalScriptProvider
+                options={{ clientId: import.meta.env.VITE_PAYPAL_CLIENT_ID || 'test', currency: 'USD' }}
+            >
+                <BrowserRouter>
+                    <Layout>
+                        <Routes>
+                            <Route path="/" element={<Catalog />} />
+                            <Route path="/login" element={<Login />} />
+                            <Route path="/register" element={<Register />} />
+                            <Route path="/checkout/:productId" element={<Checkout />} />
+                            <Route
+                                path="/dashboard"
+                                element={
+                                    <RequireAdmin>
+                                        <Dashboard />
+                                    </RequireAdmin>
+                                }
+                            />
+                        </Routes>
+                    </Layout>
+                </BrowserRouter>
+            </PayPalScriptProvider>
         </AuthProvider>
     );
 }
