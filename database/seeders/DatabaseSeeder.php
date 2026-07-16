@@ -143,12 +143,14 @@ class DatabaseSeeder extends Seeder
         Design::create([
             'title' => 'Hebrew Script Streetwear',
             'category' => 'cultural-signal',
+            'mockup_url' => 'hebrew-script',
             'status' => 'pending_approval',
         ]);
 
         Design::create([
             'title' => 'Olive Branch Line Art',
             'category' => 'cultural-signal',
+            'mockup_url' => 'olive-branch',
             'status' => 'pending_approval',
         ]);
 

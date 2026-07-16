@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../lib/api';
+import DesignArt from '../components/DesignArt';
 
 export default function Dashboard() {
     const { t } = useTranslation();
@@ -68,9 +69,12 @@ export default function Dashboard() {
                 <ul className="space-y-3">
                     {designs.map((design) => (
                         <li key={design.id} className="flex items-center justify-between rounded border border-line p-4">
-                            <div>
-                                <p className="font-medium">{design.title}</p>
-                                <p className="text-sm text-ink-soft">{design.category}</p>
+                            <div className="flex items-center gap-4">
+                                <DesignArt motif={design.mockup_url} className="h-16 w-16 shrink-0 rounded" />
+                                <div>
+                                    <p className="font-medium">{design.title}</p>
+                                    <p className="text-sm text-ink-soft">{design.category}</p>
+                                </div>
                             </div>
                             <div className="space-x-2">
                                 <button

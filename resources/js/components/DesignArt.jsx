@@ -102,6 +102,57 @@ function Pomegranate() {
     );
 }
 
+function OliveBranch() {
+    // A gently curved stem with alternating leaves and a couple of olives near the tip.
+    const stem = 'M 45 150 Q 90 110 80 70 Q 75 45 100 30';
+    const leaves = [
+        { x: 62, y: 128, rot: -35 },
+        { x: 74, y: 105, rot: 25 },
+        { x: 70, y: 82, rot: -20 },
+        { x: 84, y: 58, rot: 30 },
+        { x: 92, y: 40, rot: -15 },
+    ];
+    return (
+        <Frame>
+            <path d={stem} fill="none" stroke="var(--color-ink)" strokeWidth="2" strokeLinecap="round" />
+            {leaves.map((l, i) => (
+                <ellipse
+                    key={i}
+                    cx={l.x}
+                    cy={l.y}
+                    rx="11"
+                    ry="4.5"
+                    transform={`rotate(${l.rot} ${l.x} ${l.y})`}
+                    fill="none"
+                    stroke="var(--color-ink)"
+                    strokeWidth="1.6"
+                />
+            ))}
+            <circle cx="100" cy="26" r="5" fill="var(--color-brass)" />
+            <circle cx="112" cy="38" r="4" fill="var(--color-brass)" />
+        </Frame>
+    );
+}
+
+function HebrewScript() {
+    return (
+        <Frame>
+            <text
+                x="100"
+                y="100"
+                textAnchor="middle"
+                dominantBaseline="central"
+                fontSize="52"
+                fontFamily="var(--font-serif)"
+                fontStyle="italic"
+                fill="var(--color-ink)"
+            >
+                כתב
+            </text>
+        </Frame>
+    );
+}
+
 const REGISTRY = {
     'star-of-david': StarOfDavid,
     menorah: Menorah,
@@ -110,6 +161,8 @@ const REGISTRY = {
     hamsa: Hamsa,
     pomegranate: Pomegranate,
     aleph: () => <HebrewMark text="א" fontSize={90} />,
+    'olive-branch': OliveBranch,
+    'hebrew-script': HebrewScript,
 };
 
 export default function DesignArt({ motif, className = '' }) {
@@ -117,7 +170,7 @@ export default function DesignArt({ motif, className = '' }) {
 
     return (
         <div className={`flex items-center justify-center bg-parchment-dim ${className}`}>
-            <div className="aspect-square w-full max-w-full p-6">
+            <div className="aspect-square w-full max-w-full p-[8%]">
                 <Art />
             </div>
         </div>
