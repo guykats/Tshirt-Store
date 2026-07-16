@@ -6,6 +6,8 @@ export default function Dashboard() {
     const { t } = useTranslation();
     const [designs, setDesigns] = useState([]);
     const [orders, setOrders] = useState([]);
+    const [agents, setAgents] = useState([]);
+    const [events, setEvents] = useState([]);
 
     function loadDesigns() {
         api.get('/api/designs', { params: { status: 'pending_approval' } })
@@ -17,24 +19,43 @@ export default function Dashboard() {
             .then((res) => setOrders(res.data.data));
     }
 
+    function loadAgents() {
+        api.get('/api/agent-statuses').then((res) => setAgents(res.data.data));
+    }
+
+    function loadEvents() {
+        api.get('/api/system-events').then((res) => setEvents(res.data.data));
+    }
+
     useEffect(() => {
         loadDesigns();
         loadOrders();
+        loadAgents();
+        loadEvents();
     }, []);
 
     async function approveDesign(id) {
         await api.post(`/api/designs/${id}/approve`);
         loadDesigns();
+        loadEvents();
     }
 
     async function rejectDesign(id) {
         await api.post(`/api/designs/${id}/reject`);
         loadDesigns();
+        loadEvents();
     }
 
     async function approveOrder(id) {
         await api.post(`/api/orders/${id}/approve`);
         loadOrders();
+        loadEvents();
+    }
+
+    async function updateAgent(id, status, currentTask) {
+        await api.patch(`/api/agent-statuses/${id}`, { status, current_task: currentTask || null });
+        loadAgents();
+        loadEvents();
     }
 
     return (
@@ -70,7 +91,7 @@ export default function Dashboard() {
                 </ul>
             </section>
 
-            <section>
+            <section className="mb-10">
                 <h2 className="mb-3 text-lg font-medium">{t('dashboard_orders')}</h2>
                 {orders.length === 0 && <p className="text-neutral-500">{t('no_pending_orders')}</p>}
                 <ul className="space-y-3">
@@ -92,6 +113,78 @@ export default function Dashboard() {
                     ))}
                 </ul>
             </section>
+
+            <section className="mb-10">
+                <h2 className="mb-3 text-lg font-medium">{t('dashboard_agents')}</h2>
+                <div className="overflow-x-auto rounded border border-neutral-200">
+                    <table className="w-full text-sm">
+                        <thead className="bg-neutral-50 text-left">
+                            <tr>
+                                <th className="px-4 py-2">{t('dashboard_agent_name')}</th>
+                                <th className="px-4 py-2">{t('dashboard_agent_status')}</th>
+                                <th className="px-4 py-2">{t('dashboard_agent_task')}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {agents.map((agent) => (
+                                <AgentRow key={agent.id} agent={agent} onUpdate={updateAgent} t={t} />
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section>
+                <h2 className="mb-3 text-lg font-medium">{t('dashboard_events')}</h2>
+                <ul className="max-h-96 space-y-2 overflow-y-auto rounded border border-neutral-200 p-4">
+                    {events.length === 0 && <p className="text-neutral-500">{t('dashboard_no_events')}</p>}
+                    {events.map((event) => (
+                        <li key={event.id} className="border-b border-neutral-100 pb-2 text-sm last:border-0">
+                            <span className="text-neutral-400">{new Date(event.created_at).toLocaleString()}</span>
+                            {' — '}
+                            {event.description}
+                        </li>
+                    ))}
+                </ul>
+            </section>
         </div>
+    );
+}
+
+function AgentRow({ agent, onUpdate, t }) {
+    const [status, setStatus] = useState(agent.status);
+    const [task, setTask] = useState(agent.current_task || '');
+
+    return (
+        <tr className="border-t border-neutral-100">
+            <td className="px-4 py-2 font-medium">{agent.agent_name}</td>
+            <td className="px-4 py-2">
+                <select
+                    value={status}
+                    onChange={(e) => setStatus(e.target.value)}
+                    className="rounded border border-neutral-300 px-2 py-1"
+                >
+                    <option value="idle">IDLE</option>
+                    <option value="pending_approval">PENDING_APPROVAL</option>
+                    <option value="executing">EXECUTING</option>
+                </select>
+            </td>
+            <td className="px-4 py-2">
+                <div className="flex gap-2">
+                    <input
+                        value={task}
+                        onChange={(e) => setTask(e.target.value)}
+                        placeholder={t('dashboard_agent_task')}
+                        className="w-full rounded border border-neutral-300 px-2 py-1"
+                    />
+                    <button
+                        onClick={() => onUpdate(agent.id, status, task)}
+                        className="shrink-0 rounded bg-neutral-900 px-3 py-1 text-white"
+                    >
+                        {t('save')}
+                    </button>
+                </div>
+            </td>
+        </tr>
     );
 }

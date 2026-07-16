@@ -2,9 +2,11 @@
 
 namespace Database\Seeders;
 
+use App\Models\AgentStatus;
 use App\Models\Design;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\SystemEvent;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -91,5 +93,17 @@ class DatabaseSeeder extends Seeder
             'unit_price' => 34.00,
             'subtotal' => 34.00,
         ]);
+
+        foreach ([
+            ['agent_name' => 'Orchestrator', 'status' => 'idle', 'current_task' => null],
+            ['agent_name' => 'Trend Agent', 'status' => 'idle', 'current_task' => null],
+            ['agent_name' => 'Creative Agent', 'status' => 'idle', 'current_task' => null],
+            ['agent_name' => 'Dev Agent', 'status' => 'idle', 'current_task' => null],
+            ['agent_name' => 'Ops Agent', 'status' => 'idle', 'current_task' => null],
+        ] as $agent) {
+            AgentStatus::create($agent);
+        }
+
+        SystemEvent::log('system.seeded', 'Database seeded with demo data.', 'DatabaseSeeder', 'system');
     }
 }

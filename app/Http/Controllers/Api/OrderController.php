@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\OrderResource;
 use App\Models\Order;
+use App\Models\SystemEvent;
 use Illuminate\Http\Request;
 
 class OrderController extends Controller
@@ -40,6 +41,14 @@ class OrderController extends Controller
             'approved_by' => $request->user()->id,
             'approved_at' => now(),
         ]);
+
+        SystemEvent::log(
+            'order.approved',
+            "Order {$order->order_number} approved by {$request->user()->name}.",
+            $request->user()->name,
+            'user',
+            ['order_id' => $order->id],
+        );
 
         return new OrderResource($order->fresh(['user', 'items.productVariant']));
     }

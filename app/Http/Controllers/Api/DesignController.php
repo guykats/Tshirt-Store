@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\DesignResource;
 use App\Models\Design;
+use App\Models\SystemEvent;
 use Illuminate\Http\Request;
 
 class DesignController extends Controller
@@ -33,6 +34,14 @@ class DesignController extends Controller
             'rejection_reason' => null,
         ]);
 
+        SystemEvent::log(
+            'design.approved',
+            "Design \"{$design->title}\" approved by {$request->user()->name}.",
+            $request->user()->name,
+            'user',
+            ['design_id' => $design->id],
+        );
+
         return new DesignResource($design->fresh('approvedBy'));
     }
 
@@ -50,6 +59,14 @@ class DesignController extends Controller
             'approved_at' => now(),
             'rejection_reason' => $data['rejection_reason'] ?? null,
         ]);
+
+        SystemEvent::log(
+            'design.rejected',
+            "Design \"{$design->title}\" rejected by {$request->user()->name}.",
+            $request->user()->name,
+            'user',
+            ['design_id' => $design->id, 'reason' => $data['rejection_reason'] ?? null],
+        );
 
         return new DesignResource($design->fresh('approvedBy'));
     }
