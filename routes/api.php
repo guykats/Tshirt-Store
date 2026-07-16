@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\ActivityController;
 use App\Http\Controllers\Api\AgentStatusController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CheckoutController;
@@ -37,4 +38,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/system-events', [SystemEventController::class, 'index']);
     Route::get('/agent-statuses', [AgentStatusController::class, 'index']);
     Route::patch('/agent-statuses/{agentStatus}', [AgentStatusController::class, 'update']);
+
+    Route::get('/activity', [ActivityController::class, 'index']);
 });

@@ -180,11 +180,11 @@ class DatabaseSeeder extends Seeder
         ]);
 
         foreach ([
-            ['agent_name' => 'Orchestrator', 'status' => 'idle', 'current_task' => null],
-            ['agent_name' => 'Trend Agent', 'status' => 'idle', 'current_task' => null],
-            ['agent_name' => 'Creative Agent', 'status' => 'idle', 'current_task' => null],
-            ['agent_name' => 'Dev Agent', 'status' => 'idle', 'current_task' => null],
-            ['agent_name' => 'Ops Agent', 'status' => 'idle', 'current_task' => null],
+            ['agent_name' => 'Orchestrator', 'status' => 'idle', 'current_task' => 'Coordinated Milestones 3-5 + Phase 2 brand redesign; shipped to store.guykats.com'],
+            ['agent_name' => 'Trend Agent', 'status' => 'idle', 'current_task' => 'Wrote demo catalog copy for 7 products with cultural context'],
+            ['agent_name' => 'Creative Agent', 'status' => 'idle', 'current_task' => 'Designed 9 original SVG motifs (Star of David, Menorah, Chai, Shalom, Hamsa, Rimon, Aleph, Hebrew Script, Olive Branch) + brand design system'],
+            ['agent_name' => 'Dev Agent', 'status' => 'idle', 'current_task' => 'Built PayPal checkout, invoice/email automation, dashboard, 33 API tests'],
+            ['agent_name' => 'Ops Agent', 'status' => 'idle', 'current_task' => 'Wired PDF invoice generation + localized order confirmation emails'],
         ] as $agent) {
             AgentStatus::create($agent);
         }

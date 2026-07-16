@@ -9,6 +9,7 @@ export default function Dashboard() {
     const [orders, setOrders] = useState([]);
     const [agents, setAgents] = useState([]);
     const [events, setEvents] = useState([]);
+    const [activity, setActivity] = useState([]);
 
     function loadDesigns() {
         api.get('/api/designs', { params: { status: 'pending_approval' } })
@@ -28,11 +29,16 @@ export default function Dashboard() {
         api.get('/api/system-events').then((res) => setEvents(res.data.data));
     }
 
+    function loadActivity() {
+        api.get('/api/activity').then((res) => setActivity(res.data.data));
+    }
+
     useEffect(() => {
         loadDesigns();
         loadOrders();
         loadAgents();
         loadEvents();
+        loadActivity();
     }, []);
 
     async function approveDesign(id) {
@@ -138,7 +144,7 @@ export default function Dashboard() {
                 </div>
             </section>
 
-            <section>
+            <section className="mb-10">
                 <h2 className="mb-3 font-serif text-lg">{t('dashboard_events')}</h2>
                 <ul className="max-h-96 space-y-2 overflow-y-auto rounded border border-line p-4">
                     {events.length === 0 && <p className="text-ink-soft">{t('dashboard_no_events')}</p>}
@@ -147,6 +153,23 @@ export default function Dashboard() {
                             <span className="text-ink-soft">{new Date(event.created_at).toLocaleString()}</span>
                             {' — '}
                             {event.description}
+                        </li>
+                    ))}
+                </ul>
+            </section>
+
+            <section>
+                <h2 className="mb-3 font-serif text-lg">{t('dashboard_activity')}</h2>
+                <p className="mb-3 text-sm text-ink-soft">{t('dashboard_activity_hint')}</p>
+                <ul className="max-h-96 space-y-2 overflow-y-auto rounded border border-line p-4 font-mono text-sm">
+                    {activity.length === 0 && <p className="text-ink-soft">{t('dashboard_no_activity')}</p>}
+                    {activity.map((commit) => (
+                        <li key={commit.hash} className="border-b border-line pb-2 last:border-0">
+                            <span className="text-brass">{commit.hash}</span>
+                            {' '}
+                            <span className="text-ink-soft">{commit.author}, {commit.date && new Date(commit.date).toLocaleDateString()}</span>
+                            {' — '}
+                            {commit.message}
                         </li>
                     ))}
                 </ul>
