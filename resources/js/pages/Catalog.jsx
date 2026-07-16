@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import api from '../lib/api';
 
 export default function Catalog() {
@@ -31,6 +32,12 @@ export default function Catalog() {
                         <p className="mt-2 font-semibold">
                             {product.currency} {product.base_price.toFixed(2)}
                         </p>
+                        <Link
+                            to={`/checkout/${product.id}`}
+                            className="mt-3 inline-block rounded bg-neutral-900 px-3 py-1.5 text-sm text-white"
+                        >
+                            {t('buy_now')}
+                        </Link>
                     </div>
                 ))}
             </div>
