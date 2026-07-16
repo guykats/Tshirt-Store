@@ -7,7 +7,10 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['title', 'description', 'category', 'mockup_url', 'source_agent'])]
+#[Fillable([
+    'title', 'description', 'category', 'mockup_url', 'source_agent',
+    'status', 'approved_by', 'approved_at', 'rejection_reason',
+])]
 class Design extends Model
 {
     protected function casts(): array

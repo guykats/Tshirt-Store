@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 #[Fillable([
     'order_number', 'status', 'subtotal', 'tax_amount', 'shipping_amount', 'total_amount', 'currency',
     'paypal_order_id', 'paypal_transaction_id', 'payment_status', 'shipping_address_id', 'billing_address_id', 'notes',
+    'approved_by', 'approved_at',
 ])]
 class Order extends Model
 {
