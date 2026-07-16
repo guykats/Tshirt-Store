@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import api from '../lib/api';
+import DesignArt from '../components/DesignArt';
 
 export default function Catalog() {
     const { t } = useTranslation();
@@ -15,31 +16,29 @@ export default function Catalog() {
     }, []);
 
     return (
-        <div className="mx-auto max-w-5xl px-6 py-10">
-            <h1 className="mb-6 text-2xl font-semibold">{t('catalog_title')}</h1>
+        <div>
+            <div className="border-b border-line px-6 py-16 text-center">
+                <p className="mb-3 text-xs tracking-[0.3em] text-brass uppercase">{t('hero_eyebrow')}</p>
+                <h1 className="font-serif text-4xl">{t('hero_title')}</h1>
+                <p className="mx-auto mt-4 max-w-md text-ink-soft">{t('hero_subtitle')}</p>
+            </div>
 
-            {loading && <p className="text-neutral-500">…</p>}
+            <div className="mx-auto max-w-6xl px-6 py-14">
+                {loading && <p className="text-ink-soft">…</p>}
 
-            {!loading && products.length === 0 && (
-                <p className="text-neutral-500">{t('catalog_empty')}</p>
-            )}
+                {!loading && products.length === 0 && <p className="text-ink-soft">{t('catalog_empty')}</p>}
 
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3">
-                {products.map((product) => (
-                    <div key={product.id} className="rounded-lg border border-neutral-200 p-4">
-                        <h2 className="font-medium">{product.name}</h2>
-                        <p className="text-sm text-neutral-500">{product.description}</p>
-                        <p className="mt-2 font-semibold">
-                            {product.currency} {product.base_price.toFixed(2)}
-                        </p>
-                        <Link
-                            to={`/checkout/${product.id}`}
-                            className="mt-3 inline-block rounded bg-neutral-900 px-3 py-1.5 text-sm text-white"
-                        >
-                            {t('buy_now')}
+                <div className="grid grid-cols-1 gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
+                    {products.map((product) => (
+                        <Link key={product.id} to={`/products/${product.slug}`} className="group block">
+                            <DesignArt motif={product.design?.mockup_url} className="aspect-square rounded transition-colors group-hover:bg-line" />
+                            <h2 className="mt-4 font-serif text-lg">{product.name}</h2>
+                            <p className="mt-1 text-sm text-ink-soft">
+                                {product.currency} {product.base_price.toFixed(2)}
+                            </p>
                         </Link>
-                    </div>
-                ))}
+                    ))}
+                </div>
             </div>
         </div>
     );

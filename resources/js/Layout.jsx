@@ -21,26 +21,33 @@ export default function Layout({ children }) {
     }
 
     return (
-        <div>
-            <nav className="flex items-center justify-between border-b border-neutral-200 px-6 py-4">
-                <Link to="/" className="font-semibold">{t('app_name')}</Link>
-                <div className="flex items-center gap-4 text-sm">
-                    <Link to="/">{t('nav_catalog')}</Link>
-                    {user?.role === 'admin' && <Link to="/dashboard">{t('nav_dashboard')}</Link>}
+        <div className="min-h-screen bg-parchment text-ink">
+            <nav className="flex items-center justify-between border-b border-line px-6 py-5">
+                <Link to="/" className="font-serif text-xl tracking-wide">
+                    {t('app_name')}
+                </Link>
+                <div className="flex items-center gap-5 text-sm text-ink-soft">
+                    <Link to="/" className="hover:text-ink">{t('nav_catalog')}</Link>
+                    {user?.role === 'admin' && (
+                        <Link to="/dashboard" className="hover:text-ink">{t('nav_dashboard')}</Link>
+                    )}
                     {user ? (
-                        <button onClick={handleLogout}>{t('nav_logout')}</button>
+                        <button onClick={handleLogout} className="hover:text-ink">{t('nav_logout')}</button>
                     ) : (
                         <>
-                            <Link to="/login">{t('nav_login')}</Link>
-                            <Link to="/register">{t('nav_register')}</Link>
+                            <Link to="/login" className="hover:text-ink">{t('nav_login')}</Link>
+                            <Link to="/register" className="hover:text-ink">{t('nav_register')}</Link>
                         </>
                     )}
-                    <button onClick={toggleLocale} className="rounded border border-neutral-300 px-2 py-1">
+                    <button onClick={toggleLocale} className="rounded-full border border-line px-3 py-1 text-xs hover:border-brass hover:text-ink">
                         {i18n.language === 'en' ? 'עברית' : 'English'}
                     </button>
                 </div>
             </nav>
             <main>{children}</main>
+            <footer className="mt-24 border-t border-line px-6 py-10 text-center text-xs text-ink-soft">
+                {t('footer_tagline')}
+            </footer>
         </div>
     );
 }

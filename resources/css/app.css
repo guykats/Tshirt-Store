@@ -6,4 +6,18 @@
 @theme {
     --font-sans: ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
         'Noto Color Emoji';
+    --font-serif: ui-serif, Georgia, 'Times New Roman', serif;
+
+    --color-ink: #17140f;
+    --color-ink-soft: #4a453c;
+    --color-parchment: #f7f4ee;
+    --color-parchment-dim: #efeadf;
+    --color-brass: #8c6a3f;
+    --color-brass-light: #b79868;
+    --color-line: #e4dfd4;
+}
+
+body {
+    background-color: var(--color-parchment);
+    color: var(--color-ink);
 }

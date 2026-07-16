@@ -15,6 +15,79 @@ class DatabaseSeeder extends Seeder
 {
     use WithoutModelEvents;
 
+    /**
+     * Demo catalog. `motif` maps to a component in resources/js/components/DesignArt.jsx —
+     * we don't have raster image generation available, so product "artwork" is rendered as
+     * clean SVG line art / typography directly in the browser rather than uploaded images.
+     * It's stored in designs.mockup_url (a free-text column) as a pragmatic reuse rather than
+     * a real asset URL.
+     */
+    protected array $catalog = [
+        [
+            'motif' => 'star-of-david',
+            'title' => 'Minimal Star of David',
+            'name' => 'Minimal Star Tee',
+            'slug' => 'minimal-star-tee',
+            'description' => 'A clean, understated take on a timeless symbol. Single-line construction, no ornamentation — the shape speaks for itself.',
+            'price' => 34.00,
+            'type' => 'tee',
+        ],
+        [
+            'motif' => 'menorah',
+            'title' => 'Menorah Line Art',
+            'name' => 'Menorah Line Tee',
+            'slug' => 'menorah-line-tee',
+            'description' => 'Seven branches, one continuous line. A quiet nod to light and continuity, drawn with the same restraint as the rest of the collection.',
+            'price' => 36.00,
+            'type' => 'tee',
+        ],
+        [
+            'motif' => 'chai',
+            'title' => 'Chai Icon Mark',
+            'name' => 'Chai Icon Tee',
+            'slug' => 'chai-icon-tee',
+            'description' => 'חי — "life." Two letters, centered, in a serif built for permanence rather than trend.',
+            'price' => 32.00,
+            'type' => 'tee',
+        ],
+        [
+            'motif' => 'shalom',
+            'title' => 'Shalom Script',
+            'name' => 'Shalom Script Hoodie',
+            'slug' => 'shalom-script-hoodie',
+            'description' => 'A single word, centered on heavyweight fleece. שלום carries the collection\'s whole philosophy: say less, mean more.',
+            'price' => 68.00,
+            'type' => 'hoodie',
+        ],
+        [
+            'motif' => 'hamsa',
+            'title' => 'Hamsa Guard Mark',
+            'name' => 'Hamsa Guard Tee',
+            'slug' => 'hamsa-guard-tee',
+            'description' => 'An open palm, reduced to its essential geometry. Protection as a design language, not a costume.',
+            'price' => 34.00,
+            'type' => 'tee',
+        ],
+        [
+            'motif' => 'pomegranate',
+            'title' => 'Rimon Crest',
+            'name' => 'Rimon Crest Tee',
+            'slug' => 'rimon-crest-tee',
+            'description' => 'The pomegranate, traditionally counted at 613 seeds — rendered here as a single quiet crest on the chest.',
+            'price' => 34.00,
+            'type' => 'tee',
+        ],
+        [
+            'motif' => 'aleph',
+            'title' => 'Aleph Mark',
+            'name' => 'Aleph Tee',
+            'slug' => 'aleph-tee',
+            'description' => 'א — the first letter, the beginning of everything. The simplest mark in the collection, and the most deliberate.',
+            'price' => 32.00,
+            'type' => 'tee',
+        ],
+    ];
+
     public function run(): void
     {
         $admin = User::factory()->create([
@@ -30,33 +103,43 @@ class DatabaseSeeder extends Seeder
             'password' => 'password',
         ]);
 
-        $approvedDesign = Design::create([
-            'title' => 'Minimal Star of David',
-            'category' => 'cultural-signal',
-            'status' => 'approved',
-            'approved_by' => $admin->id,
-            'approved_at' => now(),
-        ]);
+        $firstVariant = null;
 
-        $product = Product::create([
-            'design_id' => $approvedDesign->id,
-            'name' => 'Minimal Star Tee',
-            'slug' => 'minimal-star-tee',
-            'description' => 'A clean, understated take on a timeless cultural symbol.',
-            'base_price' => 34.00,
-            'sku' => 'MST-001',
-            'status' => 'active',
-        ]);
-
-        foreach (['S', 'M', 'L', 'XL'] as $size) {
-            $product->variants()->create([
-                'size' => $size,
-                'color' => 'Black',
-                'sku' => "MST-001-{$size}-BLK",
-                'stock_quantity' => 25,
+        foreach ($this->catalog as $i => $item) {
+            $design = Design::create([
+                'title' => $item['title'],
+                'category' => 'cultural-signal',
+                'mockup_url' => $item['motif'],
+                'status' => 'approved',
+                'approved_by' => $admin->id,
+                'approved_at' => now(),
             ]);
+
+            $product = Product::create([
+                'design_id' => $design->id,
+                'name' => $item['name'],
+                'slug' => $item['slug'],
+                'description' => $item['description'],
+                'base_price' => $item['price'],
+                'sku' => 'TS-'.str_pad((string) ($i + 1), 3, '0', STR_PAD_LEFT),
+                'status' => 'active',
+            ]);
+
+            $colors = $item['type'] === 'hoodie' ? ['Black'] : ['Black', 'Sand'];
+            foreach ($colors as $color) {
+                foreach (['S', 'M', 'L', 'XL'] as $size) {
+                    $variant = $product->variants()->create([
+                        'size' => $size,
+                        'color' => $color,
+                        'sku' => "{$product->sku}-{$size}-".strtoupper(substr($color, 0, 3)),
+                        'stock_quantity' => 25,
+                    ]);
+                    $firstVariant ??= $variant;
+                }
+            }
         }
 
+        // Two more designs still pending approval, to demo the human-in-the-loop dashboard.
         Design::create([
             'title' => 'Hebrew Script Streetwear',
             'category' => 'cultural-signal',
@@ -64,7 +147,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         Design::create([
-            'title' => 'Menorah Line Art',
+            'title' => 'Olive Branch Line Art',
             'category' => 'cultural-signal',
             'status' => 'pending_approval',
         ]);
@@ -81,17 +164,17 @@ class DatabaseSeeder extends Seeder
         $order = Order::create([
             'order_number' => 'ORD-1001',
             'user_id' => $customer->id,
-            'subtotal' => 34.00,
-            'total_amount' => 34.00,
+            'subtotal' => $firstVariant->product->base_price,
+            'total_amount' => $firstVariant->product->base_price,
             'shipping_address_id' => $shipping->id,
             'billing_address_id' => $shipping->id,
         ]);
 
         $order->items()->create([
-            'product_variant_id' => $product->variants()->first()->id,
+            'product_variant_id' => $firstVariant->id,
             'quantity' => 1,
-            'unit_price' => 34.00,
-            'subtotal' => 34.00,
+            'unit_price' => $firstVariant->product->base_price,
+            'subtotal' => $firstVariant->product->base_price,
         ]);
 
         foreach ([

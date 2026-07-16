@@ -3,6 +3,7 @@ import { PayPalScriptProvider } from '@paypal/react-paypal-js';
 import { AuthProvider, useAuth } from './lib/AuthContext';
 import Layout from './Layout';
 import Catalog from './pages/Catalog';
+import ProductDetail from './pages/ProductDetail';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Checkout from './pages/Checkout';
@@ -27,6 +28,7 @@ export default function App() {
                     <Layout>
                         <Routes>
                             <Route path="/" element={<Catalog />} />
+                            <Route path="/products/:slug" element={<ProductDetail />} />
                             <Route path="/login" element={<Login />} />
                             <Route path="/register" element={<Register />} />
                             <Route path="/checkout/:productId" element={<Checkout />} />
