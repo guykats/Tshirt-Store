@@ -60,17 +60,17 @@ export default function Dashboard() {
 
     return (
         <div className="mx-auto max-w-5xl px-6 py-10">
-            <h1 className="mb-6 text-2xl font-semibold">{t('dashboard_title')}</h1>
+            <h1 className="mb-6 font-serif text-2xl">{t('dashboard_title')}</h1>
 
             <section className="mb-10">
-                <h2 className="mb-3 text-lg font-medium">{t('dashboard_designs')}</h2>
-                {designs.length === 0 && <p className="text-neutral-500">{t('no_pending_designs')}</p>}
+                <h2 className="mb-3 font-serif text-lg">{t('dashboard_designs')}</h2>
+                {designs.length === 0 && <p className="text-ink-soft">{t('no_pending_designs')}</p>}
                 <ul className="space-y-3">
                     {designs.map((design) => (
-                        <li key={design.id} className="flex items-center justify-between rounded border border-neutral-200 p-4">
+                        <li key={design.id} className="flex items-center justify-between rounded border border-line p-4">
                             <div>
                                 <p className="font-medium">{design.title}</p>
-                                <p className="text-sm text-neutral-500">{design.category}</p>
+                                <p className="text-sm text-ink-soft">{design.category}</p>
                             </div>
                             <div className="space-x-2">
                                 <button
@@ -92,14 +92,14 @@ export default function Dashboard() {
             </section>
 
             <section className="mb-10">
-                <h2 className="mb-3 text-lg font-medium">{t('dashboard_orders')}</h2>
-                {orders.length === 0 && <p className="text-neutral-500">{t('no_pending_orders')}</p>}
+                <h2 className="mb-3 font-serif text-lg">{t('dashboard_orders')}</h2>
+                {orders.length === 0 && <p className="text-ink-soft">{t('no_pending_orders')}</p>}
                 <ul className="space-y-3">
                     {orders.map((order) => (
-                        <li key={order.id} className="flex items-center justify-between rounded border border-neutral-200 p-4">
+                        <li key={order.id} className="flex items-center justify-between rounded border border-line p-4">
                             <div>
                                 <p className="font-medium">{order.order_number}</p>
-                                <p className="text-sm text-neutral-500">
+                                <p className="text-sm text-ink-soft">
                                     {order.currency} {order.total_amount.toFixed(2)}
                                 </p>
                             </div>
@@ -115,10 +115,10 @@ export default function Dashboard() {
             </section>
 
             <section className="mb-10">
-                <h2 className="mb-3 text-lg font-medium">{t('dashboard_agents')}</h2>
-                <div className="overflow-x-auto rounded border border-neutral-200">
+                <h2 className="mb-3 font-serif text-lg">{t('dashboard_agents')}</h2>
+                <div className="overflow-x-auto rounded border border-line">
                     <table className="w-full text-sm">
-                        <thead className="bg-neutral-50 text-left">
+                        <thead className="bg-parchment-dim text-left">
                             <tr>
                                 <th className="px-4 py-2">{t('dashboard_agent_name')}</th>
                                 <th className="px-4 py-2">{t('dashboard_agent_status')}</th>
@@ -135,12 +135,12 @@ export default function Dashboard() {
             </section>
 
             <section>
-                <h2 className="mb-3 text-lg font-medium">{t('dashboard_events')}</h2>
-                <ul className="max-h-96 space-y-2 overflow-y-auto rounded border border-neutral-200 p-4">
-                    {events.length === 0 && <p className="text-neutral-500">{t('dashboard_no_events')}</p>}
+                <h2 className="mb-3 font-serif text-lg">{t('dashboard_events')}</h2>
+                <ul className="max-h-96 space-y-2 overflow-y-auto rounded border border-line p-4">
+                    {events.length === 0 && <p className="text-ink-soft">{t('dashboard_no_events')}</p>}
                     {events.map((event) => (
-                        <li key={event.id} className="border-b border-neutral-100 pb-2 text-sm last:border-0">
-                            <span className="text-neutral-400">{new Date(event.created_at).toLocaleString()}</span>
+                        <li key={event.id} className="border-b border-line pb-2 text-sm last:border-0">
+                            <span className="text-ink-soft">{new Date(event.created_at).toLocaleString()}</span>
                             {' — '}
                             {event.description}
                         </li>
@@ -156,13 +156,13 @@ function AgentRow({ agent, onUpdate, t }) {
     const [task, setTask] = useState(agent.current_task || '');
 
     return (
-        <tr className="border-t border-neutral-100">
+        <tr className="border-t border-line">
             <td className="px-4 py-2 font-medium">{agent.agent_name}</td>
             <td className="px-4 py-2">
                 <select
                     value={status}
                     onChange={(e) => setStatus(e.target.value)}
-                    className="rounded border border-neutral-300 px-2 py-1"
+                    className="rounded border border-line px-2 py-1"
                 >
                     <option value="idle">IDLE</option>
                     <option value="pending_approval">PENDING_APPROVAL</option>
@@ -175,11 +175,11 @@ function AgentRow({ agent, onUpdate, t }) {
                         value={task}
                         onChange={(e) => setTask(e.target.value)}
                         placeholder={t('dashboard_agent_task')}
-                        className="w-full rounded border border-neutral-300 px-2 py-1"
+                        className="w-full rounded border border-line px-2 py-1"
                     />
                     <button
                         onClick={() => onUpdate(agent.id, status, task)}
-                        className="shrink-0 rounded bg-neutral-900 px-3 py-1 text-white"
+                        className="shrink-0 rounded bg-ink px-3 py-1 text-white"
                     >
                         {t('save')}
                     </button>

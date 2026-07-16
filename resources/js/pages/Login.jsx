@@ -28,7 +28,7 @@ export default function Login() {
 
     return (
         <div className="mx-auto max-w-sm px-6 py-16">
-            <h1 className="mb-6 text-2xl font-semibold">{t('login_title')}</h1>
+            <h1 className="mb-6 font-serif text-2xl">{t('login_title')}</h1>
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                     <label className="mb-1 block text-sm">{t('email')}</label>
@@ -37,7 +37,7 @@ export default function Login() {
                         required
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className="w-full rounded border border-neutral-300 px-3 py-2"
+                        className="w-full rounded border border-line bg-parchment px-3 py-2"
                     />
                 </div>
                 <div>
@@ -47,14 +47,14 @@ export default function Login() {
                         required
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        className="w-full rounded border border-neutral-300 px-3 py-2"
+                        className="w-full rounded border border-line bg-parchment px-3 py-2"
                     />
                 </div>
-                {error && <p className="text-sm text-red-600">{error}</p>}
+                {error && <p className="text-sm text-red-700">{error}</p>}
                 <button
                     type="submit"
                     disabled={submitting}
-                    className="w-full rounded bg-neutral-900 px-4 py-2 text-white disabled:opacity-50"
+                    className="w-full rounded bg-ink px-4 py-2.5 text-sm tracking-wide text-parchment uppercase hover:bg-ink-soft disabled:opacity-50"
                 >
                     {t('login_button')}
                 </button>

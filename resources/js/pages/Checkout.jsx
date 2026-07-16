@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { PayPalButtons } from '@paypal/react-paypal-js';
 import api from '../lib/api';
 import { useAuth } from '../lib/AuthContext';
@@ -8,6 +8,7 @@ import { useAuth } from '../lib/AuthContext';
 export default function Checkout() {
     const { t } = useTranslation();
     const { productId } = useParams();
+    const [searchParams] = useSearchParams();
     const { user, loading: authLoading } = useAuth();
     const navigate = useNavigate();
 
@@ -25,19 +26,20 @@ export default function Checkout() {
     useEffect(() => {
         api.get(`/api/products/${productId}`).then((res) => {
             setProduct(res.data.data);
-            const firstInStock = res.data.data.variants.find((v) => v.stock_quantity > 0);
-            if (firstInStock) setVariantId(String(firstInStock.id));
+            const preselected = searchParams.get('variant');
+            const match = preselected && res.data.data.variants.find((v) => String(v.id) === preselected);
+            const fallback = res.data.data.variants.find((v) => v.stock_quantity > 0);
+            const initial = match || fallback;
+            if (initial) setVariantId(String(initial.id));
         });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [productId]);
 
     if (!authLoading && !user) {
         return (
             <div className="mx-auto max-w-md px-6 py-16 text-center">
-                <p className="mb-4">{t('checkout_login_required')}</p>
-                <button
-                    onClick={() => navigate('/login')}
-                    className="rounded bg-neutral-900 px-4 py-2 text-white"
-                >
+                <p className="mb-4 text-ink-soft">{t('checkout_login_required')}</p>
+                <button onClick={() => navigate('/login')} className="rounded bg-ink px-5 py-2.5 text-sm text-parchment">
                     {t('nav_login')}
                 </button>
             </div>
@@ -64,7 +66,7 @@ export default function Checkout() {
         }
     }
 
-    async function onApprove(data) {
+    async function onApprove() {
         const orderId = order?.id;
         const res = await api.post(`/api/checkout/${orderId}/capture`);
         setOrder(res.data.data);
@@ -74,19 +76,19 @@ export default function Checkout() {
     if (status === 'paid') {
         return (
             <div className="mx-auto max-w-md px-6 py-16 text-center">
-                <h1 className="mb-4 text-2xl font-semibold">{t('checkout_success')}</h1>
-                <p className="text-neutral-500">{t('checkout_order_number', { number: order.order_number })}</p>
+                <h1 className="mb-4 font-serif text-2xl">{t('checkout_success')}</h1>
+                <p className="text-ink-soft">{t('checkout_order_number', { number: order.order_number })}</p>
             </div>
         );
     }
 
     return (
-        <div className="mx-auto max-w-lg px-6 py-10">
-            <h1 className="mb-6 text-2xl font-semibold">{t('checkout_title')}</h1>
+        <div className="mx-auto max-w-lg px-6 py-12">
+            <h1 className="mb-6 font-serif text-2xl">{t('checkout_title')}</h1>
 
-            <div className="mb-6 rounded border border-neutral-200 p-4">
+            <div className="mb-6 rounded border border-line p-4">
                 <p className="font-medium">{product.name}</p>
-                <p className="text-sm text-neutral-500">{product.currency} {product.base_price.toFixed(2)}</p>
+                <p className="text-sm text-ink-soft">{product.currency} {product.base_price.toFixed(2)}</p>
             </div>
 
             {status === 'form' && (
@@ -96,7 +98,7 @@ export default function Checkout() {
                         <select
                             value={variantId}
                             onChange={(e) => setVariantId(e.target.value)}
-                            className="w-full rounded border border-neutral-300 px-3 py-2"
+                            className="w-full rounded border border-line bg-parchment px-3 py-2"
                         >
                             {product.variants.map((v) => (
                                 <option key={v.id} value={v.id} disabled={v.stock_quantity === 0}>
@@ -113,7 +115,7 @@ export default function Checkout() {
                             max="20"
                             value={quantity}
                             onChange={(e) => setQuantity(e.target.value)}
-                            className="w-full rounded border border-neutral-300 px-3 py-2"
+                            className="w-full rounded border border-line bg-parchment px-3 py-2"
                         />
                     </div>
 
@@ -124,16 +126,16 @@ export default function Checkout() {
                                 required={field !== 'line2' && field !== 'phone'}
                                 value={address[field]}
                                 onChange={(e) => setAddress((a) => ({ ...a, [field]: e.target.value }))}
-                                className="w-full rounded border border-neutral-300 px-3 py-2"
+                                className="w-full rounded border border-line bg-parchment px-3 py-2"
                             />
                         </div>
                     ))}
 
-                    {error && <p className="text-sm text-red-600">{error}</p>}
+                    {error && <p className="text-sm text-red-700">{error}</p>}
 
                     <button
                         onClick={() => createOrder().catch(() => {})}
-                        className="w-full rounded bg-neutral-900 px-4 py-2 text-white"
+                        className="w-full rounded bg-ink px-4 py-3 text-sm tracking-wide text-parchment uppercase hover:bg-ink-soft"
                     >
                         {t('checkout_continue_to_payment')}
                     </button>
@@ -142,13 +144,13 @@ export default function Checkout() {
 
             {status === 'paying' && paypalOrderId && (
                 <div>
-                    <p className="mb-4 text-sm text-neutral-500">{t('checkout_complete_with_paypal')}</p>
+                    <p className="mb-4 text-sm text-ink-soft">{t('checkout_complete_with_paypal')}</p>
                     <PayPalButtons
                         createOrder={() => Promise.resolve(paypalOrderId)}
                         onApprove={onApprove}
                         onError={() => setError(t('checkout_error'))}
                     />
-                    {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+                    {error && <p className="mt-3 text-sm text-red-700">{error}</p>}
                 </div>
             )}
         </div>
