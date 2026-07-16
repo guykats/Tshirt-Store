@@ -4,11 +4,13 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\OrderResource;
+use App\Mail\OrderConfirmationMail;
 use App\Models\Order;
 use App\Models\ProductVariant;
 use App\Services\PayPalClient;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use RuntimeException;
 
@@ -122,6 +124,9 @@ class CheckoutController extends Controller
             'payment_status' => 'paid',
             'paypal_transaction_id' => $captureId,
         ]);
+
+        $order->refresh();
+        Mail::to($order->user)->locale($order->user->preferred_locale ?? 'en')->send(new OrderConfirmationMail($order));
 
         return new OrderResource($order->fresh(['items.productVariant']));
     }

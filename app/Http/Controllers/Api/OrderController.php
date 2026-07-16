@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\OrderResource;
 use App\Models\Order;
+use App\Services\InvoiceService;
 use Illuminate\Http\Request;
 
 class OrderController extends Controller
@@ -42,5 +43,12 @@ class OrderController extends Controller
         ]);
 
         return new OrderResource($order->fresh(['user', 'items.productVariant']));
+    }
+
+    public function invoice(Request $request, Order $order, InvoiceService $invoices)
+    {
+        $this->authorize('view', $order);
+
+        return $invoices->generate($order)->stream("invoice-{$order->order_number}.pdf");
     }
 }

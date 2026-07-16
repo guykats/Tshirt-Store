@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Mail\OrderConfirmationMail;
 use App\Models\Order;
 use App\Services\PayPalClient;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class PayPalWebhookController extends Controller
 {
@@ -58,6 +60,9 @@ class PayPalWebhookController extends Controller
 
         if ($order && $order->payment_status !== 'paid') {
             $order->update(['payment_status' => 'paid', 'paypal_transaction_id' => $captureId]);
+
+            $order->refresh()->loadMissing('user');
+            Mail::to($order->user)->locale($order->user->preferred_locale ?? 'en')->send(new OrderConfirmationMail($order));
         }
     }
 
