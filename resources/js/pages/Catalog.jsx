@@ -3,11 +3,14 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import api from '../lib/api';
 import DesignArt from '../components/DesignArt';
+import useDocumentMeta from '../hooks/useDocumentMeta';
 
 export default function Catalog() {
     const { t } = useTranslation();
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
+
+    useDocumentMeta(t('app_name'), t('meta_catalog_description'));
 
     useEffect(() => {
         api.get('/api/products')

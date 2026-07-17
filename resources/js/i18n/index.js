@@ -63,6 +63,11 @@ const resources = {
             address_state: 'State',
             address_postal_code: 'Postal Code',
             address_phone: 'Phone (optional)',
+            meta_catalog_description: 'Minimalist streetwear carrying quiet Jewish cultural signal — Star of David, Menorah, Chai, and more, rendered with restraint.',
+            meta_login_title: 'Log In — {{app}}',
+            meta_register_title: 'Create Account — {{app}}',
+            meta_checkout_title: 'Checkout — {{app}}',
+            meta_dashboard_title: 'Approval Dashboard — {{app}}',
         },
     },
     he: {
@@ -126,6 +131,11 @@ const resources = {
             address_state: 'מדינה / מחוז',
             address_postal_code: 'מיקוד',
             address_phone: 'טלפון (אופציונלי)',
+            meta_catalog_description: 'סטריטוור מינימליסטי הנושא איתות תרבותי יהודי שקט — מגן דוד, מנורה, חי ועוד, מעוצבים באיפוק.',
+            meta_login_title: 'התחברות — {{app}}',
+            meta_register_title: 'יצירת חשבון — {{app}}',
+            meta_checkout_title: 'תשלום — {{app}}',
+            meta_dashboard_title: 'לוח אישורים — {{app}}',
         },
     },
 };
