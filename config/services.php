@@ -42,6 +42,9 @@ return [
         'webhook_id' => env('PAYPAL_WEBHOOK_ID'),
     ],
 
+    // deploy.yml runs `config:cache` on every deploy — if this key is added
+    // directly to production .env outside of a deploy, it won't take effect
+    // until the next push triggers a fresh config:cache.
     'anthropic' => [
         'api_key' => env('ANTHROPIC_API_KEY'),
         'model' => env('ANTHROPIC_CHAT_MODEL', 'claude-sonnet-5'),
