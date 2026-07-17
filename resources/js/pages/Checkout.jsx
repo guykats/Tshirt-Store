@@ -107,8 +107,9 @@ export default function Checkout() {
             {status === 'form' && (
                 <div className="space-y-4">
                     <div>
-                        <label className="mb-1 block text-sm">{t('checkout_variant')}</label>
+                        <label htmlFor="checkout-variant" className="mb-1 block text-sm">{t('checkout_variant')}</label>
                         <select
+                            id="checkout-variant"
                             value={variantId}
                             onChange={(e) => setVariantId(e.target.value)}
                             className="w-full rounded border border-line bg-parchment px-3 py-2"
@@ -121,8 +122,9 @@ export default function Checkout() {
                         </select>
                     </div>
                     <div>
-                        <label className="mb-1 block text-sm">{t('checkout_quantity')}</label>
+                        <label htmlFor="checkout-quantity" className="mb-1 block text-sm">{t('checkout_quantity')}</label>
                         <input
+                            id="checkout-quantity"
                             type="number"
                             min="1"
                             max="20"
@@ -134,8 +136,9 @@ export default function Checkout() {
 
                     {['full_name', 'line1', 'line2', 'city', 'state', 'postal_code', 'phone'].map((field) => (
                         <div key={field}>
-                            <label className="mb-1 block text-sm">{t(`address_${field}`)}</label>
+                            <label htmlFor={`checkout-${field}`} className="mb-1 block text-sm">{t(`address_${field}`)}</label>
                             <input
+                                id={`checkout-${field}`}
                                 required={field !== 'line2' && field !== 'phone'}
                                 value={address[field]}
                                 onChange={(e) => setAddress((a) => ({ ...a, [field]: e.target.value }))}
@@ -144,7 +147,7 @@ export default function Checkout() {
                         </div>
                     ))}
 
-                    {error && <p className="text-sm text-red-700">{error}</p>}
+                    {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
 
                     <button
                         onClick={() => createOrder().catch(() => {})}
@@ -164,7 +167,7 @@ export default function Checkout() {
                         onApprove={onApprove}
                         onError={() => setError(t('checkout_error'))}
                     />
-                    {error && <p className="mt-3 text-sm text-red-700">{error}</p>}
+                    {error && <p role="alert" className="mt-3 text-sm text-red-700">{error}</p>}
                 </div>
             )}
         </div>
