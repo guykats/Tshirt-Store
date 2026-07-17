@@ -62,6 +62,23 @@ class AuthTest extends TestCase
         $this->assertGuest();
     }
 
+    public function test_login_is_rate_limited_after_repeated_failures(): void
+    {
+        $user = User::factory()->create(['password' => 'correct-password']);
+
+        for ($i = 0; $i < 5; $i++) {
+            $this->postJson('/api/login', ['email' => $user->email, 'password' => 'wrong'])
+                ->assertUnprocessable();
+        }
+
+        $this->postJson('/api/login', ['email' => $user->email, 'password' => 'wrong'])
+            ->assertStatus(429);
+
+        // A correct password is also blocked once the limit for this email+IP is hit.
+        $this->postJson('/api/login', ['email' => $user->email, 'password' => 'correct-password'])
+            ->assertStatus(429);
+    }
+
     public function test_a_logged_in_user_can_fetch_their_own_profile(): void
     {
         $user = User::factory()->create();
