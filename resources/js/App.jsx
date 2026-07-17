@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { PayPalScriptProvider } from '@paypal/react-paypal-js';
 import { AuthProvider, useAuth } from './lib/AuthContext';
 import Layout from './Layout';
+import ErrorBoundary from './components/ErrorBoundary';
 import Catalog from './pages/Catalog';
 import ProductDetail from './pages/ProductDetail';
 import Login from './pages/Login';
@@ -39,46 +40,48 @@ export default function App() {
             >
                 <BrowserRouter>
                     <Layout>
-                        <Routes>
-                            <Route path="/" element={<Catalog />} />
-                            <Route path="/about" element={<About />} />
-                            <Route path="/products/:slug" element={<ProductDetail />} />
-                            <Route path="/login" element={<Login />} />
-                            <Route path="/register" element={<Register />} />
-                            <Route path="/checkout/:productId" element={<Checkout />} />
-                            <Route
-                                path="/orders"
-                                element={
-                                    <RequireAuth>
-                                        <Orders />
-                                    </RequireAuth>
-                                }
-                            />
-                            <Route
-                                path="/dashboard"
-                                element={
-                                    <RequireAdmin>
-                                        <Dashboard />
-                                    </RequireAdmin>
-                                }
-                            />
-                            <Route
-                                path="/dashboard/progress"
-                                element={
-                                    <RequireAdmin>
-                                        <ProjectProgress />
-                                    </RequireAdmin>
-                                }
-                            />
-                            <Route
-                                path="/dashboard/chat"
-                                element={
-                                    <RequireAdmin>
-                                        <VisionerChat />
-                                    </RequireAdmin>
-                                }
-                            />
-                        </Routes>
+                        <ErrorBoundary>
+                            <Routes>
+                                <Route path="/" element={<Catalog />} />
+                                <Route path="/about" element={<About />} />
+                                <Route path="/products/:slug" element={<ProductDetail />} />
+                                <Route path="/login" element={<Login />} />
+                                <Route path="/register" element={<Register />} />
+                                <Route path="/checkout/:productId" element={<Checkout />} />
+                                <Route
+                                    path="/orders"
+                                    element={
+                                        <RequireAuth>
+                                            <Orders />
+                                        </RequireAuth>
+                                    }
+                                />
+                                <Route
+                                    path="/dashboard"
+                                    element={
+                                        <RequireAdmin>
+                                            <Dashboard />
+                                        </RequireAdmin>
+                                    }
+                                />
+                                <Route
+                                    path="/dashboard/progress"
+                                    element={
+                                        <RequireAdmin>
+                                            <ProjectProgress />
+                                        </RequireAdmin>
+                                    }
+                                />
+                                <Route
+                                    path="/dashboard/chat"
+                                    element={
+                                        <RequireAdmin>
+                                            <VisionerChat />
+                                        </RequireAdmin>
+                                    }
+                                />
+                            </Routes>
+                        </ErrorBoundary>
                     </Layout>
                 </BrowserRouter>
             </PayPalScriptProvider>
