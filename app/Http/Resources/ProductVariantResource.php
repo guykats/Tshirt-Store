@@ -16,6 +16,7 @@ class ProductVariantResource extends JsonResource
             'sku' => $this->sku,
             'stock_quantity' => $this->stock_quantity,
             'price_override' => $this->price_override !== null ? (float) $this->price_override : null,
+            'product' => new ProductResource($this->whenLoaded('product')),
         ];
     }
 }

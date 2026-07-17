@@ -30,6 +30,23 @@ class OrderApprovalTest extends TestCase
         ], $overrides));
     }
 
+    public function test_order_history_includes_the_purchased_product_name(): void
+    {
+        $customer = User::factory()->create(['role' => 'customer']);
+        $design = \App\Models\Design::create(['title' => 'Test Design', 'status' => 'approved']);
+        $product = \App\Models\Product::create([
+            'design_id' => $design->id, 'name' => 'Aleph Tee', 'slug' => 'aleph-tee-'.uniqid(),
+            'base_price' => 32, 'sku' => 'AL-'.uniqid(), 'status' => 'active',
+        ]);
+        $variant = $product->variants()->create(['size' => 'M', 'color' => 'Black', 'sku' => 'AL-M-'.uniqid(), 'stock_quantity' => 5]);
+        $order = $this->makeOrder($customer);
+        $order->items()->create(['product_variant_id' => $variant->id, 'quantity' => 1, 'unit_price' => 32, 'subtotal' => 32]);
+
+        $response = $this->actingAs($customer)->getJson('/api/orders');
+
+        $response->assertOk()->assertJsonPath('data.0.items.0.product_variant.product.name', 'Aleph Tee');
+    }
+
     public function test_a_customer_only_sees_their_own_orders(): void
     {
         $customer = User::factory()->create(['role' => 'customer']);
