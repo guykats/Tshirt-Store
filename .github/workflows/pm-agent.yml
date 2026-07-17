@@ -1,0 +1,98 @@
+name: PM Agent (autonomous)
+
+# Runs unattended on a schedule, independent of any interactive session — it
+# syncs with the live project_tasks/epics board and keeps shipping real,
+# verified progress per CLAUDE.md. See docs/PROJECT-HISTORY.md for why this
+# board-driven workflow exists at all.
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: pm-agent
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  pm-agent:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: 8.3
+          extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite
+          coverage: none
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install JS dependencies
+        run: npm ci
+
+      - name: Install Composer dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Configure local environment (SQLite, no real secrets needed)
+        run: |
+          cp .env.example .env
+          sed -i 's/^DB_CONNECTION=.*/DB_CONNECTION=sqlite/' .env
+          touch database/database.sqlite
+          php artisan key:generate
+
+      - name: Configure git identity for autonomous commits
+        run: |
+          git config user.name "PM Agent"
+          git config user.email "pm-agent@users.noreply.github.com"
+
+      - name: Run PM Agent
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_args: >-
+            --permission-mode acceptEdits
+            --max-turns 30
+            --allowedTools "Read,Write,Edit,Bash,Grep,Glob,WebSearch"
+          prompt: |
+            You are running unattended as this project's PM, triggered on a 30-minute
+            schedule with no human present. Read CLAUDE.md first and follow it exactly —
+            the standing operating agreement, the hard-won conventions, and the
+            verification bar all apply to this run exactly as they would to an
+            interactive session.
+
+            This run:
+
+            1. Check the live state of the `project_tasks` and `epics` tables (a fresh
+               `php artisan migrate:fresh --seed --force` against the local SQLite db,
+               then query them, is the reliable way to see current state — the seeded/
+               migrated history *is* the board).
+            2. Pick the single highest-value next action and actually ship it, following
+               the `ship-project-task` skill (or `propose-epics` if the proposed-epics
+               queue is thin). Don't just report — do real work: code, tests, docs, or
+               board bookkeeping, verified per CLAUDE.md's bar, committed and pushed
+               directly to `main`.
+            3. If an epic is `approved` with zero linked `project_tasks`, break it into
+               concrete tasks now (set `epic_id` on each) — that's the PM's job.
+            4. If the `todo` backlog or the `proposed` epics queue is empty or thin,
+               seed more real, concrete items rather than stopping — this project's
+               standing rule is a continuously non-empty backlog, never idle.
+            5. PayPal and SMTP real credentials remain intentionally deferred — never
+               block on them.
+            6. If something genuinely needs a human decision (ambiguous priority,
+               unusually risky, or a task with no safe path forward), mark it `blocked`
+               with a clear `blocked_reason` on the board instead of guessing.
+
+            Use as much of your turn budget as there is real, safe, well-scoped work to
+            do this run — don't stop after one small change if more is clearly available.
+            Every change must pass the full verification bar in CLAUDE.md before you
+            call it done.

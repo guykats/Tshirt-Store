@@ -39,6 +39,18 @@ Work on this project is organized as a small Jira-style board, not ad hoc:
 *writing and pushing a Laravel migration* — see "Production state changes
 through git" below.
 
+### Autonomous runs
+
+`.github/workflows/pm-agent.yml` runs this exact PM workflow unattended on a
+30-minute cron, independent of any interactive session or whether the
+owner's machine is on — it reads this file, checks the board, ships or
+seeds work, and pushes to `main` on its own. If you're starting an
+interactive session, `git log` / the board may already reflect work you
+didn't do — that's expected, not a conflict to resolve. It authenticates
+with an `ANTHROPIC_API_KEY` repo secret and is capped at `--max-turns 30`
+per run as a cost/blast-radius bound; adjust that (or disable the workflow
+entirely) rather than removing the cap if it needs tuning.
+
 ## Standing operating agreement with the project owner
 
 These were granted explicitly during earlier sessions and remain in force
