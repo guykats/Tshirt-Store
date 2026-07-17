@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -19,6 +21,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // Keyed by email+IP so one attacker can't lock out a real user by hammering their address,
+        // while still capping how fast any single (email, IP) pair can guess passwords.
+        RateLimiter::for('login', function ($request) {
+            return Limit::perMinute(5)->by(strtolower((string) $request->input('email')).'|'.$request->ip());
+        });
+
+        RateLimiter::for('register', function ($request) {
+            return Limit::perMinute(5)->by($request->ip());
+        });
     }
 }
