@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import api from '../lib/api';
 import DesignArt from '../components/DesignArt';
 import useDocumentMeta from '../hooks/useDocumentMeta';
@@ -14,6 +15,7 @@ export default function Dashboard() {
     const [agents, setAgents] = useState([]);
     const [events, setEvents] = useState([]);
     const [activity, setActivity] = useState([]);
+    const [taskCounts, setTaskCounts] = useState({ todo: 0, in_progress: 0, blocked: 0, done: 0 });
 
     function loadDesigns() {
         api.get('/api/designs', { params: { status: 'pending_approval' } })
@@ -37,12 +39,17 @@ export default function Dashboard() {
         api.get('/api/activity').then((res) => setActivity(res.data.data));
     }
 
+    function loadTaskCounts() {
+        api.get('/api/project-tasks').then((res) => setTaskCounts(res.data.counts));
+    }
+
     useEffect(() => {
         loadDesigns();
         loadOrders();
         loadAgents();
         loadEvents();
         loadActivity();
+        loadTaskCounts();
     }, []);
 
     async function approveDesign(id) {
@@ -63,8 +70,8 @@ export default function Dashboard() {
         loadEvents();
     }
 
-    async function updateAgent(id, status, currentTask) {
-        await api.patch(`/api/agent-statuses/${id}`, { status, current_task: currentTask || null });
+    async function updateAgent(id, status) {
+        await api.patch(`/api/agent-statuses/${id}`, { status });
         loadAgents();
         loadEvents();
     }
@@ -129,7 +136,23 @@ export default function Dashboard() {
             </section>
 
             <section className="mb-10">
+                <div className="mb-3 flex items-center justify-between">
+                    <h2 className="font-serif text-lg">{t('dashboard_progress')}</h2>
+                    <Link to="/dashboard/progress" className="text-sm text-brass hover:underline">
+                        {t('dashboard_progress_view_all')}
+                    </Link>
+                </div>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    <ProgressStat label={t('progress_status_blocked')} value={taskCounts.blocked} tone="text-red-700" />
+                    <ProgressStat label={t('progress_status_in_progress')} value={taskCounts.in_progress} tone="text-blue-700" />
+                    <ProgressStat label={t('progress_status_todo')} value={taskCounts.todo} tone="text-ink-soft" />
+                    <ProgressStat label={t('progress_status_done')} value={taskCounts.done} tone="text-green-700" />
+                </div>
+            </section>
+
+            <section className="mb-10">
                 <h2 className="mb-3 font-serif text-lg">{t('dashboard_agents')}</h2>
+                <p className="mb-3 text-sm text-ink-soft">{t('dashboard_agents_hint')}</p>
                 <div className="overflow-x-auto rounded border border-line">
                     <table className="w-full text-sm">
                         <thead className="bg-parchment-dim text-left">
@@ -137,6 +160,7 @@ export default function Dashboard() {
                                 <th className="px-4 py-2">{t('dashboard_agent_name')}</th>
                                 <th className="px-4 py-2">{t('dashboard_agent_status')}</th>
                                 <th className="px-4 py-2">{t('dashboard_agent_task')}</th>
+                                <th className="px-4 py-2">{t('dashboard_agent_backlog')}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -182,40 +206,49 @@ export default function Dashboard() {
     );
 }
 
+function ProgressStat({ label, value, tone }) {
+    return (
+        <div className="rounded border border-line p-3">
+            <p className={`text-2xl font-serif ${tone}`}>{value ?? 0}</p>
+            <p className="mt-1 text-xs text-ink-soft">{label}</p>
+        </div>
+    );
+}
+
 function AgentRow({ agent, onUpdate, t }) {
     const [status, setStatus] = useState(agent.status);
-    const [task, setTask] = useState(agent.current_task || '');
 
     return (
         <tr className="border-t border-line">
             <td className="px-4 py-2 font-medium">{agent.agent_name}</td>
             <td className="px-4 py-2">
-                <select
-                    value={status}
-                    onChange={(e) => setStatus(e.target.value)}
-                    className="rounded border border-line px-2 py-1"
-                >
-                    <option value="idle">IDLE</option>
-                    <option value="pending_approval">PENDING_APPROVAL</option>
-                    <option value="executing">EXECUTING</option>
-                </select>
-            </td>
-            <td className="px-4 py-2">
                 <div className="flex gap-2">
-                    <input
-                        value={task}
-                        onChange={(e) => setTask(e.target.value)}
-                        placeholder={t('dashboard_agent_task')}
-                        className="w-full rounded border border-line px-2 py-1"
-                    />
+                    <select
+                        value={status}
+                        onChange={(e) => setStatus(e.target.value)}
+                        className="rounded border border-line px-2 py-1"
+                    >
+                        <option value="idle">IDLE</option>
+                        <option value="pending_approval">PENDING_APPROVAL</option>
+                        <option value="executing">EXECUTING</option>
+                    </select>
                     <button
-                        onClick={() => onUpdate(agent.id, status, task)}
+                        onClick={() => onUpdate(agent.id, status)}
                         className="shrink-0 rounded bg-ink px-3 py-1 text-white"
                     >
                         {t('save')}
                     </button>
                 </div>
             </td>
+            <td className="px-4 py-2">
+                {agent.current_task || <span className="text-ink-soft">—</span>}
+                {agent.current_task_status === 'in_progress' && (
+                    <span className="ml-2 rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-800">
+                        {t('progress_status_in_progress')}
+                    </span>
+                )}
+            </td>
+            <td className="px-4 py-2 text-ink-soft">{agent.backlog_count ?? 0}</td>
         </tr>
     );
 }

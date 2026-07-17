@@ -9,12 +9,22 @@ import Register from './pages/Register';
 import Checkout from './pages/Checkout';
 import Dashboard from './pages/Dashboard';
 import ProjectProgress from './pages/ProjectProgress';
+import Orders from './pages/Orders';
 
 function RequireAdmin({ children }) {
     const { user, loading } = useAuth();
 
     if (loading) return null;
     if (!user || user.role !== 'admin') return <Navigate to="/login" replace />;
+
+    return children;
+}
+
+function RequireAuth({ children }) {
+    const { user, loading } = useAuth();
+
+    if (loading) return null;
+    if (!user) return <Navigate to="/login" replace />;
 
     return children;
 }
@@ -33,6 +43,14 @@ export default function App() {
                             <Route path="/login" element={<Login />} />
                             <Route path="/register" element={<Register />} />
                             <Route path="/checkout/:productId" element={<Checkout />} />
+                            <Route
+                                path="/orders"
+                                element={
+                                    <RequireAuth>
+                                        <Orders />
+                                    </RequireAuth>
+                                }
+                            />
                             <Route
                                 path="/dashboard"
                                 element={

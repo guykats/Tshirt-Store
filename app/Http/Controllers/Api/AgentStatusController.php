@@ -21,9 +21,11 @@ class AgentStatusController extends Controller
     {
         abort_unless($request->user()->isAdmin(), 403);
 
+        // current_task is intentionally not accepted here anymore — it's derived live
+        // from project_tasks in AgentStatusResource, so a manually-typed value here
+        // would just get silently overridden on the next GET and mislead whoever set it.
         $data = $request->validate([
             'status' => ['required', 'in:idle,pending_approval,executing'],
-            'current_task' => ['nullable', 'string', 'max:255'],
         ]);
 
         $agentStatus->update($data);

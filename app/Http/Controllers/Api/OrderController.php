@@ -15,7 +15,7 @@ class OrderController extends Controller
     {
         $this->authorize('viewAny', Order::class);
 
-        $query = Order::query()->with(['user', 'items.productVariant']);
+        $query = Order::query()->with(['user', 'items.productVariant.product']);
 
         if (! $request->user()->isAdmin()) {
             $query->where('user_id', $request->user()->id);
@@ -30,7 +30,7 @@ class OrderController extends Controller
     {
         $this->authorize('view', $order);
 
-        return new OrderResource($order->load(['user', 'shippingAddress', 'billingAddress', 'items.productVariant']));
+        return new OrderResource($order->load(['user', 'shippingAddress', 'billingAddress', 'items.productVariant.product']));
     }
 
     public function approve(Request $request, Order $order)
@@ -38,7 +38,7 @@ class OrderController extends Controller
         $this->authorize('update', $order);
 
         if ($order->status === 'approved') {
-            return new OrderResource($order->load(['user', 'items.productVariant']));
+            return new OrderResource($order->load(['user', 'items.productVariant.product']));
         }
 
         $order->update([
@@ -55,7 +55,7 @@ class OrderController extends Controller
             ['order_id' => $order->id],
         );
 
-        return new OrderResource($order->fresh(['user', 'items.productVariant']));
+        return new OrderResource($order->fresh(['user', 'items.productVariant.product']));
     }
 
     public function invoice(Request $request, Order $order, InvoiceService $invoices)
