@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Exceptions\InsufficientStockException;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\OrderResource;
 use App\Mail\OrderConfirmationMail;
@@ -10,6 +11,7 @@ use App\Models\ProductVariant;
 use App\Services\PayPalClient;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use RuntimeException;
@@ -39,6 +41,10 @@ class CheckoutController extends Controller
 
         $variant = ProductVariant::with('product')->findOrFail($data['product_variant_id']);
 
+        if ($variant->product->status !== 'active') {
+            return response()->json(['message' => 'This product is not currently available.'], 422);
+        }
+
         if ($variant->stock_quantity < $data['quantity']) {
             return response()->json(['message' => 'Not enough stock for the requested quantity.'], 422);
         }
@@ -47,30 +53,42 @@ class CheckoutController extends Controller
         $subtotal = round($unitPrice * $data['quantity'], 2);
         $currency = $variant->product->currency;
 
-        $order = DB::transaction(function () use ($request, $data, $variant, $unitPrice, $subtotal, $currency) {
-            $address = $request->user()->addresses()->create([
-                'type' => 'shipping',
-                ...$data['shipping_address'],
-            ]);
+        try {
+            $order = DB::transaction(function () use ($request, $data, $variant, $unitPrice, $subtotal, $currency) {
+                $locked = ProductVariant::where('id', $variant->id)->lockForUpdate()->firstOrFail();
 
-            $order = $request->user()->orders()->create([
-                'order_number' => 'ORD-'.now()->format('ymd').'-'.strtoupper(Str::random(6)),
-                'subtotal' => $subtotal,
-                'total_amount' => $subtotal,
-                'currency' => $currency,
-                'shipping_address_id' => $address->id,
-                'billing_address_id' => $address->id,
-            ]);
+                if ($locked->stock_quantity < $data['quantity']) {
+                    throw new InsufficientStockException();
+                }
 
-            $order->items()->create([
-                'product_variant_id' => $variant->id,
-                'quantity' => $data['quantity'],
-                'unit_price' => $unitPrice,
-                'subtotal' => $subtotal,
-            ]);
+                $locked->decrement('stock_quantity', $data['quantity']);
 
-            return $order;
-        });
+                $address = $request->user()->addresses()->create([
+                    'type' => 'shipping',
+                    ...$data['shipping_address'],
+                ]);
+
+                $order = $request->user()->orders()->create([
+                    'order_number' => 'ORD-'.now()->format('ymd').'-'.strtoupper(Str::random(6)),
+                    'subtotal' => $subtotal,
+                    'total_amount' => $subtotal,
+                    'currency' => $currency,
+                    'shipping_address_id' => $address->id,
+                    'billing_address_id' => $address->id,
+                ]);
+
+                $order->items()->create([
+                    'product_variant_id' => $variant->id,
+                    'quantity' => $data['quantity'],
+                    'unit_price' => $unitPrice,
+                    'subtotal' => $subtotal,
+                ]);
+
+                return $order;
+            });
+        } catch (InsufficientStockException) {
+            return response()->json(['message' => 'Not enough stock for the requested quantity.'], 422);
+        }
 
         try {
             $payPalOrder = $this->payPal->createOrder($order->order_number, (float) $order->total_amount, $currency);
@@ -126,7 +144,13 @@ class CheckoutController extends Controller
         ]);
 
         $order->refresh();
-        Mail::to($order->user)->locale($order->user->preferred_locale ?? 'en')->send(new OrderConfirmationMail($order));
+
+        try {
+            Mail::to($order->user)->locale($order->user->preferred_locale ?? 'en')->send(new OrderConfirmationMail($order));
+        } catch (\Throwable $e) {
+            report($e);
+            Log::warning('Order confirmation email failed to send after successful payment.', ['order_id' => $order->id]);
+        }
 
         return new OrderResource($order->fresh(['items.productVariant']));
     }

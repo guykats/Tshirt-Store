@@ -116,6 +116,43 @@ class CheckoutTest extends TestCase
         ]);
     }
 
+    public function test_a_successful_checkout_decrements_variant_stock(): void
+    {
+        $user = User::factory()->create();
+        $variant = $this->makeVariant(['stock_quantity' => 5]);
+
+        $this->mock(PayPalClient::class, function ($mock) {
+            $mock->shouldReceive('createOrder')->once()->andReturn(['id' => 'PAYPAL-ORDER-123']);
+        });
+
+        $this->actingAs($user)->postJson('/api/checkout', [
+            'product_variant_id' => $variant->id,
+            'quantity' => 2,
+            'shipping_address' => $this->validAddress(),
+        ])->assertCreated();
+
+        $this->assertDatabaseHas('product_variants', [
+            'id' => $variant->id,
+            'stock_quantity' => 3,
+        ]);
+    }
+
+    public function test_checkout_rejects_a_variant_of_a_non_active_product(): void
+    {
+        $user = User::factory()->create();
+        $variant = $this->makeVariant();
+        $variant->product->update(['status' => 'draft']);
+
+        $response = $this->actingAs($user)->postJson('/api/checkout', [
+            'product_variant_id' => $variant->id,
+            'quantity' => 1,
+            'shipping_address' => $this->validAddress(),
+        ]);
+
+        $response->assertStatus(422)->assertJsonPath('message', 'This product is not currently available.');
+        $this->assertDatabaseCount('orders', 0);
+    }
+
     public function test_checkout_still_creates_a_local_order_when_paypal_is_unreachable(): void
     {
         $user = User::factory()->create();
@@ -192,6 +229,48 @@ class CheckoutTest extends TestCase
             'paypal_transaction_id' => 'CAPTURE-123',
         ]);
         Mail::assertSent(OrderConfirmationMail::class, fn ($mail) => $mail->order->id === $order->id);
+    }
+
+    public function test_capture_still_succeeds_when_the_confirmation_email_fails_to_send(): void
+    {
+        Mail::shouldReceive('to')->andReturnSelf();
+        Mail::shouldReceive('locale')->andReturnSelf();
+        Mail::shouldReceive('send')->andThrow(new \RuntimeException('SMTP unreachable'));
+
+        $user = User::factory()->create();
+        $variant = $this->makeVariant();
+        $address = $user->addresses()->create(array_merge(['type' => 'shipping'], $this->validAddress()));
+
+        $order = $user->orders()->create([
+            'order_number' => 'ORD-TEST-MAILFAIL',
+            'subtotal' => 30,
+            'total_amount' => 30,
+            'paypal_order_id' => 'PAYPAL-MAILFAIL',
+            'shipping_address_id' => $address->id,
+            'billing_address_id' => $address->id,
+        ]);
+        $order->items()->create([
+            'product_variant_id' => $variant->id,
+            'quantity' => 1,
+            'unit_price' => 30,
+            'subtotal' => 30,
+        ]);
+
+        $this->mock(PayPalClient::class, function ($mock) {
+            $mock->shouldReceive('captureOrder')->once()->andReturn([
+                'status' => 'COMPLETED',
+                'purchase_units' => [['payments' => ['captures' => [['id' => 'CAPTURE-MAILFAIL']]]]],
+            ]);
+        });
+
+        $response = $this->actingAs($user)->postJson("/api/checkout/{$order->id}/capture");
+
+        $response->assertOk()->assertJsonPath('data.payment_status', 'paid');
+        $this->assertDatabaseHas('orders', [
+            'id' => $order->id,
+            'payment_status' => 'paid',
+            'paypal_transaction_id' => 'CAPTURE-MAILFAIL',
+        ]);
     }
 
     public function test_a_declined_capture_marks_the_order_failed_without_sending_email(): void

@@ -21,6 +21,8 @@ class ProductController extends Controller
 
     public function show(Product $product)
     {
+        abort_unless($product->status === 'active', 404);
+
         return new ProductResource($product->load(['design', 'variants']));
     }
 }
