@@ -88,4 +88,21 @@ class ProductTest extends TestCase
 
         $this->getJson('/api/products')->assertOk();
     }
+
+    public function test_the_catalog_exposes_pagination_metadata_the_frontend_depends_on(): void
+    {
+        foreach (range(1, 25) as $i) {
+            $this->makeProduct(['name' => "Product {$i}"]);
+        }
+
+        $page1 = $this->getJson('/api/products');
+        $page1->assertOk()
+            ->assertJsonCount(20, 'data')
+            ->assertJsonPath('meta.current_page', 1)
+            ->assertJsonPath('meta.last_page', 2)
+            ->assertJsonPath('meta.total', 25);
+
+        $page2 = $this->getJson('/api/products?page=2');
+        $page2->assertOk()->assertJsonCount(5, 'data')->assertJsonPath('meta.current_page', 2);
+    }
 }
