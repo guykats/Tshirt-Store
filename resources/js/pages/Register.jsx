@@ -38,8 +38,9 @@ export default function Register() {
             <h1 className="mb-6 font-serif text-2xl">{t('register_title')}</h1>
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                    <label className="mb-1 block text-sm">{t('name')}</label>
+                    <label htmlFor="register-name" className="mb-1 block text-sm">{t('name')}</label>
                     <input
+                        id="register-name"
                         required
                         value={form.name}
                         onChange={update('name')}
@@ -47,8 +48,9 @@ export default function Register() {
                     />
                 </div>
                 <div>
-                    <label className="mb-1 block text-sm">{t('email')}</label>
+                    <label htmlFor="register-email" className="mb-1 block text-sm">{t('email')}</label>
                     <input
+                        id="register-email"
                         type="email"
                         required
                         value={form.email}
@@ -57,8 +59,9 @@ export default function Register() {
                     />
                 </div>
                 <div>
-                    <label className="mb-1 block text-sm">{t('password')}</label>
+                    <label htmlFor="register-password" className="mb-1 block text-sm">{t('password')}</label>
                     <input
+                        id="register-password"
                         type="password"
                         required
                         minLength={8}
@@ -68,8 +71,9 @@ export default function Register() {
                     />
                 </div>
                 <div>
-                    <label className="mb-1 block text-sm">{t('confirm_password')}</label>
+                    <label htmlFor="register-password-confirmation" className="mb-1 block text-sm">{t('confirm_password')}</label>
                     <input
+                        id="register-password-confirmation"
                         type="password"
                         required
                         minLength={8}
@@ -78,7 +82,7 @@ export default function Register() {
                         className="w-full rounded border border-line bg-parchment px-3 py-2"
                     />
                 </div>
-                {error && <p className="text-sm text-red-700">{error}</p>}
+                {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
                 <button
                     type="submit"
                     disabled={submitting}

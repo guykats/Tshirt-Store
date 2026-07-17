@@ -35,8 +35,9 @@ export default function Login() {
             <h1 className="mb-6 font-serif text-2xl">{t('login_title')}</h1>
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                    <label className="mb-1 block text-sm">{t('email')}</label>
+                    <label htmlFor="login-email" className="mb-1 block text-sm">{t('email')}</label>
                     <input
+                        id="login-email"
                         type="email"
                         required
                         value={email}
@@ -45,8 +46,9 @@ export default function Login() {
                     />
                 </div>
                 <div>
-                    <label className="mb-1 block text-sm">{t('password')}</label>
+                    <label htmlFor="login-password" className="mb-1 block text-sm">{t('password')}</label>
                     <input
+                        id="login-password"
                         type="password"
                         required
                         value={password}
@@ -54,7 +56,7 @@ export default function Login() {
                         className="w-full rounded border border-line bg-parchment px-3 py-2"
                     />
                 </div>
-                {error && <p className="text-sm text-red-700">{error}</p>}
+                {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
                 <button
                     type="submit"
                     disabled={submitting}

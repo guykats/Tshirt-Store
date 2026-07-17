@@ -165,11 +165,20 @@ const REGISTRY = {
     'hebrew-script': HebrewScript,
 };
 
-export default function DesignArt({ motif, className = '' }) {
+export default function DesignArt({ motif, className = '', label }) {
     const Art = REGISTRY[motif] || REGISTRY['star-of-david'];
 
+    // Pass `label` when this is the primary visual for what it depicts (e.g. the
+    // product detail hero image) so screen readers get a real description. Omit it
+    // (default) when the same name is already visible as adjacent text — a product
+    // card thumbnail sitting next to its own title shouldn't announce the name twice.
     return (
-        <div className={`flex items-center justify-center bg-parchment-dim ${className}`}>
+        <div
+            className={`flex items-center justify-center bg-parchment-dim ${className}`}
+            role={label ? 'img' : undefined}
+            aria-label={label || undefined}
+            aria-hidden={label ? undefined : true}
+        >
             <div className="aspect-square w-full max-w-full p-[8%]">
                 <Art />
             </div>

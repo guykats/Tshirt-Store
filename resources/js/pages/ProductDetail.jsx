@@ -48,7 +48,7 @@ export default function ProductDetail() {
             </Link>
 
             <div className="grid grid-cols-1 gap-10 md:grid-cols-2">
-                <DesignArt motif={product.design?.mockup_url} className="aspect-square rounded" />
+                <DesignArt motif={product.design?.mockup_url} className="aspect-square rounded" label={product.name} />
 
                 <div>
                     <h1 className="font-serif text-3xl">{product.name}</h1>
