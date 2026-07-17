@@ -6,6 +6,12 @@ human-in-the-loop approval workflow for new designs and orders.
 
 Live at [store.guykats.com](https://store.guykats.com).
 
+> Picking this project up as an agent or a new contributor? Read
+> [`CLAUDE.md`](./CLAUDE.md) for the working conventions and standing
+> operating rules, and [`docs/PROJECT-HISTORY.md`](./docs/PROJECT-HISTORY.md)
+> for how it got to its current state and why. This README covers what the
+> app is and how to run it.
+
 ## Stack
 
 - **Backend:** Laravel 13 (PHP 8.3), MySQL in production / SQLite for local dev and tests
@@ -44,9 +50,16 @@ Key flows:
 - **Design/order approval:** new designs and orders start in `pending_approval`
   and only become visible/active once an admin approves them from `/dashboard`.
   Every approval is written to `system_events` for a permanent audit trail.
-- **Team progress dashboard:** `/dashboard` also shows an "Agent Status" board
-  (manually-set task descriptions) and a "Recent Activity" feed that reads
-  `git log` live from the server on every request, so it can't go stale.
+- **Project progress board:** `/dashboard/progress` is a Jira-style board
+  (`project_tasks` table) — every task has an owning agent, a status, and
+  once done, a real commit hash and optional screenshot as evidence, so
+  nothing is a self-reported claim. Above it, an **Epics** section shows
+  bigger strategic initiatives proposed by a "Visioner Agent" that a human
+  explicitly approves, rejects, or delays before any tasks get created from
+  one. `/dashboard`'s own "Agent Status" widget and "Recent Activity" feed
+  (which reads `git log` live from the server) summarize the same data —
+  see `CLAUDE.md` and `docs/PROJECT-HISTORY.md` for how this system works
+  and how to work within it.
 
 ## Local setup
 
