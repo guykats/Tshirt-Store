@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
 import api from '../lib/api';
 import DesignArt from '../components/DesignArt';
+import useDocumentMeta from '../hooks/useDocumentMeta';
 
 export default function ProductDetail() {
     const { t } = useTranslation();
@@ -10,6 +11,11 @@ export default function ProductDetail() {
     const [product, setProduct] = useState(null);
     const [size, setSize] = useState('');
     const [color, setColor] = useState('');
+
+    useDocumentMeta(
+        product ? `${product.name} — ${t('app_name')}` : t('app_name'),
+        product?.description,
+    );
 
     useEffect(() => {
         api.get(`/api/products/${slug}`).then((res) => {

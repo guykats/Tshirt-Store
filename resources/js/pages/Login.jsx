@@ -2,11 +2,15 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
+import useDocumentMeta from '../hooks/useDocumentMeta';
 
 export default function Login() {
     const { t } = useTranslation();
     const { login } = useAuth();
     const navigate = useNavigate();
+
+    useDocumentMeta(t('meta_login_title', { app: t('app_name') }));
+
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState(null);

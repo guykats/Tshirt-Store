@@ -2,11 +2,15 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
+import useDocumentMeta from '../hooks/useDocumentMeta';
 
 export default function Register() {
     const { t } = useTranslation();
     const { register } = useAuth();
     const navigate = useNavigate();
+
+    useDocumentMeta(t('meta_register_title', { app: t('app_name') }));
+
     const [form, setForm] = useState({ name: '', email: '', password: '', password_confirmation: '' });
     const [error, setError] = useState(null);
     const [submitting, setSubmitting] = useState(false);

@@ -4,6 +4,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { PayPalButtons } from '@paypal/react-paypal-js';
 import api from '../lib/api';
 import { useAuth } from '../lib/AuthContext';
+import useDocumentMeta from '../hooks/useDocumentMeta';
 
 export default function Checkout() {
     const { t } = useTranslation();
@@ -11,6 +12,8 @@ export default function Checkout() {
     const [searchParams] = useSearchParams();
     const { user, loading: authLoading } = useAuth();
     const navigate = useNavigate();
+
+    useDocumentMeta(t('meta_checkout_title', { app: t('app_name') }));
 
     const [product, setProduct] = useState(null);
     const [variantId, setVariantId] = useState('');

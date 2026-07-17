@@ -2,9 +2,13 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../lib/api';
 import DesignArt from '../components/DesignArt';
+import useDocumentMeta from '../hooks/useDocumentMeta';
 
 export default function Dashboard() {
     const { t } = useTranslation();
+
+    useDocumentMeta(t('meta_dashboard_title', { app: t('app_name') }));
+
     const [designs, setDesigns] = useState([]);
     const [orders, setOrders] = useState([]);
     const [agents, setAgents] = useState([]);
