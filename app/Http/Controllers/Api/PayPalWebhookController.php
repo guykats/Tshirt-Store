@@ -20,22 +20,22 @@ class PayPalWebhookController extends Controller
         $body = $request->json()->all();
         $eventType = $body['event_type'] ?? null;
 
-        if (config('services.paypal.webhook_id')) {
-            $verified = $this->payPal->verifyWebhookSignature([
-                'transmission_id' => $request->header('PAYPAL-TRANSMISSION-ID'),
-                'transmission_time' => $request->header('PAYPAL-TRANSMISSION-TIME'),
-                'cert_url' => $request->header('PAYPAL-CERT-URL'),
-                'auth_algo' => $request->header('PAYPAL-AUTH-ALGO'),
-                'transmission_sig' => $request->header('PAYPAL-TRANSMISSION-SIG'),
-            ], $body);
+        // Fail closed: without a configured webhook_id, verifyWebhookSignature() always
+        // returns false, so an unconfigured webhook rejects every request rather than
+        // silently trusting an unverified body (which would let anyone POST a fake
+        // PAYMENT.CAPTURE.COMPLETED event for any order).
+        $verified = $this->payPal->verifyWebhookSignature([
+            'transmission_id' => $request->header('PAYPAL-TRANSMISSION-ID'),
+            'transmission_time' => $request->header('PAYPAL-TRANSMISSION-TIME'),
+            'cert_url' => $request->header('PAYPAL-CERT-URL'),
+            'auth_algo' => $request->header('PAYPAL-AUTH-ALGO'),
+            'transmission_sig' => $request->header('PAYPAL-TRANSMISSION-SIG'),
+        ], $body);
 
-            if (! $verified) {
-                Log::warning('PayPal webhook signature verification failed', ['event_type' => $eventType]);
+        if (! $verified) {
+            Log::warning('PayPal webhook signature verification failed or not configured', ['event_type' => $eventType]);
 
-                return response()->json(['message' => 'Invalid signature'], 401);
-            }
-        } else {
-            Log::warning('PAYPAL_WEBHOOK_ID not configured; skipping signature verification', ['event_type' => $eventType]);
+            return response()->json(['message' => 'Invalid signature'], 401);
         }
 
         match ($eventType) {
