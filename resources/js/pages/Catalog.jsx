@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import api from '../lib/api';
 import DesignArt from '../components/DesignArt';
 import useDocumentMeta from '../hooks/useDocumentMeta';
@@ -9,14 +9,26 @@ export default function Catalog() {
     const { t } = useTranslation();
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [meta, setMeta] = useState({ current_page: 1, last_page: 1 });
+    const [searchParams, setSearchParams] = useSearchParams();
+    const page = Number(searchParams.get('page')) || 1;
 
     useDocumentMeta(t('app_name'), t('meta_catalog_description'));
 
     useEffect(() => {
-        api.get('/api/products')
-            .then((res) => setProducts(res.data.data))
+        setLoading(true);
+        api.get('/api/products', { params: { page } })
+            .then((res) => {
+                setProducts(res.data.data);
+                setMeta(res.data.meta);
+            })
             .finally(() => setLoading(false));
-    }, []);
+        window.scrollTo({ top: 0 });
+    }, [page]);
+
+    function goToPage(nextPage) {
+        setSearchParams(nextPage === 1 ? {} : { page: String(nextPage) });
+    }
 
     return (
         <div>
@@ -42,6 +54,28 @@ export default function Catalog() {
                         </Link>
                     ))}
                 </div>
+
+                {!loading && meta.last_page > 1 && (
+                    <div className="mt-14 flex items-center justify-center gap-4">
+                        <button
+                            onClick={() => goToPage(meta.current_page - 1)}
+                            disabled={meta.current_page <= 1}
+                            className="rounded border border-line px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-30"
+                        >
+                            {t('catalog_previous')}
+                        </button>
+                        <span className="text-sm text-ink-soft">
+                            {t('catalog_page_of', { current: meta.current_page, last: meta.last_page })}
+                        </span>
+                        <button
+                            onClick={() => goToPage(meta.current_page + 1)}
+                            disabled={meta.current_page >= meta.last_page}
+                            className="rounded border border-line px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-30"
+                        >
+                            {t('catalog_next')}
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     );
