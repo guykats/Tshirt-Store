@@ -72,6 +72,13 @@ unless the owner says otherwise:
   mocks (`Mockery` in tests) and `MAIL_MAILER=log` in dev; don't block on
   missing secrets, and never ask the owner to paste real secrets into chat.
 - **GitHub access is scoped to `guykats/tshirt-store` only.**
+- **Two separate `ANTHROPIC_API_KEY` secrets exist, in two different places:**
+  a GitHub Actions repo secret (used by `pm-agent.yml` in CI) and a
+  production `.env` value (used live by `app/Services/AnthropicClient.php`
+  for `/dashboard/chat`'s Visioner Agent chat). They can hold the same key
+  value, but setting one does not set the other — check both if either
+  integration isn't working. Same rule as PayPal/SMTP: never ask the owner
+  to paste the key into chat, only tell them where to add it.
 
 ## Production state changes through git — always
 
