@@ -169,7 +169,10 @@ return [
     |
     */
 
-    'secure' => env('SESSION_SECURE_COOKIE'),
+    // Falls back to whether APP_URL is https:// rather than defaulting to null/false,
+    // so the session cookie is marked Secure in production without depending on a
+    // separate env var that .env.example doesn't set and is easy to forget.
+    'secure' => env('SESSION_SECURE_COOKIE', str_starts_with(env('APP_URL', ''), 'https://')),
 
     /*
     |--------------------------------------------------------------------------

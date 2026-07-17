@@ -21,13 +21,18 @@ class ProjectTaskController extends Controller
             ->limit(200)
             ->get();
 
+        $tally = ProjectTask::query()
+            ->selectRaw('status, count(*) as total')
+            ->groupBy('status')
+            ->pluck('total', 'status');
+
         return response()->json([
             'data' => ProjectTaskResource::collection($tasks),
             'counts' => [
-                'todo' => ProjectTask::where('status', 'todo')->count(),
-                'in_progress' => ProjectTask::where('status', 'in_progress')->count(),
-                'blocked' => ProjectTask::where('status', 'blocked')->count(),
-                'done' => ProjectTask::where('status', 'done')->count(),
+                'todo' => (int) $tally->get('todo', 0),
+                'in_progress' => (int) $tally->get('in_progress', 0),
+                'blocked' => (int) $tally->get('blocked', 0),
+                'done' => (int) $tally->get('done', 0),
             ],
         ]);
     }
