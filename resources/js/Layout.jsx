@@ -29,7 +29,10 @@ export default function Layout({ children }) {
                 <div className="flex items-center gap-5 text-sm text-ink-soft">
                     <Link to="/" className="hover:text-ink">{t('nav_catalog')}</Link>
                     {user?.role === 'admin' && (
-                        <Link to="/dashboard" className="hover:text-ink">{t('nav_dashboard')}</Link>
+                        <>
+                            <Link to="/dashboard" className="hover:text-ink">{t('nav_dashboard')}</Link>
+                            <Link to="/dashboard/progress" className="hover:text-ink">{t('nav_progress')}</Link>
+                        </>
                     )}
                     {user ? (
                         <button onClick={handleLogout} className="hover:text-ink">{t('nav_logout')}</button>

@@ -8,6 +8,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Checkout from './pages/Checkout';
 import Dashboard from './pages/Dashboard';
+import ProjectProgress from './pages/ProjectProgress';
 
 function RequireAdmin({ children }) {
     const { user, loading } = useAuth();
@@ -37,6 +38,14 @@ export default function App() {
                                 element={
                                     <RequireAdmin>
                                         <Dashboard />
+                                    </RequireAdmin>
+                                }
+                            />
+                            <Route
+                                path="/dashboard/progress"
+                                element={
+                                    <RequireAdmin>
+                                        <ProjectProgress />
                                     </RequireAdmin>
                                 }
                             />
