@@ -10,6 +10,7 @@ import Checkout from './pages/Checkout';
 import Dashboard from './pages/Dashboard';
 import ProjectProgress from './pages/ProjectProgress';
 import Orders from './pages/Orders';
+import About from './pages/About';
 
 function RequireAdmin({ children }) {
     const { user, loading } = useAuth();
@@ -39,6 +40,7 @@ export default function App() {
                     <Layout>
                         <Routes>
                             <Route path="/" element={<Catalog />} />
+                            <Route path="/about" element={<About />} />
                             <Route path="/products/:slug" element={<ProductDetail />} />
                             <Route path="/login" element={<Login />} />
                             <Route path="/register" element={<Register />} />
