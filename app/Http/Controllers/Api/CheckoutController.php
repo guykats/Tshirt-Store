@@ -8,6 +8,7 @@ use App\Http\Resources\OrderResource;
 use App\Mail\OrderConfirmationMail;
 use App\Models\Order;
 use App\Models\ProductVariant;
+use App\Models\SystemEvent;
 use App\Services\PayPalClient;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -144,6 +145,14 @@ class CheckoutController extends Controller
         ]);
 
         $order->refresh();
+
+        SystemEvent::log(
+            'order.paid',
+            "Order {$order->order_number} paid via PayPal.",
+            $request->user()->name,
+            'user',
+            ['order_id' => $order->id, 'paypal_transaction_id' => $captureId],
+        );
 
         try {
             Mail::to($order->user)->locale($order->user->preferred_locale ?? 'en')->send(new OrderConfirmationMail($order));

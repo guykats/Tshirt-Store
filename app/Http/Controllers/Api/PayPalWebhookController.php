@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Mail\OrderConfirmationMail;
 use App\Models\Order;
+use App\Models\SystemEvent;
 use App\Services\PayPalClient;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -62,6 +63,14 @@ class PayPalWebhookController extends Controller
             $order->update(['payment_status' => 'paid', 'paypal_transaction_id' => $captureId]);
 
             $order->refresh()->loadMissing('user');
+
+            SystemEvent::log(
+                'order.paid',
+                "Order {$order->order_number} paid via PayPal webhook.",
+                'PayPal',
+                'system',
+                ['order_id' => $order->id, 'paypal_transaction_id' => $captureId],
+            );
 
             try {
                 Mail::to($order->user)->locale($order->user->preferred_locale ?? 'en')->send(new OrderConfirmationMail($order));
