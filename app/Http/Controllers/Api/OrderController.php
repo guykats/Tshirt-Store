@@ -37,6 +37,10 @@ class OrderController extends Controller
     {
         $this->authorize('update', $order);
 
+        if ($order->status === 'approved') {
+            return new OrderResource($order->load(['user', 'items.productVariant']));
+        }
+
         $order->update([
             'status' => 'approved',
             'approved_by' => $request->user()->id,

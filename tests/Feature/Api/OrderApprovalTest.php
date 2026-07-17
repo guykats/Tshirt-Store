@@ -88,6 +88,18 @@ class OrderApprovalTest extends TestCase
         ]);
     }
 
+    public function test_approving_an_already_approved_order_does_not_duplicate_the_audit_log(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $customer = User::factory()->create(['role' => 'customer']);
+        $order = $this->makeOrder($customer);
+
+        $this->actingAs($admin)->postJson("/api/orders/{$order->id}/approve")->assertOk();
+        $this->actingAs($admin)->postJson("/api/orders/{$order->id}/approve")->assertOk();
+
+        $this->assertSame(1, \App\Models\SystemEvent::where('event_type', 'order.approved')->count());
+    }
+
     public function test_the_owner_can_download_their_own_invoice(): void
     {
         $customer = User::factory()->create(['role' => 'customer']);

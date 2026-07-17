@@ -27,7 +27,7 @@ jobs:
       - name: Build frontend assets
         run: npm run build
 
-      - name: Pull latest code and install PHP dependencies on server
+      - name: Pull latest code, install PHP dependencies, and migrate
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -37,9 +37,24 @@ jobs:
           script: |
             set -e
             cd "${{ secrets.DEPLOY_PATH }}"
+
+            # Maintenance mode brackets the riskiest part of the deploy (code swap +
+            # migrations) so requests don't land mid-migration against a half-updated
+            # schema. The trap guarantees `up` runs even if a step below fails, so a
+            # bad migration can't leave the site down indefinitely — it can still leave
+            # the schema in a partial state that needs manual review, but the site
+            # itself won't hang in maintenance mode waiting on a step that never ran.
+            php artisan down --render="errors::503" --retry=30 || true
+            trap 'php artisan up || true' EXIT
+
             git fetch origin main
             git reset --hard origin/main
             composer install --no-dev --optimize-autoloader --no-interaction
+
+            # Clear (not cache) config before migrating, so migrations run against
+            # whatever .env actually says now rather than a stale cache from the
+            # previous deploy that may predate a config/env change this deploy needs.
+            php artisan config:clear
             php artisan migrate --force
 
       - name: Upload built frontend assets
