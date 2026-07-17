@@ -62,7 +62,13 @@ class PayPalWebhookController extends Controller
             $order->update(['payment_status' => 'paid', 'paypal_transaction_id' => $captureId]);
 
             $order->refresh()->loadMissing('user');
-            Mail::to($order->user)->locale($order->user->preferred_locale ?? 'en')->send(new OrderConfirmationMail($order));
+
+            try {
+                Mail::to($order->user)->locale($order->user->preferred_locale ?? 'en')->send(new OrderConfirmationMail($order));
+            } catch (\Throwable $e) {
+                report($e);
+                Log::warning('Order confirmation email failed to send after webhook payment.', ['order_id' => $order->id]);
+            }
         }
     }
 

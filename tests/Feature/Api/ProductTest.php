@@ -68,6 +68,20 @@ class ProductTest extends TestCase
         $this->getJson('/api/products/does-not-exist')->assertNotFound();
     }
 
+    public function test_show_returns_404_for_a_draft_product(): void
+    {
+        $product = $this->makeProduct(['status' => 'draft']);
+
+        $this->getJson("/api/products/{$product->slug}")->assertNotFound();
+    }
+
+    public function test_show_returns_404_for_an_archived_product(): void
+    {
+        $product = $this->makeProduct(['status' => 'archived']);
+
+        $this->getJson("/api/products/{$product->slug}")->assertNotFound();
+    }
+
     public function test_products_are_publicly_accessible_without_authentication(): void
     {
         $this->makeProduct();
