@@ -56,6 +56,7 @@ jobs:
             # previous deploy that may predate a config/env change this deploy needs.
             php artisan config:clear
             php artisan migrate --force
+            php artisan storage:link || true
 
       - name: Upload built frontend assets
         uses: appleboy/scp-action@v0.1.7

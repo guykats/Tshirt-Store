@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\DesignController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\PayPalWebhookController;
 use App\Http\Controllers\Api\ProductController;
+use App\Http\Controllers\Api\ProjectTaskController;
 use App\Http\Controllers\Api\SystemEventController;
 use Illuminate\Support\Facades\Route;
 
@@ -40,4 +41,5 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/agent-statuses/{agentStatus}', [AgentStatusController::class, 'update']);
 
     Route::get('/activity', [ActivityController::class, 'index']);
+    Route::get('/project-tasks', [ProjectTaskController::class, 'index']);
 });
