@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link, useSearchParams } from 'react-router-dom';
 import api from '../lib/api';
 import DesignArt from '../components/DesignArt';
+import { CatalogSkeleton } from '../components/Skeleton';
 import useDocumentMeta from '../hooks/useDocumentMeta';
 
 export default function Catalog() {
@@ -39,21 +40,23 @@ export default function Catalog() {
             </div>
 
             <div className="mx-auto max-w-6xl px-6 py-14">
-                {loading && <p className="text-ink-soft">…</p>}
+                {loading && <CatalogSkeleton />}
 
                 {!loading && products.length === 0 && <p className="text-ink-soft">{t('catalog_empty')}</p>}
 
-                <div className="grid grid-cols-1 gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
-                    {products.map((product) => (
-                        <Link key={product.id} to={`/products/${product.slug}`} className="group block">
-                            <DesignArt motif={product.design?.mockup_url} className="aspect-square rounded transition-colors group-hover:bg-line" />
-                            <h2 className="mt-4 font-serif text-lg">{product.name}</h2>
-                            <p className="mt-1 text-sm text-ink-soft">
-                                {product.currency} {product.base_price.toFixed(2)}
-                            </p>
-                        </Link>
-                    ))}
-                </div>
+                {!loading && products.length > 0 && (
+                    <div className="grid grid-cols-1 gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
+                        {products.map((product) => (
+                            <Link key={product.id} to={`/products/${product.slug}`} className="group block">
+                                <DesignArt motif={product.design?.mockup_url} className="aspect-square rounded transition-colors group-hover:bg-line" />
+                                <h2 className="mt-4 font-serif text-lg">{product.name}</h2>
+                                <p className="mt-1 text-sm text-ink-soft">
+                                    {product.currency} {product.base_price.toFixed(2)}
+                                </p>
+                            </Link>
+                        ))}
+                    </div>
+                )}
 
                 {!loading && meta.last_page > 1 && (
                     <div className="mt-14 flex items-center justify-center gap-4">

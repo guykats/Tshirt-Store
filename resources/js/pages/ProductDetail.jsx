@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
 import api from '../lib/api';
 import DesignArt from '../components/DesignArt';
+import { ProductDetailSkeleton } from '../components/Skeleton';
 import useDocumentMeta from '../hooks/useDocumentMeta';
 
 export default function ProductDetail() {
@@ -28,7 +29,13 @@ export default function ProductDetail() {
         });
     }, [slug]);
 
-    if (!product) return null;
+    if (!product) {
+        return (
+            <div className="mx-auto max-w-4xl px-6 py-12">
+                <ProductDetailSkeleton />
+            </div>
+        );
+    }
 
     const sizes = [...new Set(product.variants.map((v) => v.size))];
     const colors = [...new Set(product.variants.map((v) => v.color))];
