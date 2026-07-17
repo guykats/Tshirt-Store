@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\AgentStatusController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CheckoutController;
 use App\Http\Controllers\Api\DesignController;
+use App\Http\Controllers\Api\EpicController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\PayPalWebhookController;
 use App\Http\Controllers\Api\ProductController;
@@ -42,4 +43,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/activity', [ActivityController::class, 'index']);
     Route::get('/project-tasks', [ProjectTaskController::class, 'index']);
+
+    Route::get('/epics', [EpicController::class, 'index']);
+    Route::post('/epics/{epic}/approve', [EpicController::class, 'approve']);
+    Route::post('/epics/{epic}/reject', [EpicController::class, 'reject']);
+    Route::post('/epics/{epic}/delay', [EpicController::class, 'delay']);
 });

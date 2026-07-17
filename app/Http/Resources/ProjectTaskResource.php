@@ -12,6 +12,8 @@ class ProjectTaskResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'epic_id' => $this->epic_id,
+            'epic_title' => $this->whenLoaded('epic', fn () => $this->epic?->title),
             'title' => $this->title,
             'description' => $this->description,
             'agent_name' => $this->agent_name,

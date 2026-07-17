@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use InvalidArgumentException;
 
 #[Fillable([
-    'title', 'description', 'agent_name', 'status', 'task_type',
+    'epic_id', 'title', 'description', 'agent_name', 'status', 'task_type',
     'commit_sha', 'screenshot_path', 'blocked_reason', 'completed_at',
 ])]
 class ProjectTask extends Model
@@ -18,6 +18,11 @@ class ProjectTask extends Model
         return [
             'completed_at' => 'datetime',
         ];
+    }
+
+    public function epic()
+    {
+        return $this->belongsTo(Epic::class);
     }
 
     /**

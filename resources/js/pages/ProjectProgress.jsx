@@ -10,6 +10,11 @@ const STATUS_STYLES = {
     blocked: 'bg-red-100 text-red-800',
     done: 'bg-green-100 text-green-800',
 };
+const EPIC_STATUS_STYLES = {
+    proposed: 'bg-amber-100 text-amber-800',
+    approved: 'bg-green-100 text-green-800',
+    rejected: 'bg-red-100 text-red-800',
+};
 
 export default function ProjectProgress() {
     const { t } = useTranslation();
@@ -18,6 +23,8 @@ export default function ProjectProgress() {
     const [statusFilter, setStatusFilter] = useState('');
     const [agentFilter, setAgentFilter] = useState('');
     const [lightbox, setLightbox] = useState(null);
+    const [epics, setEpics] = useState([]);
+    const [showDecidedEpics, setShowDecidedEpics] = useState(false);
 
     useDocumentMeta(t('meta_progress_title', { app: t('app_name') }));
 
@@ -29,14 +36,90 @@ export default function ProjectProgress() {
             });
     }
 
+    function loadEpics() {
+        api.get('/api/epics').then((res) => setEpics(res.data.data));
+    }
+
     useEffect(load, [statusFilter, agentFilter]);
+    useEffect(loadEpics, []);
+
+    async function decideEpic(epicId, action) {
+        await api.post(`/api/epics/${epicId}/${action}`);
+        loadEpics();
+    }
 
     const agents = [...new Set(tasks.map((t) => t.agent_name))].sort();
+    const visibleEpics = epics.filter((e) => showDecidedEpics || e.status === 'proposed');
 
     return (
         <div className="mx-auto max-w-6xl px-6 py-10">
             <h1 className="mb-2 font-serif text-2xl">{t('progress_title')}</h1>
             <p className="mb-6 text-sm text-ink-soft">{t('progress_hint')}</p>
+
+            <section className="mb-12">
+                <div className="mb-1 flex items-center justify-between">
+                    <h2 className="font-serif text-lg">{t('epics_title')}</h2>
+                    <button
+                        onClick={() => setShowDecidedEpics((v) => !v)}
+                        className="text-sm text-brass hover:underline"
+                    >
+                        {showDecidedEpics ? t('epics_hide_decided') : t('epics_show_decided')}
+                    </button>
+                </div>
+                <p className="mb-4 text-sm text-ink-soft">{t('epics_hint')}</p>
+
+                {visibleEpics.length === 0 && (
+                    <p className="rounded border border-line p-4 text-sm text-ink-soft">{t('epics_empty')}</p>
+                )}
+
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    {visibleEpics.map((epic) => (
+                        <div key={epic.id} className="flex flex-col rounded border border-line p-4">
+                            <div className="mb-2 flex items-start justify-between gap-2">
+                                <p className="font-serif text-base">{epic.title}</p>
+                                <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs whitespace-nowrap ${EPIC_STATUS_STYLES[epic.status]}`}>
+                                    {t(`epics_status_${epic.status}`)}
+                                </span>
+                            </div>
+                            <p className="mb-3 flex-1 text-sm text-ink-soft">{epic.description}</p>
+                            <div className="mb-3 flex items-center justify-between text-xs text-ink-soft">
+                                <span>{epic.agent_name}</span>
+                                <span>
+                                    {epic.task_count === 1
+                                        ? t('epics_task_count', { count: epic.task_count })
+                                        : t('epics_task_count_plural', { count: epic.task_count ?? 0 })}
+                                </span>
+                            </div>
+                            {epic.status === 'proposed' ? (
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => decideEpic(epic.id, 'approve')}
+                                        className="flex-1 rounded bg-green-600 px-3 py-1.5 text-sm text-white"
+                                    >
+                                        {t('epics_choose')}
+                                    </button>
+                                    <button
+                                        onClick={() => decideEpic(epic.id, 'reject')}
+                                        className="flex-1 rounded bg-red-600 px-3 py-1.5 text-sm text-white"
+                                    >
+                                        {t('epics_reject')}
+                                    </button>
+                                    <button
+                                        onClick={() => decideEpic(epic.id, 'delay')}
+                                        className="flex-1 rounded border border-line px-3 py-1.5 text-sm"
+                                    >
+                                        {t('epics_delay')}
+                                    </button>
+                                </div>
+                            ) : (
+                                epic.decided_by && (
+                                    <p className="text-xs text-ink-soft">{t('epics_decided_by', { name: epic.decided_by })}</p>
+                                )
+                            )}
+                        </div>
+                    ))}
+                </div>
+            </section>
 
             <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
                 {STATUSES.map((s) => (

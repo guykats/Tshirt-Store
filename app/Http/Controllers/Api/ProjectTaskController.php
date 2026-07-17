@@ -16,6 +16,7 @@ class ProjectTaskController extends Controller
         $tasks = ProjectTask::query()
             ->when($request->query('status'), fn ($q, $status) => $q->where('status', $status))
             ->when($request->query('agent'), fn ($q, $agent) => $q->where('agent_name', $agent))
+            ->when($request->query('epic_id'), fn ($q, $epicId) => $q->where('epic_id', $epicId))
             ->orderByRaw("CASE status WHEN 'blocked' THEN 0 WHEN 'in_progress' THEN 1 WHEN 'todo' THEN 2 WHEN 'done' THEN 3 ELSE 4 END")
             ->orderByDesc('updated_at')
             ->limit(200)
