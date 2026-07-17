@@ -28,6 +28,7 @@ export default function Layout({ children }) {
                 </Link>
                 <div className="flex items-center gap-5 text-sm text-ink-soft">
                     <Link to="/" className="hover:text-ink">{t('nav_catalog')}</Link>
+                    <Link to="/about" className="hover:text-ink">{t('nav_about')}</Link>
                     {user && user.role !== 'admin' && (
                         <Link to="/orders" className="hover:text-ink">{t('nav_orders')}</Link>
                     )}
