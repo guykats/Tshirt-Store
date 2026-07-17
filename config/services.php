@@ -42,4 +42,9 @@ return [
         'webhook_id' => env('PAYPAL_WEBHOOK_ID'),
     ],
 
+    'anthropic' => [
+        'api_key' => env('ANTHROPIC_API_KEY'),
+        'model' => env('ANTHROPIC_CHAT_MODEL', 'claude-sonnet-5'),
+    ],
+
 ];

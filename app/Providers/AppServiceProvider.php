@@ -30,5 +30,11 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('register', function ($request) {
             return Limit::perMinute(5)->by($request->ip());
         });
+
+        // Each message can trigger a real, billed Anthropic API call (and possibly a
+        // multi-round tool-use loop) - cap how fast one admin can fire them off.
+        RateLimiter::for('visioner-chat', function ($request) {
+            return Limit::perMinute(10)->by($request->user()?->id ?: $request->ip());
+        });
     }
 }

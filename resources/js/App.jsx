@@ -9,6 +9,7 @@ import Register from './pages/Register';
 import Checkout from './pages/Checkout';
 import Dashboard from './pages/Dashboard';
 import ProjectProgress from './pages/ProjectProgress';
+import VisionerChat from './pages/VisionerChat';
 import Orders from './pages/Orders';
 import About from './pages/About';
 
@@ -66,6 +67,14 @@ export default function App() {
                                 element={
                                     <RequireAdmin>
                                         <ProjectProgress />
+                                    </RequireAdmin>
+                                }
+                            />
+                            <Route
+                                path="/dashboard/chat"
+                                element={
+                                    <RequireAdmin>
+                                        <VisionerChat />
                                     </RequireAdmin>
                                 }
                             />

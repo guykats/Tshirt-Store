@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\PayPalWebhookController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\ProjectTaskController;
 use App\Http\Controllers\Api\SystemEventController;
+use App\Http\Controllers\Api\VisionerChatController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:register');
@@ -48,4 +49,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/epics/{epic}/approve', [EpicController::class, 'approve']);
     Route::post('/epics/{epic}/reject', [EpicController::class, 'reject']);
     Route::post('/epics/{epic}/delay', [EpicController::class, 'delay']);
+
+    Route::get('/visioner-chat', [VisionerChatController::class, 'index']);
+    Route::post('/visioner-chat', [VisionerChatController::class, 'store'])->middleware('throttle:visioner-chat');
 });
