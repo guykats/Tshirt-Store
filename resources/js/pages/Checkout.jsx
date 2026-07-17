@@ -25,6 +25,7 @@ export default function Checkout() {
     const [paypalOrderId, setPaypalOrderId] = useState(null);
     const [error, setError] = useState(null);
     const [status, setStatus] = useState('form');
+    const [submitting, setSubmitting] = useState(false);
 
     useEffect(() => {
         api.get(`/api/products/${productId}`).then((res) => {
@@ -52,6 +53,8 @@ export default function Checkout() {
     if (!product) return null;
 
     async function createOrder() {
+        if (submitting) return;
+        setSubmitting(true);
         setError(null);
         try {
             const res = await api.post('/api/checkout', {
@@ -66,14 +69,21 @@ export default function Checkout() {
         } catch (err) {
             setError(err.response?.data?.message || t('checkout_error'));
             throw err;
+        } finally {
+            setSubmitting(false);
         }
     }
 
     async function onApprove() {
+        setError(null);
         const orderId = order?.id;
-        const res = await api.post(`/api/checkout/${orderId}/capture`);
-        setOrder(res.data.data);
-        setStatus('paid');
+        try {
+            const res = await api.post(`/api/checkout/${orderId}/capture`);
+            setOrder(res.data.data);
+            setStatus('paid');
+        } catch (err) {
+            setError(err.response?.data?.message || t('checkout_error'));
+        }
     }
 
     if (status === 'paid') {
@@ -138,7 +148,8 @@ export default function Checkout() {
 
                     <button
                         onClick={() => createOrder().catch(() => {})}
-                        className="w-full rounded bg-ink px-4 py-3 text-sm tracking-wide text-parchment uppercase hover:bg-ink-soft"
+                        disabled={submitting}
+                        className="w-full rounded bg-ink px-4 py-3 text-sm tracking-wide text-parchment uppercase hover:bg-ink-soft disabled:opacity-50"
                     >
                         {t('checkout_continue_to_payment')}
                     </button>
