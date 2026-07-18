@@ -165,16 +165,31 @@ const REGISTRY = {
     'hebrew-script': HebrewScript,
 };
 
-export default function DesignArt({ motif, className = '', label }) {
+export default function DesignArt({ motif, className = '', label, tone = 'light' }) {
     const Art = REGISTRY[motif] || REGISTRY['star-of-david'];
+    const isDark = tone === 'dark';
 
     // Pass `label` when this is the primary visual for what it depicts (e.g. the
     // product detail hero image) so screen readers get a real description. Omit it
     // (default) when the same name is already visible as adjacent text — a product
     // card thumbnail sitting next to its own title shouldn't announce the name twice.
+    //
+    // `tone="dark"` is for placing a motif on an ink-colored band (e.g. a brand-story
+    // section): it drops the light background and re-points the same --color-ink /
+    // --color-line / --color-brass variables the art already draws with, so the
+    // identical line-art renders in a light stroke instead of inventing new artwork.
     return (
         <div
-            className={`flex items-center justify-center bg-parchment-dim ${className}`}
+            className={`flex items-center justify-center ${isDark ? 'bg-transparent' : 'bg-parchment-dim'} ${className}`}
+            style={
+                isDark
+                    ? {
+                          '--color-ink': 'var(--color-parchment)',
+                          '--color-line': 'var(--color-brass-light)',
+                          '--color-brass': 'var(--color-brass-light)',
+                      }
+                    : undefined
+            }
             role={label ? 'img' : undefined}
             aria-label={label || undefined}
             aria-hidden={label ? undefined : true}

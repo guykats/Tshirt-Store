@@ -64,15 +64,68 @@ export default function Catalog() {
 
     const isSearching = search.trim().length > 0;
 
+    const trustItems = [
+        { key: 'symbolism', titleKey: 'catalog_trust_symbolism_title', descKey: 'catalog_trust_symbolism_desc' },
+        { key: 'checkout', titleKey: 'catalog_trust_checkout_title', descKey: 'catalog_trust_checkout_desc' },
+        { key: 'made_to_order', titleKey: 'catalog_trust_madetoorder_title', descKey: 'catalog_trust_madetoorder_desc' },
+        { key: 'shipping', titleKey: 'catalog_trust_shipping_title', descKey: 'catalog_trust_shipping_desc' },
+    ];
+
     return (
         <div>
-            <div className="border-b border-line px-6 py-16 text-center">
-                <p className="mb-3 text-xs tracking-[0.3em] text-brass uppercase">{t('hero_eyebrow')}</p>
-                <h1 className="font-serif text-4xl">{t('hero_title')}</h1>
-                <p className="mx-auto mt-4 max-w-md text-ink-soft">{t('hero_subtitle')}</p>
-            </div>
+            {/* Hero */}
+            <section className="border-b border-line">
+                <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-12 px-6 py-16 lg:grid-cols-2 lg:gap-16 lg:py-20">
+                    <div>
+                        <p className="mb-4 text-xs tracking-[0.3em] text-brass uppercase">{t('hero_eyebrow')}</p>
+                        <h1 className="font-serif text-4xl leading-tight sm:text-5xl">{t('hero_title')}</h1>
+                        <p className="mt-5 max-w-md text-ink-soft">{t('hero_subtitle')}</p>
+                        <div className="mt-8 flex flex-wrap gap-4">
+                            <a
+                                href="#collection"
+                                className="rounded bg-ink px-6 py-3 text-sm text-parchment transition-colors hover:bg-ink/90"
+                            >
+                                {t('catalog_cta_shop')}
+                            </a>
+                            <Link
+                                to="/about"
+                                className="rounded border border-ink px-6 py-3 text-sm transition-colors hover:bg-parchment-dim"
+                            >
+                                {t('catalog_cta_story')}
+                            </Link>
+                        </div>
+                    </div>
+                    <div className="mx-auto w-full max-w-sm lg:max-w-none">
+                        <DesignArt
+                            motif="star-of-david"
+                            label={t('catalog_hero_motif_label')}
+                            className="aspect-square rounded-lg"
+                        />
+                    </div>
+                </div>
+            </section>
 
-            <div className="mx-auto max-w-6xl px-6 py-14">
+            {/* Trust strip */}
+            <section className="border-b border-line bg-parchment-dim/50">
+                <div className="mx-auto grid max-w-6xl grid-cols-1 gap-10 px-6 py-12 sm:grid-cols-2 lg:grid-cols-4">
+                    {trustItems.map((item) => (
+                        <div key={item.key} className="text-center sm:text-left">
+                            <span aria-hidden="true" className="mb-2 inline-block text-brass">
+                                ✦
+                            </span>
+                            <h3 className="font-serif text-base">{t(item.titleKey)}</h3>
+                            <p className="mt-1 text-sm text-ink-soft">{t(item.descKey)}</p>
+                        </div>
+                    ))}
+                </div>
+            </section>
+
+            <div id="collection" className="mx-auto max-w-6xl px-6 py-14">
+                <div className="mb-10 text-center">
+                    <h2 className="font-serif text-2xl">{t('catalog_collection_heading')}</h2>
+                    <p className="mt-2 text-sm text-ink-soft">{t('catalog_collection_subheading')}</p>
+                </div>
+
                 <div className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex-1">
                         <label htmlFor="catalog-search" className="sr-only">
@@ -148,6 +201,20 @@ export default function Catalog() {
                     </div>
                 )}
             </div>
+
+            {/* Brand story band */}
+            <section className="bg-ink text-parchment">
+                <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-10 px-6 py-16 lg:grid-cols-[1fr_auto] lg:gap-16">
+                    <div>
+                        <p className="mb-3 text-xs tracking-[0.3em] text-brass-light uppercase">{t('catalog_story_eyebrow')}</p>
+                        <h2 className="font-serif text-3xl">{t('catalog_story_title')}</h2>
+                        <p className="mt-4 max-w-xl text-parchment/80">{t('catalog_story_body')}</p>
+                    </div>
+                    <div className="mx-auto h-32 w-32 shrink-0">
+                        <DesignArt motif="hebrew-script" label={t('catalog_story_motif_label')} tone="dark" />
+                    </div>
+                </div>
+            </section>
         </div>
     );
 }
