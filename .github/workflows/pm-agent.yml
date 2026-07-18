@@ -60,6 +60,10 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # TEMPORARY: every run since 2026-07-17T17:01Z has failed in ~239ms at $0
+          # cost (i.e. before Claude does anything) with no error text visible in the
+          # default (redacted) logs. Un-hiding output to diagnose; remove once fixed.
+          show_full_output: true
           claude_args: >-
             --permission-mode acceptEdits
             --max-turns 30
