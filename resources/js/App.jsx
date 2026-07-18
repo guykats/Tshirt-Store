@@ -13,6 +13,7 @@ import Checkout from './pages/Checkout';
 import Dashboard from './pages/Dashboard';
 import ProjectProgress from './pages/ProjectProgress';
 import VisionerChat from './pages/VisionerChat';
+import StyleGuide from './pages/StyleGuide';
 import Orders from './pages/Orders';
 import About from './pages/About';
 
@@ -81,6 +82,14 @@ export default function App() {
                                     element={
                                         <RequireAdmin>
                                             <VisionerChat />
+                                        </RequireAdmin>
+                                    }
+                                />
+                                <Route
+                                    path="/dashboard/style-guide"
+                                    element={
+                                        <RequireAdmin>
+                                            <StyleGuide />
                                         </RequireAdmin>
                                     }
                                 />
