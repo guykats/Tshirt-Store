@@ -9,4 +9,9 @@ return [
     'invoice_attached' => 'Your invoice is attached to this email.',
     'thanks' => 'Thanks for shopping with us.',
     'regards' => 'The :app_name Team',
+    'reset_password_subject' => 'Reset your password',
+    'reset_password_intro' => 'You are receiving this email because we received a password reset request for your account.',
+    'reset_password_action' => 'Reset Password',
+    'reset_password_expire' => 'This password reset link will expire in :count minutes.',
+    'reset_password_no_action' => 'If you did not request a password reset, no further action is required.',
 ];

@@ -7,6 +7,8 @@ import Catalog from './pages/Catalog';
 import ProductDetail from './pages/ProductDetail';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import Checkout from './pages/Checkout';
 import Dashboard from './pages/Dashboard';
 import ProjectProgress from './pages/ProjectProgress';
@@ -47,6 +49,8 @@ export default function App() {
                                 <Route path="/products/:slug" element={<ProductDetail />} />
                                 <Route path="/login" element={<Login />} />
                                 <Route path="/register" element={<Register />} />
+                                <Route path="/forgot-password" element={<ForgotPassword />} />
+                                <Route path="/reset-password" element={<ResetPassword />} />
                                 <Route path="/checkout/:productId" element={<Checkout />} />
                                 <Route
                                     path="/orders"

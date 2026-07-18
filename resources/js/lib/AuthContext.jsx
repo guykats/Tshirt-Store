@@ -32,8 +32,18 @@ export function AuthProvider({ children }) {
         setUser(null);
     }
 
+    async function requestPasswordReset(email) {
+        await ensureCsrfCookie();
+        await api.post('/api/forgot-password', { email });
+    }
+
+    async function resetPassword(payload) {
+        await ensureCsrfCookie();
+        await api.post('/api/reset-password', payload);
+    }
+
     return (
-        <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+        <AuthContext.Provider value={{ user, loading, login, register, logout, requestPasswordReset, resetPassword }}>
             {children}
         </AuthContext.Provider>
     );

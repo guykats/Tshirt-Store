@@ -9,4 +9,9 @@ return [
     'invoice_attached' => 'החשבונית שלך מצורפת למייל זה.',
     'thanks' => 'תודה שקנית אצלנו.',
     'regards' => 'צוות :app_name',
+    'reset_password_subject' => 'איפוס הסיסמה שלך',
+    'reset_password_intro' => 'קיבלת מייל זה מכיוון שביקשנו עבורך איפוס סיסמה עבור החשבון שלך.',
+    'reset_password_action' => 'איפוס סיסמה',
+    'reset_password_expire' => 'קישור איפוס הסיסמה הזה יפוג בעוד :count דקות.',
+    'reset_password_no_action' => 'אם לא ביקשת לאפס את הסיסמה, אין צורך לבצע פעולה נוספת.',
 ];

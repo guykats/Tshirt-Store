@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import useDocumentMeta from '../hooks/useDocumentMeta';
 
@@ -65,6 +65,9 @@ export default function Login() {
                     {t('login_button')}
                 </button>
             </form>
+            <p className="mt-4 text-sm">
+                <Link to="/forgot-password" className="underline">{t('login_forgot_password')}</Link>
+            </p>
         </div>
     );
 }
