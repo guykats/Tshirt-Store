@@ -59,7 +59,12 @@ jobs:
       - name: Run PM Agent
         uses: anthropics/claude-code-action@v1
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Uses the owner's Claude subscription (via `claude setup-token`) instead of
+          # metered API billing. github_token must be passed explicitly alongside
+          # claude_code_oauth_token, or the action falls back to GitHub App auth and
+          # fails - see https://github.com/anthropics/claude-code-action/issues/676.
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           claude_args: >-
             --permission-mode acceptEdits
             --max-turns 30
