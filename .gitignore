@@ -1,4 +1,5 @@
 *.log
+/tshirt_store
 .DS_Store
 .env
 .env.backup
