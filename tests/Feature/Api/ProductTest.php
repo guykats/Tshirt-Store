@@ -105,4 +105,67 @@ class ProductTest extends TestCase
         $page2 = $this->getJson('/api/products?page=2');
         $page2->assertOk()->assertJsonCount(5, 'data')->assertJsonPath('meta.current_page', 2);
     }
+
+    public function test_search_matches_products_by_name_case_insensitively(): void
+    {
+        $this->makeProduct(['name' => 'Star of David Tee']);
+        $this->makeProduct(['name' => 'Menorah Hoodie']);
+
+        $response = $this->getJson('/api/products?search=star');
+
+        $response->assertOk();
+        $names = collect($response->json('data'))->pluck('name');
+        $this->assertTrue($names->contains('Star of David Tee'));
+        $this->assertFalse($names->contains('Menorah Hoodie'));
+    }
+
+    public function test_search_matches_products_by_description(): void
+    {
+        $this->makeProduct(['name' => 'Chai Tee', 'description' => 'A minimalist chai symbol design.']);
+        $this->makeProduct(['name' => 'Hamsa Tee', 'description' => 'A protective hand motif.']);
+
+        $response = $this->getJson('/api/products?search=minimalist');
+
+        $response->assertOk();
+        $names = collect($response->json('data'))->pluck('name');
+        $this->assertTrue($names->contains('Chai Tee'));
+        $this->assertFalse($names->contains('Hamsa Tee'));
+    }
+
+    public function test_search_with_no_matches_returns_an_empty_result_set(): void
+    {
+        $this->makeProduct(['name' => 'Star of David Tee']);
+
+        $response = $this->getJson('/api/products?search=nonexistent-search-term');
+
+        $response->assertOk()
+            ->assertJsonCount(0, 'data')
+            ->assertJsonPath('meta.total', 0);
+    }
+
+    public function test_sort_by_price_ascending_reorders_results(): void
+    {
+        $this->makeProduct(['name' => 'Expensive Tee', 'base_price' => 90.00]);
+        $this->makeProduct(['name' => 'Cheap Tee', 'base_price' => 10.00]);
+        $this->makeProduct(['name' => 'Mid Tee', 'base_price' => 50.00]);
+
+        $response = $this->getJson('/api/products?sort=price_asc');
+
+        $response->assertOk();
+        $names = collect($response->json('data'))->pluck('name')->values()->all();
+        $this->assertSame(['Cheap Tee', 'Mid Tee', 'Expensive Tee'], $names);
+    }
+
+    public function test_sort_by_price_descending_reorders_results(): void
+    {
+        $this->makeProduct(['name' => 'Expensive Tee', 'base_price' => 90.00]);
+        $this->makeProduct(['name' => 'Cheap Tee', 'base_price' => 10.00]);
+        $this->makeProduct(['name' => 'Mid Tee', 'base_price' => 50.00]);
+
+        $response = $this->getJson('/api/products?sort=price_desc');
+
+        $response->assertOk();
+        $names = collect($response->json('data'))->pluck('name')->values()->all();
+        $this->assertSame(['Expensive Tee', 'Mid Tee', 'Cheap Tee'], $names);
+    }
 }
