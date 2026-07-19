@@ -165,9 +165,14 @@ const REGISTRY = {
     'hebrew-script': HebrewScript,
 };
 
-export default function DesignArt({ motif, className = '', label, tone = 'light' }) {
+export default function DesignArt({ motif, className = '', label, tone = 'light', background = true }) {
     const Art = REGISTRY[motif] || REGISTRY['star-of-david'];
     const isDark = tone === 'dark';
+    // `background={false}` drops the parchment/transparent fill this component normally
+    // paints behind the mark, for callers (GarmentMockup.jsx) that composite the same
+    // mark on top of their own surface (printed on fabric) and would otherwise get a
+    // visible rectangle behind the "print."
+    const bgClass = !background ? 'bg-transparent' : isDark ? 'bg-transparent' : 'bg-parchment-dim';
 
     // Pass `label` when this is the primary visual for what it depicts (e.g. the
     // product detail hero image) so screen readers get a real description. Omit it
@@ -180,7 +185,7 @@ export default function DesignArt({ motif, className = '', label, tone = 'light'
     // identical line-art renders in a light stroke instead of inventing new artwork.
     return (
         <div
-            className={`flex items-center justify-center ${isDark ? 'bg-transparent' : 'bg-parchment-dim'} ${className}`}
+            className={`flex items-center justify-center ${bgClass} ${className}`}
             style={
                 isDark
                     ? {
