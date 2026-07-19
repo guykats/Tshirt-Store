@@ -64,4 +64,16 @@ class Order extends Model
     {
         return $this->hasMany(OrderItem::class);
     }
+
+    /**
+     * Whether the order's owner can still self-service cancel it: only while
+     * it's in a pre-fulfillment status and payment hasn't already been
+     * captured. Once it's processing/shipped/delivered (or payment has been
+     * captured), cancellation has to go through support instead.
+     */
+    public function isCancellable(): bool
+    {
+        return in_array($this->status, ['pending_approval', 'approved'], true)
+            && $this->payment_status !== 'paid';
+    }
 }

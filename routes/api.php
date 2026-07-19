@@ -60,6 +60,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/orders', [OrderController::class, 'index']);
     Route::get('/orders/{order}', [OrderController::class, 'show']);
     Route::post('/orders/{order}/approve', [OrderController::class, 'approve']);
+    Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel']);
     Route::get('/orders/{order}/invoice', [OrderController::class, 'invoice']);
 
     Route::get('/products/{product}/reviews/eligibility', [ReviewController::class, 'eligibility']);

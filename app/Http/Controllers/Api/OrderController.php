@@ -58,6 +58,27 @@ class OrderController extends Controller
         return new OrderResource($order->fresh(['user', 'items.productVariant.product']));
     }
 
+    public function cancel(Request $request, Order $order)
+    {
+        $this->authorize('cancel', $order);
+
+        if (! $order->isCancellable()) {
+            return response()->json(['message' => 'This order can no longer be cancelled.'], 422);
+        }
+
+        $order->update(['status' => 'cancelled']);
+
+        SystemEvent::log(
+            'order.cancelled',
+            "Order {$order->order_number} cancelled by {$request->user()->name}.",
+            $request->user()->name,
+            'user',
+            ['order_id' => $order->id],
+        );
+
+        return new OrderResource($order->fresh(['user', 'items.productVariant.product']));
+    }
+
     public function invoice(Request $request, Order $order, InvoiceService $invoices)
     {
         $this->authorize('view', $order);
