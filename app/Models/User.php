@@ -49,6 +49,14 @@ class User extends Authenticatable
     }
 
     /**
+     * @return HasMany<WishlistItem, $this>
+     */
+    public function wishlistItems(): HasMany
+    {
+        return $this->hasMany(WishlistItem::class);
+    }
+
+    /**
      * @return HasMany<Design, $this>
      */
     public function approvedDesigns(): HasMany

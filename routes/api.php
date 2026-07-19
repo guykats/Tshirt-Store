@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\SiteSettingController;
 use App\Http\Controllers\Api\SystemEventController;
 use App\Http\Controllers\Api\TestimonialController;
 use App\Http\Controllers\Api\VisionerChatController;
+use App\Http\Controllers\Api\WishlistController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:register');
@@ -62,6 +63,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/products/{product}/reviews/eligibility', [ReviewController::class, 'eligibility']);
     Route::post('/products/{product}/reviews', [ReviewController::class, 'store']);
+
+    Route::get('/wishlist', [WishlistController::class, 'index']);
+    Route::post('/products/{product}/wishlist', [WishlistController::class, 'store']);
+    Route::delete('/products/{product}/wishlist', [WishlistController::class, 'destroy']);
 
     Route::get('/designs', [DesignController::class, 'index']);
     Route::post('/designs/{design}/approve', [DesignController::class, 'approve']);

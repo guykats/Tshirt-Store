@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { PayPalScriptProvider } from '@paypal/react-paypal-js';
 import { AuthProvider, useAuth } from './lib/AuthContext';
 import { SiteSettingsProvider } from './lib/SiteSettingsContext';
+import { WishlistProvider } from './lib/WishlistContext';
 import Layout from './Layout';
 import ErrorBoundary from './components/ErrorBoundary';
 import RouteLoading from './components/RouteLoading';
@@ -26,6 +27,7 @@ const VisionerChat = lazy(() => import('./pages/VisionerChat'));
 const StyleGuide = lazy(() => import('./pages/StyleGuide'));
 const DesignSettings = lazy(() => import('./pages/DesignSettings'));
 const Orders = lazy(() => import('./pages/Orders'));
+const Wishlist = lazy(() => import('./pages/Wishlist'));
 const About = lazy(() => import('./pages/About'));
 
 function RequireAdmin({ children }) {
@@ -65,72 +67,82 @@ export default function App() {
     return (
         <AuthProvider>
             <SiteSettingsProvider>
-                <BrowserRouter>
-                    <Layout>
-                        <ErrorBoundary>
-                            <Suspense fallback={<RouteLoading />}>
-                                <Routes>
-                                    <Route path="/" element={<Catalog />} />
-                                    <Route path="/about" element={<About />} />
-                                    <Route path="/products/:slug" element={<ProductDetail />} />
-                                    <Route path="/login" element={<Login />} />
-                                    <Route path="/register" element={<Register />} />
-                                    <Route path="/forgot-password" element={<ForgotPassword />} />
-                                    <Route path="/reset-password" element={<ResetPassword />} />
-                                    <Route path="/checkout/:productId" element={<CheckoutWithPayPal />} />
-                                    <Route
-                                        path="/orders"
-                                        element={
-                                            <RequireAuth>
-                                                <Orders />
-                                            </RequireAuth>
-                                        }
-                                    />
-                                    <Route
-                                        path="/dashboard"
-                                        element={
-                                            <RequireAdmin>
-                                                <Dashboard />
-                                            </RequireAdmin>
-                                        }
-                                    />
-                                    <Route
-                                        path="/dashboard/progress"
-                                        element={
-                                            <RequireAdmin>
-                                                <ProjectProgress />
-                                            </RequireAdmin>
-                                        }
-                                    />
-                                    <Route
-                                        path="/dashboard/chat"
-                                        element={
-                                            <RequireAdmin>
-                                                <VisionerChat />
-                                            </RequireAdmin>
-                                        }
-                                    />
-                                    <Route
-                                        path="/dashboard/style-guide"
-                                        element={
-                                            <RequireAdmin>
-                                                <StyleGuide />
-                                            </RequireAdmin>
-                                        }
-                                    />
-                                    <Route
-                                        path="/dashboard/design"
-                                        element={
-                                            <RequireAdmin>
-                                                <DesignSettings />
-                                            </RequireAdmin>
-                                        }
-                                    />
-                                </Routes>
-                            </Suspense>
-                        </ErrorBoundary>
-                    </Layout>
-                </BrowserRouter>
+                <WishlistProvider>
+                    <BrowserRouter>
+                        <Layout>
+                            <ErrorBoundary>
+                                <Suspense fallback={<RouteLoading />}>
+                                    <Routes>
+                                        <Route path="/" element={<Catalog />} />
+                                        <Route path="/about" element={<About />} />
+                                        <Route path="/products/:slug" element={<ProductDetail />} />
+                                        <Route path="/login" element={<Login />} />
+                                        <Route path="/register" element={<Register />} />
+                                        <Route path="/forgot-password" element={<ForgotPassword />} />
+                                        <Route path="/reset-password" element={<ResetPassword />} />
+                                        <Route path="/checkout/:productId" element={<CheckoutWithPayPal />} />
+                                        <Route
+                                            path="/orders"
+                                            element={
+                                                <RequireAuth>
+                                                    <Orders />
+                                                </RequireAuth>
+                                            }
+                                        />
+                                        <Route
+                                            path="/wishlist"
+                                            element={
+                                                <RequireAuth>
+                                                    <Wishlist />
+                                                </RequireAuth>
+                                            }
+                                        />
+                                        <Route
+                                            path="/dashboard"
+                                            element={
+                                                <RequireAdmin>
+                                                    <Dashboard />
+                                                </RequireAdmin>
+                                            }
+                                        />
+                                        <Route
+                                            path="/dashboard/progress"
+                                            element={
+                                                <RequireAdmin>
+                                                    <ProjectProgress />
+                                                </RequireAdmin>
+                                            }
+                                        />
+                                        <Route
+                                            path="/dashboard/chat"
+                                            element={
+                                                <RequireAdmin>
+                                                    <VisionerChat />
+                                                </RequireAdmin>
+                                            }
+                                        />
+                                        <Route
+                                            path="/dashboard/style-guide"
+                                            element={
+                                                <RequireAdmin>
+                                                    <StyleGuide />
+                                                </RequireAdmin>
+                                            }
+                                        />
+                                        <Route
+                                            path="/dashboard/design"
+                                            element={
+                                                <RequireAdmin>
+                                                    <DesignSettings />
+                                                </RequireAdmin>
+                                            }
+                                        />
+                                    </Routes>
+                                </Suspense>
+                            </ErrorBoundary>
+                        </Layout>
+                    </BrowserRouter>
+                </WishlistProvider>
             </SiteSettingsProvider>
         </AuthProvider>
     );

@@ -4,6 +4,7 @@ import { Link, useParams } from 'react-router-dom';
 import api from '../lib/api';
 import DesignArt from '../components/DesignArt';
 import ProductReviews from '../components/ProductReviews';
+import WishlistButton from '../components/WishlistButton';
 import { ProductDetailSkeleton } from '../components/Skeleton';
 import useDocumentMeta from '../hooks/useDocumentMeta';
 import useJsonLd from '../hooks/useJsonLd';
@@ -94,7 +95,10 @@ export default function ProductDetail() {
             </Link>
 
             <div className="grid grid-cols-1 gap-10 md:grid-cols-2">
-                <DesignArt motif={product.design?.mockup_url} className="aspect-square rounded" label={product.name} />
+                <div className="relative">
+                    <DesignArt motif={product.design?.mockup_url} className="aspect-square rounded" label={product.name} />
+                    <WishlistButton product={product} className="absolute top-3 right-3" />
+                </div>
 
                 <div>
                     <h1 className="font-serif text-3xl">{product.name}</h1>

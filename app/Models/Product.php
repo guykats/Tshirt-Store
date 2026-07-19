@@ -45,4 +45,12 @@ class Product extends Model
     {
         return $this->hasMany(Review::class);
     }
+
+    /**
+     * @return HasMany<WishlistItem, $this>
+     */
+    public function wishlistItems(): HasMany
+    {
+        return $this->hasMany(WishlistItem::class);
+    }
 }

@@ -41,7 +41,10 @@ export default function Layout({ children }) {
                     <Link to="/" className="hover:text-ink">{t('nav_catalog')}</Link>
                     <Link to="/about" className="hover:text-ink">{t('nav_about')}</Link>
                     {user && user.role !== 'admin' && (
-                        <Link to="/orders" className="hover:text-ink">{t('nav_orders')}</Link>
+                        <>
+                            <Link to="/wishlist" className="hover:text-ink">{t('nav_wishlist')}</Link>
+                            <Link to="/orders" className="hover:text-ink">{t('nav_orders')}</Link>
+                        </>
                     )}
                     {user?.role === 'admin' && (
                         <>
