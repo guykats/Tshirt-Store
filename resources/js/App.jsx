@@ -29,6 +29,7 @@ const DesignSettings = lazy(() => import('./pages/DesignSettings'));
 const Orders = lazy(() => import('./pages/Orders'));
 const Wishlist = lazy(() => import('./pages/Wishlist'));
 const About = lazy(() => import('./pages/About'));
+const NotFound = lazy(() => import('./pages/NotFound'));
 
 function RequireAdmin({ children }) {
     const { user, loading } = useAuth();
@@ -137,6 +138,7 @@ export default function App() {
                                                 </RequireAdmin>
                                             }
                                         />
+                                        <Route path="*" element={<NotFound />} />
                                     </Routes>
                                 </Suspense>
                             </ErrorBoundary>
