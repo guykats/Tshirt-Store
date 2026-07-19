@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\ActivityController;
 use App\Http\Controllers\Api\Admin\ProductController as AdminProductController;
+use App\Http\Controllers\Api\Admin\ProductImageController as AdminProductImageController;
 use App\Http\Controllers\Api\Admin\ProductVariantController as AdminProductVariantController;
 use App\Http\Controllers\Api\AgentStatusController;
 use App\Http\Controllers\Api\AuthController;
@@ -127,6 +128,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/products/{product}/variants', [AdminProductVariantController::class, 'store']);
         Route::put('/products/{product}/variants/{variant}', [AdminProductVariantController::class, 'update']);
         Route::delete('/products/{product}/variants/{variant}', [AdminProductVariantController::class, 'destroy']);
+
+        // Static "reorder" path before {image} so it's never matched as a route model
+        // binding id, same pattern as GET /testimonials/manage above.
+        Route::patch('/products/{product}/images/reorder', [AdminProductImageController::class, 'reorder']);
+        Route::post('/products/{product}/images', [AdminProductImageController::class, 'store']);
+        Route::put('/products/{product}/images/{image}', [AdminProductImageController::class, 'update']);
+        Route::delete('/products/{product}/images/{image}', [AdminProductImageController::class, 'destroy']);
     });
 
     Route::get('/epics', [EpicController::class, 'index']);

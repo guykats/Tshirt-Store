@@ -21,7 +21,7 @@ class ProductController extends Controller
         $payload = CatalogCache::remember($cacheKey, function () use ($search, $sort) {
             $query = Product::query()
                 ->where('status', 'active')
-                ->with(['design', 'variants']);
+                ->with(['design', 'variants', 'images']);
 
             if ($search !== '') {
                 $like = '%'.str_replace(['%', '_'], ['\\%', '\\_'], $search).'%';
@@ -52,7 +52,7 @@ class ProductController extends Controller
         abort_unless($product->status === 'active', 404);
 
         $payload = CatalogCache::remember("show:{$product->id}", function () use ($product) {
-            return (new ProductResource($product->load(['design', 'variants'])))
+            return (new ProductResource($product->load(['design', 'variants', 'images'])))
                 ->response()
                 ->getData(true);
         });

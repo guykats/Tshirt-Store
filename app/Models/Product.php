@@ -47,6 +47,18 @@ class Product extends Model
     }
 
     /**
+     * Ordered gallery images — `position` first (admin-controlled order), then `id` as a
+     * stable, portable (no FIELD()/no MySQL-only tie-break) fallback for images created
+     * with the same position.
+     *
+     * @return HasMany<ProductImage, $this>
+     */
+    public function images(): HasMany
+    {
+        return $this->hasMany(ProductImage::class)->orderBy('position')->orderBy('id');
+    }
+
+    /**
      * @return HasMany<Review, $this>
      */
     public function reviews(): HasMany

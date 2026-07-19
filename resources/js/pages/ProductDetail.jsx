@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
 import api from '../lib/api';
 import ColorSwatch from '../components/ColorSwatch';
-import GarmentMockup from '../components/GarmentMockup';
+import ProductGallery from '../components/ProductGallery';
 import ProductReviews from '../components/ProductReviews';
 import WishlistButton from '../components/WishlistButton';
 import { ProductDetailSkeleton } from '../components/Skeleton';
@@ -97,13 +97,7 @@ export default function ProductDetail() {
 
             <div className="grid grid-cols-1 gap-10 md:grid-cols-2">
                 <div className="relative">
-                    <GarmentMockup
-                        motif={product.design?.mockup_url}
-                        product={product}
-                        color={color}
-                        className="aspect-square rounded"
-                        label={t('product_mockup_label', { name: product.name, color })}
-                    />
+                    <ProductGallery product={product} images={product.images} color={color} />
                     <WishlistButton product={product} className="absolute top-3 right-3" />
                 </div>
 

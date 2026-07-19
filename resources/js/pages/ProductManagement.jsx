@@ -26,6 +26,12 @@ const EMPTY_VARIANT_FORM = {
     price_override: '',
 };
 
+const EMPTY_IMAGE_FORM = {
+    url: '',
+    alt_text: '',
+    color: '',
+};
+
 export default function ProductManagement() {
     const { t } = useTranslation();
 
@@ -47,6 +53,13 @@ export default function ProductManagement() {
     const [variantSaving, setVariantSaving] = useState(false);
     const [variantStatus, setVariantStatus] = useState(null); // 'saved' | 'error' | null
     const [confirmDeleteVariantId, setConfirmDeleteVariantId] = useState(null);
+
+    const [expandedImagesProductId, setExpandedImagesProductId] = useState(null);
+    const [editingImageId, setEditingImageId] = useState(null); // id | 'new' | null
+    const [imageForm, setImageForm] = useState(EMPTY_IMAGE_FORM);
+    const [imageSaving, setImageSaving] = useState(false);
+    const [imageStatus, setImageStatus] = useState(null); // 'saved' | 'error' | null
+    const [confirmDeleteImageId, setConfirmDeleteImageId] = useState(null);
 
     useEffect(() => {
         loadProducts();
@@ -204,6 +217,97 @@ export default function ProductManagement() {
         }
     }
 
+    function toggleImages(product) {
+        const next = expandedImagesProductId === product.id ? null : product.id;
+        setExpandedImagesProductId(next);
+        setEditingImageId(null);
+        setImageStatus(null);
+        setImageForm(EMPTY_IMAGE_FORM);
+    }
+
+    function startNewImage() {
+        setEditingImageId('new');
+        setImageStatus(null);
+        setImageForm(EMPTY_IMAGE_FORM);
+    }
+
+    function startEditImage(image) {
+        setEditingImageId(image.id);
+        setImageStatus(null);
+        setImageForm({
+            url: image.url,
+            alt_text: image.alt_text || '',
+            color: image.color || '',
+        });
+    }
+
+    function cancelImageEdit() {
+        setEditingImageId(null);
+        setImageStatus(null);
+        setImageForm(EMPTY_IMAGE_FORM);
+    }
+
+    function updateImageField(field, value) {
+        setImageForm((prev) => ({ ...prev, [field]: value }));
+    }
+
+    async function handleImageSubmit(e, product) {
+        e.preventDefault();
+        setImageStatus(null);
+        setImageSaving(true);
+        try {
+            const payload = {
+                url: imageForm.url,
+                alt_text: imageForm.alt_text || null,
+                color: imageForm.color || null,
+            };
+            if (editingImageId === 'new') {
+                await api.post(`/api/admin/products/${product.slug}/images`, payload);
+            } else {
+                await api.put(`/api/admin/products/${product.slug}/images/${editingImageId}`, payload);
+            }
+            await loadProducts();
+            setEditingImageId(null);
+            setImageForm(EMPTY_IMAGE_FORM);
+            setImageStatus('saved');
+        } catch {
+            setImageStatus('error');
+        } finally {
+            setImageSaving(false);
+        }
+    }
+
+    async function handleImageDelete(product, image) {
+        setImageStatus(null);
+        try {
+            await api.delete(`/api/admin/products/${product.slug}/images/${image.id}`);
+            setConfirmDeleteImageId(null);
+            await loadProducts();
+        } catch {
+            setConfirmDeleteImageId(null);
+            setImageStatus('error');
+        }
+    }
+
+    async function handleImageMove(product, image, direction) {
+        const ordered = [...(product.images || [])].sort((a, b) => a.position - b.position);
+        const index = ordered.findIndex((img) => img.id === image.id);
+        const swapWith = direction === 'up' ? index - 1 : index + 1;
+        if (swapWith < 0 || swapWith >= ordered.length) return;
+
+        [ordered[index], ordered[swapWith]] = [ordered[swapWith], ordered[index]];
+
+        setImageStatus(null);
+        try {
+            await api.patch(`/api/admin/products/${product.slug}/images/reorder`, {
+                image_ids: ordered.map((img) => img.id),
+            });
+            await loadProducts();
+        } catch {
+            setImageStatus('error');
+        }
+    }
+
     return (
         <div className="mx-auto max-w-4xl px-6 py-10">
             <h1 className="mb-2 font-serif text-2xl">{t('products_management_title')}</h1>
@@ -247,6 +351,11 @@ export default function ProductManagement() {
                                         {expandedProductId === product.id
                                             ? t('products_management_variants_hide')
                                             : t('products_management_variants_show', { count: product.variants?.length || 0 })}
+                                    </button>
+                                    <button type="button" onClick={() => toggleImages(product)} className="text-sm underline">
+                                        {expandedImagesProductId === product.id
+                                            ? t('products_management_images_hide')
+                                            : t('products_management_images_show', { count: product.images?.length || 0 })}
                                     </button>
                                     <button type="button" onClick={() => startEditProduct(product)} className="text-sm underline">
                                         {t('products_management_edit')}
@@ -457,6 +566,173 @@ export default function ProductManagement() {
                                                 </button>
                                                 <button type="button" onClick={cancelVariantEdit} className="text-sm underline">
                                                     {t('products_management_variant_cancel')}
+                                                </button>
+                                            </div>
+                                        </form>
+                                    )}
+                                </div>
+                            )}
+
+                            {expandedImagesProductId === product.id && (
+                                <div className="mt-4 border-t border-line pt-4">
+                                    {imageStatus === 'saved' && (
+                                        <p role="status" className="mb-3 text-sm text-green-700">{t('products_management_image_saved')}</p>
+                                    )}
+                                    {imageStatus === 'error' && (
+                                        <p role="alert" className="mb-3 text-sm text-red-700">{t('products_management_image_error')}</p>
+                                    )}
+
+                                    {(product.images || []).length === 0 && (
+                                        <p className="mb-3 text-sm text-ink-soft">{t('products_management_images_empty')}</p>
+                                    )}
+                                    {(product.images || []).length > 0 && (
+                                        <ul className="mb-3 space-y-2">
+                                            {[...product.images]
+                                                .sort((a, b) => a.position - b.position)
+                                                .map((image, index, ordered) => (
+                                                    <li
+                                                        key={image.id}
+                                                        className="flex flex-wrap items-center justify-between gap-3 rounded border border-line p-3"
+                                                    >
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="h-12 w-12 shrink-0">
+                                                                <DesignArt motif={image.url} className="rounded" />
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-sm font-medium">{image.url}</p>
+                                                                <p className="text-xs text-ink-soft">
+                                                                    {image.alt_text || '—'}
+                                                                    {image.color ? ` · ${image.color}` : ''}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center gap-3">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleImageMove(product, image, 'up')}
+                                                                disabled={index === 0}
+                                                                aria-label={t('products_management_image_move_up')}
+                                                                className="text-sm underline disabled:opacity-30"
+                                                            >
+                                                                &uarr;
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleImageMove(product, image, 'down')}
+                                                                disabled={index === ordered.length - 1}
+                                                                aria-label={t('products_management_image_move_down')}
+                                                                className="text-sm underline disabled:opacity-30"
+                                                            >
+                                                                &darr;
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => startEditImage(image)}
+                                                                className="text-sm underline"
+                                                            >
+                                                                {t('products_management_image_edit')}
+                                                            </button>
+                                                            {confirmDeleteImageId === image.id ? (
+                                                                <span className="flex gap-2 text-sm">
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleImageDelete(product, image)}
+                                                                        className="text-red-700 underline"
+                                                                    >
+                                                                        {t('products_management_confirm_delete_yes')}
+                                                                    </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => setConfirmDeleteImageId(null)}
+                                                                        className="underline"
+                                                                    >
+                                                                        {t('products_management_confirm_delete_no')}
+                                                                    </button>
+                                                                </span>
+                                                            ) : (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setConfirmDeleteImageId(image.id)}
+                                                                    className="text-sm text-red-700 underline"
+                                                                >
+                                                                    {t('products_management_image_delete')}
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </li>
+                                                ))}
+                                        </ul>
+                                    )}
+
+                                    {editingImageId === null && (
+                                        <button
+                                            type="button"
+                                            onClick={startNewImage}
+                                            className="rounded border border-ink px-4 py-2 text-sm tracking-wide uppercase hover:bg-parchment-dim"
+                                        >
+                                            {t('products_management_image_add')}
+                                        </button>
+                                    )}
+
+                                    {editingImageId !== null && (
+                                        <form
+                                            onSubmit={(e) => handleImageSubmit(e, product)}
+                                            className="max-w-xl space-y-4 rounded border border-line p-4"
+                                        >
+                                            <h3 className="font-serif text-base">
+                                                {editingImageId === 'new'
+                                                    ? t('products_management_image_new_title')
+                                                    : t('products_management_image_edit')}
+                                            </h3>
+                                            <div>
+                                                <label htmlFor="image-url" className="mb-1 block text-sm">
+                                                    {t('products_management_image_url_label')}
+                                                </label>
+                                                <input
+                                                    id="image-url"
+                                                    type="text"
+                                                    required
+                                                    value={imageForm.url}
+                                                    onChange={(e) => updateImageField('url', e.target.value)}
+                                                    className="w-full rounded border border-line bg-parchment px-3 py-2"
+                                                />
+                                                <p className="mt-1 text-xs text-ink-soft">{t('products_management_image_url_hint')}</p>
+                                            </div>
+                                            <div>
+                                                <label htmlFor="image-alt-text" className="mb-1 block text-sm">
+                                                    {t('products_management_image_alt_label')}
+                                                </label>
+                                                <input
+                                                    id="image-alt-text"
+                                                    type="text"
+                                                    value={imageForm.alt_text}
+                                                    onChange={(e) => updateImageField('alt_text', e.target.value)}
+                                                    className="w-full rounded border border-line bg-parchment px-3 py-2"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label htmlFor="image-color" className="mb-1 block text-sm">
+                                                    {t('products_management_image_color_label')}
+                                                </label>
+                                                <input
+                                                    id="image-color"
+                                                    type="text"
+                                                    value={imageForm.color}
+                                                    onChange={(e) => updateImageField('color', e.target.value)}
+                                                    className="w-full rounded border border-line bg-parchment px-3 py-2"
+                                                />
+                                                <p className="mt-1 text-xs text-ink-soft">{t('products_management_image_color_hint')}</p>
+                                            </div>
+                                            <div className="flex gap-4">
+                                                <button
+                                                    type="submit"
+                                                    disabled={imageSaving}
+                                                    className="rounded bg-ink px-5 py-2.5 text-sm tracking-wide text-parchment uppercase hover:bg-ink-soft disabled:opacity-50"
+                                                >
+                                                    {t('products_management_image_save')}
+                                                </button>
+                                                <button type="button" onClick={cancelImageEdit} className="text-sm underline">
+                                                    {t('products_management_image_cancel')}
                                                 </button>
                                             </div>
                                         </form>

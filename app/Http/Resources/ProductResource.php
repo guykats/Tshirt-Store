@@ -20,6 +20,7 @@ class ProductResource extends JsonResource
             'status' => $this->status,
             'design' => new DesignResource($this->whenLoaded('design')),
             'variants' => ProductVariantResource::collection($this->whenLoaded('variants')),
+            'images' => ProductImageResource::collection($this->whenLoaded('images')),
         ];
     }
 }

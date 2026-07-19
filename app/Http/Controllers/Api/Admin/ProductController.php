@@ -23,7 +23,7 @@ class ProductController extends Controller
         abort_unless($request->user()->isAdmin(), 403);
 
         $products = Product::query()
-            ->with(['design', 'variants'])
+            ->with(['design', 'variants', 'images'])
             ->latest()
             ->paginate(50);
 
@@ -46,7 +46,7 @@ class ProductController extends Controller
             'user',
         );
 
-        return (new ProductResource($product->load(['design', 'variants'])))
+        return (new ProductResource($product->load(['design', 'variants', 'images'])))
             ->response()
             ->setStatusCode(201);
     }
@@ -66,7 +66,7 @@ class ProductController extends Controller
             'user',
         );
 
-        return new ProductResource($product->fresh(['design', 'variants']));
+        return new ProductResource($product->fresh(['design', 'variants', 'images']));
     }
 
     /**
