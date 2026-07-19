@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\SecurityHeaders;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -13,6 +14,13 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
+    ->withSchedule(function (Schedule $schedule): void {
+        // First scheduled job in the project. Laravel's scheduler only decides
+        // *when* things run; something still has to invoke `schedule:run` every
+        // minute for that to matter in production — deploy.yml wires that up via
+        // an idempotent crontab entry on the Hostinger host.
+        $schedule->command('app:backup-database')->dailyAt('03:00');
+    })
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->statefulApi();
 
