@@ -18,6 +18,7 @@ export default function Checkout() {
     const [product, setProduct] = useState(null);
     const [variantId, setVariantId] = useState('');
     const [quantity, setQuantity] = useState(1);
+    const [email, setEmail] = useState('');
     const [address, setAddress] = useState({
         full_name: '', line1: '', line2: '', city: '', state: '', postal_code: '', country: 'US', phone: '',
     });
@@ -39,18 +40,7 @@ export default function Checkout() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [productId]);
 
-    if (!authLoading && !user) {
-        return (
-            <div className="mx-auto max-w-md px-6 py-16 text-center">
-                <p className="mb-4 text-ink-soft">{t('checkout_login_required')}</p>
-                <button onClick={() => navigate('/login')} className="rounded bg-ink px-5 py-2.5 text-sm text-parchment">
-                    {t('nav_login')}
-                </button>
-            </div>
-        );
-    }
-
-    if (!product) return null;
+    if (authLoading || !product) return null;
 
     async function createOrder() {
         if (submitting) return;
@@ -58,6 +48,7 @@ export default function Checkout() {
         setError(null);
         try {
             const res = await api.post('/api/checkout', {
+                ...(user ? {} : { email }),
                 product_variant_id: Number(variantId),
                 quantity: Number(quantity),
                 shipping_address: address,
@@ -106,6 +97,27 @@ export default function Checkout() {
 
             {status === 'form' && (
                 <div className="space-y-4">
+                    {!user && (
+                        <p className="rounded border border-line bg-parchment-dim p-3 text-sm text-ink-soft">
+                            {t('checkout_guest_notice')}{' '}
+                            <button type="button" onClick={() => navigate('/login')} className="underline hover:text-ink">
+                                {t('nav_login')}
+                            </button>
+                        </p>
+                    )}
+                    {!user && (
+                        <div>
+                            <label htmlFor="checkout-email" className="mb-1 block text-sm">{t('email')}</label>
+                            <input
+                                id="checkout-email"
+                                type="email"
+                                required
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                className="w-full rounded border border-line bg-parchment px-3 py-2"
+                            />
+                        </div>
+                    )}
                     <div>
                         <label htmlFor="checkout-variant" className="mb-1 block text-sm">{t('checkout_variant')}</label>
                         <select

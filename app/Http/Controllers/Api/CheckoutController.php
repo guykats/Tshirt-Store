@@ -9,8 +9,10 @@ use App\Mail\OrderConfirmationMail;
 use App\Models\Order;
 use App\Models\ProductVariant;
 use App\Models\SystemEvent;
+use App\Models\User;
 use App\Services\PayPalClient;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -23,10 +25,22 @@ class CheckoutController extends Controller
 
     /**
      * Create a local order plus a matching PayPal order for the buyer to approve.
+     *
+     * Reachable without an authenticated session (see routes/api.php) so
+     * shoppers aren't forced to register before buying. A guest only needs
+     * to provide an email; behind the scenes we create a normal User row
+     * for them (random, never-shared password, `is_guest` flag set) and
+     * log them into it for the rest of the request/session, so every
+     * existing user_id-based check (OrderPolicy, OrderController,
+     * InvoiceService, OrderConfirmationMail) keeps working completely
+     * unmodified. If the email already belongs to an existing account we
+     * refuse to silently attach the order to it — that would let anyone
+     * checkout as a stranger's real account and, since we log the buyer
+     * in, would hand them a session for it.
      */
     public function store(Request $request)
     {
-        $data = $request->validate([
+        $rules = [
             'product_variant_id' => ['required', 'exists:product_variants,id'],
             'quantity' => ['required', 'integer', 'min:1', 'max:20'],
             'shipping_address' => ['required', 'array'],
@@ -38,7 +52,33 @@ class CheckoutController extends Controller
             'shipping_address.postal_code' => ['required', 'string', 'max:20'],
             'shipping_address.country' => ['nullable', 'string', 'size:2'],
             'shipping_address.phone' => ['nullable', 'string', 'max:50'],
-        ]);
+        ];
+
+        if (! $request->user()) {
+            $rules['email'] = ['required', 'email', 'max:255'];
+        }
+
+        $data = $request->validate($rules);
+
+        $buyer = $request->user();
+
+        if (! $buyer) {
+            if (User::where('email', $data['email'])->exists()) {
+                return response()->json([
+                    'message' => 'An account already exists for this email. Please log in to continue checkout.',
+                ], 409);
+            }
+
+            $buyer = User::create([
+                'name' => $data['shipping_address']['full_name'],
+                'email' => $data['email'],
+                'password' => Str::random(40),
+                'is_guest' => true,
+            ]);
+
+            Auth::login($buyer);
+            $request->session()->regenerate();
+        }
 
         $variant = ProductVariant::with('product')->findOrFail($data['product_variant_id']);
 
@@ -55,7 +95,7 @@ class CheckoutController extends Controller
         $currency = $variant->product->currency;
 
         try {
-            $order = DB::transaction(function () use ($request, $data, $variant, $unitPrice, $subtotal, $currency) {
+            $order = DB::transaction(function () use ($buyer, $data, $variant, $unitPrice, $subtotal, $currency) {
                 $locked = ProductVariant::where('id', $variant->id)->lockForUpdate()->firstOrFail();
 
                 if ($locked->stock_quantity < $data['quantity']) {
@@ -64,12 +104,12 @@ class CheckoutController extends Controller
 
                 $locked->decrement('stock_quantity', $data['quantity']);
 
-                $address = $request->user()->addresses()->create([
+                $address = $buyer->addresses()->create([
                     'type' => 'shipping',
                     ...$data['shipping_address'],
                 ]);
 
-                $order = $request->user()->orders()->create([
+                $order = $buyer->orders()->create([
                     'order_number' => 'ORD-'.now()->format('ymd').'-'.strtoupper(Str::random(6)),
                     'subtotal' => $subtotal,
                     'total_amount' => $subtotal,

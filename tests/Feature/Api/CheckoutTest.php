@@ -50,15 +50,94 @@ class CheckoutTest extends TestCase
         ];
     }
 
-    public function test_guests_cannot_start_checkout(): void
+    public function test_a_guest_can_check_out_without_an_account(): void
     {
         $variant = $this->makeVariant();
 
-        $this->postJson('/api/checkout', [
+        $this->mock(PayPalClient::class, function ($mock) {
+            $mock->shouldReceive('createOrder')->once()->andReturn(['id' => 'PAYPAL-GUEST-1']);
+        });
+
+        $response = $this->postJson('/api/checkout', [
+            'email' => 'guest@example.com',
             'product_variant_id' => $variant->id,
             'quantity' => 1,
             'shipping_address' => $this->validAddress(),
-        ])->assertUnauthorized();
+        ]);
+
+        $response->assertCreated()->assertJsonPath('paypal_order_id', 'PAYPAL-GUEST-1');
+
+        $guest = User::where('email', 'guest@example.com')->firstOrFail();
+        $this->assertTrue($guest->isGuest());
+        $this->assertDatabaseHas('orders', [
+            'user_id' => $guest->id,
+            'paypal_order_id' => 'PAYPAL-GUEST-1',
+        ]);
+
+        // The controller logs the newly created guest in for the rest of the
+        // browser session (see CheckoutController::store), so the capture
+        // step immediately afterwards doesn't need a separate login.
+        $this->assertAuthenticatedAs($guest);
+    }
+
+    public function test_guest_checkout_requires_an_email(): void
+    {
+        $variant = $this->makeVariant();
+
+        $response = $this->postJson('/api/checkout', [
+            'product_variant_id' => $variant->id,
+            'quantity' => 1,
+            'shipping_address' => $this->validAddress(),
+        ]);
+
+        $response->assertUnprocessable()->assertJsonValidationErrors('email');
+        $this->assertDatabaseCount('orders', 0);
+    }
+
+    public function test_guest_checkout_is_rejected_when_the_email_already_has_an_account(): void
+    {
+        $existing = User::factory()->create(['email' => 'already-registered@example.com']);
+        $variant = $this->makeVariant();
+
+        $response = $this->postJson('/api/checkout', [
+            'email' => 'already-registered@example.com',
+            'product_variant_id' => $variant->id,
+            'quantity' => 1,
+            'shipping_address' => $this->validAddress(),
+        ]);
+
+        $response->assertStatus(409);
+        $this->assertDatabaseCount('orders', 0);
+        $this->assertGuest();
+        $this->assertDatabaseHas('users', ['id' => $existing->id]);
+    }
+
+    public function test_a_guest_cannot_capture_or_view_another_guests_order(): void
+    {
+        $ownerGuest = User::factory()->create(['is_guest' => true]);
+        $otherGuest = User::factory()->create(['is_guest' => true]);
+        $variant = $this->makeVariant();
+
+        $address = $ownerGuest->addresses()->create(array_merge(['type' => 'shipping'], $this->validAddress()));
+
+        $order = $ownerGuest->orders()->create([
+            'order_number' => 'ORD-TEST-GUEST-1',
+            'subtotal' => 30,
+            'total_amount' => 30,
+            'paypal_order_id' => 'PAYPAL-GUEST-OWNER',
+            'shipping_address_id' => $address->id,
+            'billing_address_id' => $address->id,
+        ]);
+        $order->items()->create([
+            'product_variant_id' => $variant->id,
+            'quantity' => 1,
+            'unit_price' => 30,
+            'subtotal' => 30,
+        ]);
+
+        $this->actingAs($otherGuest)->postJson("/api/checkout/{$order->id}/capture")->assertForbidden();
+        $this->actingAs($otherGuest)->getJson("/api/orders/{$order->id}")->assertForbidden();
+        $this->actingAs($otherGuest)->getJson("/api/orders/{$order->id}/invoice")->assertForbidden();
     }
 
     public function test_checkout_requires_a_shipping_address(): void
@@ -229,6 +308,43 @@ class CheckoutTest extends TestCase
             'paypal_transaction_id' => 'CAPTURE-123',
         ]);
         Mail::assertSent(OrderConfirmationMail::class, fn ($mail) => $mail->order->id === $order->id);
+    }
+
+    public function test_a_guest_receives_the_same_order_confirmation_email_on_capture(): void
+    {
+        Mail::fake();
+
+        $guest = User::factory()->create(['email' => 'guest-buyer@example.com', 'is_guest' => true]);
+        $variant = $this->makeVariant();
+        $address = $guest->addresses()->create(array_merge(['type' => 'shipping'], $this->validAddress()));
+
+        $order = $guest->orders()->create([
+            'order_number' => 'ORD-TEST-GUEST-MAIL',
+            'subtotal' => 30,
+            'total_amount' => 30,
+            'paypal_order_id' => 'PAYPAL-GUEST-MAIL',
+            'shipping_address_id' => $address->id,
+            'billing_address_id' => $address->id,
+        ]);
+        $order->items()->create([
+            'product_variant_id' => $variant->id,
+            'quantity' => 1,
+            'unit_price' => 30,
+            'subtotal' => 30,
+        ]);
+
+        $this->mock(PayPalClient::class, function ($mock) {
+            $mock->shouldReceive('captureOrder')->once()->andReturn([
+                'status' => 'COMPLETED',
+                'purchase_units' => [['payments' => ['captures' => [['id' => 'CAPTURE-GUEST-MAIL']]]]],
+            ]);
+        });
+
+        $response = $this->actingAs($guest)->postJson("/api/checkout/{$order->id}/capture");
+
+        $response->assertOk()->assertJsonPath('data.payment_status', 'paid');
+        Mail::assertSent(OrderConfirmationMail::class, fn ($mail) => $mail->order->id === $order->id
+            && $mail->order->user->email === 'guest-buyer@example.com');
     }
 
     public function test_capture_still_succeeds_when_the_confirmation_email_fails_to_send(): void

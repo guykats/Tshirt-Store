@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password', 'phone', 'preferred_locale'])]
+#[Fillable(['name', 'email', 'password', 'phone', 'preferred_locale', 'is_guest'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -29,6 +29,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_guest' => 'boolean',
         ];
     }
 
@@ -75,6 +76,16 @@ class User extends Authenticatable
     public function isAdmin(): bool
     {
         return $this->role === 'admin';
+    }
+
+    /**
+     * Whether this User row is a stand-in account created automatically at
+     * guest checkout time (see CheckoutController::store), rather than a
+     * real self-registered account with a usable password.
+     */
+    public function isGuest(): bool
+    {
+        return (bool) $this->is_guest;
     }
 
     /**

@@ -59,12 +59,20 @@ Route::middleware('throttle:catalog-read')->group(function () {
 
 Route::post('/webhooks/paypal', [PayPalWebhookController::class, 'handle']);
 
+// Guest checkout: intentionally reachable without an authenticated session so
+// a shopper isn't forced to register before buying. CheckoutController::store
+// silently creates and logs in an unusable-password "guest" User behind the
+// scenes when the request has no session, so the rest of this middleware
+// group's user_id-based routes (capture included) work for that guest
+// exactly as they would for a real registered user for the remainder of the
+// browser session.
+Route::post('/checkout', [CheckoutController::class, 'store']);
+
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/change-password', [AuthController::class, 'changePassword']);
 
-    Route::post('/checkout', [CheckoutController::class, 'store']);
     Route::post('/checkout/{order}/capture', [CheckoutController::class, 'capture']);
 
     Route::get('/orders', [OrderController::class, 'index']);
