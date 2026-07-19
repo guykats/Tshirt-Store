@@ -15,6 +15,8 @@ export default function Catalog() {
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [meta, setMeta] = useState({ current_page: 1, last_page: 1 });
+    const [homeStats, setHomeStats] = useState(null);
+    const [testimonials, setTestimonials] = useState([]);
     const [searchParams, setSearchParams] = useSearchParams();
     const page = Number(searchParams.get('page')) || 1;
     const search = searchParams.get('search') || '';
@@ -39,6 +41,18 @@ export default function Catalog() {
     useEffect(() => {
         setSearchInput(search);
     }, [search]);
+
+    // Real, computed investor-facing numbers (completed orders, real review average,
+    // distinct shipping countries) — see App\Http\Controllers\Api\HomeStatsController.
+    // Fetched once; this section doesn't change per search/sort/page interaction.
+    useEffect(() => {
+        api.get('/api/home-stats')
+            .then((res) => setHomeStats(res.data.data))
+            .catch(() => setHomeStats(null));
+        api.get('/api/testimonials')
+            .then((res) => setTestimonials(res.data.data))
+            .catch(() => setTestimonials([]));
+    }, []);
 
     function updateParams(next) {
         const params = { search, sort, page: String(page), ...next };
@@ -80,11 +94,27 @@ export default function Catalog() {
     const heroSubheading = (i18n.language === 'he' ? settings?.hero_subheading_he : settings?.hero_subheading_en) || t('hero_subtitle');
     const heroMotif = settings?.hero_motif || 'star-of-david';
 
-    const stats = settings
+    // Every number here is computed from real orders/reviews (HomeStatsController),
+    // not admin-typed — see the removal of stat_pieces_shipped/stat_rating/stat_countries
+    // from site_settings. A null average_rating means zero reviews exist yet, so it
+    // renders a qualitative "New" label instead of a fabricated number.
+    const stats = homeStats
         ? [
-              { key: 'pieces_shipped', value: `${settings.stat_pieces_shipped.toLocaleString(i18n.language)}+`, labelKey: 'home_stat_pieces_shipped_label' },
-              { key: 'rating', value: `${settings.stat_rating.toFixed(1)} ★`, labelKey: 'home_stat_rating_label' },
-              { key: 'countries', value: `${settings.stat_countries}+`, labelKey: 'home_stat_countries_label' },
+              {
+                  key: 'completed_orders',
+                  value: homeStats.completed_orders.toLocaleString(i18n.language),
+                  labelKey: 'home_stat_completed_orders_label',
+              },
+              {
+                  key: 'rating',
+                  value: homeStats.average_rating != null ? `${homeStats.average_rating.toFixed(1)} ★` : t('home_stat_rating_new'),
+                  labelKey: 'home_stat_rating_label',
+              },
+              {
+                  key: 'countries',
+                  value: homeStats.countries_served.toLocaleString(i18n.language),
+                  labelKey: 'home_stat_countries_label',
+              },
           ]
         : [];
 
@@ -146,6 +176,38 @@ export default function Catalog() {
                     ))}
                 </div>
             </section>
+
+            {/* Testimonials — real, admin-editable quotes (Testimonial model), kept
+                separate from the reviews table's aggregated star rating above so
+                nothing on a quote card could be mistaken for a computed statistic. */}
+            {testimonials.length > 0 && (
+                <section className="border-b border-line">
+                    <div className="mx-auto max-w-6xl px-6 py-14">
+                        <div className="mb-10 text-center">
+                            <h2 className="font-serif text-2xl">{t('testimonials_section_title')}</h2>
+                            <p className="mt-2 text-sm text-ink-soft">{t('testimonials_section_subtitle')}</p>
+                        </div>
+                        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
+                            {testimonials.map((testimonial) => (
+                                <figure key={testimonial.id} className="rounded border border-line bg-parchment-dim/40 p-6">
+                                    <span aria-hidden="true" className="mb-3 block font-serif text-3xl text-brass">
+                                        “
+                                    </span>
+                                    <blockquote className="text-sm leading-relaxed text-ink-soft">
+                                        {i18n.language === 'he' ? testimonial.quote_he : testimonial.quote_en}
+                                    </blockquote>
+                                    <figcaption className="mt-4 text-sm">
+                                        <span className="block font-medium">{testimonial.author_name}</span>
+                                        <span className="block text-xs text-ink-soft">
+                                            {i18n.language === 'he' ? testimonial.author_context_he : testimonial.author_context_en}
+                                        </span>
+                                    </figcaption>
+                                </figure>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+            )}
 
             <div id="collection" className="mx-auto max-w-6xl px-6 py-14">
                 <div className="mb-10 text-center">

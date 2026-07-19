@@ -39,9 +39,6 @@ class SiteSettingController extends Controller
             'hero_subheading_en' => ['required', 'string', 'max:2000'],
             'hero_subheading_he' => ['required', 'string', 'max:2000'],
             'hero_motif' => ['required', 'string', 'in:star-of-david,menorah,chai,shalom,hamsa,pomegranate,aleph,olive-branch,hebrew-script'],
-            'stat_pieces_shipped' => ['required', 'integer', 'min:0'],
-            'stat_rating' => ['required', 'numeric', 'min:0', 'max:5'],
-            'stat_countries' => ['required', 'integer', 'min:0'],
         ]);
 
         $settings = SiteSetting::current();

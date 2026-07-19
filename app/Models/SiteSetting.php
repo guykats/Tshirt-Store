@@ -10,19 +10,9 @@ use Illuminate\Database\Eloquent\Model;
     'hero_tagline_en', 'hero_tagline_he',
     'hero_subheading_en', 'hero_subheading_he',
     'hero_motif',
-    'stat_pieces_shipped', 'stat_rating', 'stat_countries',
 ])]
 class SiteSetting extends Model
 {
-    protected function casts(): array
-    {
-        return [
-            'stat_pieces_shipped' => 'integer',
-            'stat_rating' => 'float',
-            'stat_countries' => 'integer',
-        ];
-    }
-
     /**
      * This is a singleton settings row (id=1, seeded by a data migration). Fall back to
      * creating it on the fly if it's somehow missing, rather than 500ing the homepage.
@@ -44,9 +34,6 @@ class SiteSetting extends Model
             'hero_subheading_en' => 'Understated apparel carrying real cultural symbols — for the moments you want to say who you are without saying a word.',
             'hero_subheading_he' => 'בגדים מאופקים הנושאים סמלים תרבותיים אמיתיים — לרגעים שבהם רוצים לומר מי אתם, בלי להגיד מילה.',
             'hero_motif' => 'star-of-david',
-            'stat_pieces_shipped' => 12500,
-            'stat_rating' => 4.9,
-            'stat_countries' => 24,
         ]);
     }
 }

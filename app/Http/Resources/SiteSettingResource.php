@@ -26,9 +26,6 @@ class SiteSettingResource extends JsonResource
             'hero_subheading_en' => $this->hero_subheading_en,
             'hero_subheading_he' => $this->hero_subheading_he,
             'hero_motif' => $this->hero_motif,
-            'stat_pieces_shipped' => $this->stat_pieces_shipped,
-            'stat_rating' => (float) $this->stat_rating,
-            'stat_countries' => $this->stat_countries,
             'updated_at' => $this->updated_at,
         ];
     }

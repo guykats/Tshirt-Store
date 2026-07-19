@@ -23,7 +23,7 @@ class SiteSettingTest extends TestCase
                     'logo_path', 'logo_url', 'accent_color',
                     'hero_tagline_en', 'hero_tagline_he',
                     'hero_subheading_en', 'hero_subheading_he',
-                    'hero_motif', 'stat_pieces_shipped', 'stat_rating', 'stat_countries',
+                    'hero_motif',
                 ],
             ]);
     }
@@ -56,17 +56,15 @@ class SiteSettingTest extends TestCase
 
         $response = $this->actingAs($admin)->patchJson('/api/site-settings', array_merge(
             $this->validPayload(),
-            ['hero_tagline_en' => 'A brand new tagline', 'stat_pieces_shipped' => 99999],
+            ['hero_tagline_en' => 'A brand new tagline'],
         ));
 
         $response->assertOk()
-            ->assertJsonPath('data.hero_tagline_en', 'A brand new tagline')
-            ->assertJsonPath('data.stat_pieces_shipped', 99999);
+            ->assertJsonPath('data.hero_tagline_en', 'A brand new tagline');
 
         $this->assertDatabaseHas('site_settings', [
             'id' => 1,
             'hero_tagline_en' => 'A brand new tagline',
-            'stat_pieces_shipped' => 99999,
         ]);
         $this->assertDatabaseHas('system_events', ['event_type' => 'site_settings.updated']);
     }
@@ -95,18 +93,6 @@ class SiteSettingTest extends TestCase
         $response->assertStatus(422)->assertJsonValidationErrors('hero_motif');
     }
 
-    public function test_updating_site_settings_rejects_an_out_of_range_rating(): void
-    {
-        $admin = User::factory()->create(['role' => 'admin']);
-
-        $response = $this->actingAs($admin)->patchJson('/api/site-settings', array_merge(
-            $this->validPayload(),
-            ['stat_rating' => 9.9],
-        ));
-
-        $response->assertStatus(422)->assertJsonValidationErrors('stat_rating');
-    }
-
     public function test_site_setting_current_returns_the_singleton_row(): void
     {
         $first = SiteSetting::current();
@@ -126,9 +112,6 @@ class SiteSettingTest extends TestCase
             'hero_subheading_en' => 'Understated apparel carrying real cultural symbols.',
             'hero_subheading_he' => 'בגדים מאופקים הנושאים סמלים תרבותיים אמיתיים.',
             'hero_motif' => 'star-of-david',
-            'stat_pieces_shipped' => 12500,
-            'stat_rating' => 4.9,
-            'stat_countries' => 24,
         ];
     }
 }

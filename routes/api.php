@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CheckoutController;
 use App\Http\Controllers\Api\DesignController;
 use App\Http\Controllers\Api\EpicController;
+use App\Http\Controllers\Api\HomeStatsController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\PasswordResetController;
 use App\Http\Controllers\Api\PayPalWebhookController;
@@ -14,6 +15,7 @@ use App\Http\Controllers\Api\ProjectTaskController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\SiteSettingController;
 use App\Http\Controllers\Api\SystemEventController;
+use App\Http\Controllers\Api\TestimonialController;
 use App\Http\Controllers\Api\VisionerChatController;
 use Illuminate\Support\Facades\Route;
 
@@ -35,6 +37,14 @@ Route::middleware('throttle:catalog-read')->group(function () {
 // Public bootstrap read — the homepage renders logo/hero/stats for anonymous
 // visitors, so this has to be reachable without a Sanctum session.
 Route::get('/site-settings', [SiteSettingController::class, 'show']);
+
+// Public homepage social-proof surface: real stats (no auth needed to read them) and
+// the active testimonial quotes. Throttled with the rest of the public catalog-read
+// surface since these are anonymous-facing and otherwise unguarded.
+Route::middleware('throttle:catalog-read')->group(function () {
+    Route::get('/home-stats', [HomeStatsController::class, 'show']);
+    Route::get('/testimonials', [TestimonialController::class, 'index']);
+});
 
 Route::post('/webhooks/paypal', [PayPalWebhookController::class, 'handle']);
 
@@ -65,6 +75,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/project-tasks', [ProjectTaskController::class, 'index']);
 
     Route::patch('/site-settings', [SiteSettingController::class, 'update']);
+
+    // Static path before {testimonial} so "manage" is never matched as a route
+    // model binding id.
+    Route::get('/testimonials/manage', [TestimonialController::class, 'manage']);
+    Route::post('/testimonials', [TestimonialController::class, 'store']);
+    Route::patch('/testimonials/{testimonial}', [TestimonialController::class, 'update']);
+    Route::delete('/testimonials/{testimonial}', [TestimonialController::class, 'destroy']);
 
     Route::get('/epics', [EpicController::class, 'index']);
     Route::post('/epics/{epic}/approve', [EpicController::class, 'approve']);
