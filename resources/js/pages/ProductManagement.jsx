@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../lib/api';
+import ColorSwatch from '../components/ColorSwatch';
 import DesignArt from '../components/DesignArt';
 import useDocumentMeta from '../hooks/useDocumentMeta';
 
@@ -303,7 +304,12 @@ export default function ProductManagement() {
                                                     {product.variants.map((variant) => (
                                                         <tr key={variant.id} className="border-t border-line">
                                                             <td className="px-3 py-2">{variant.size}</td>
-                                                            <td className="px-3 py-2">{variant.color}</td>
+                                                            <td className="px-3 py-2">
+                                                                <span className="inline-flex items-center gap-1.5">
+                                                                    <ColorSwatch color={variant.color} />
+                                                                    {variant.color}
+                                                                </span>
+                                                            </td>
                                                             <td className="px-3 py-2">{variant.sku}</td>
                                                             <td className="px-3 py-2">{variant.stock_quantity}</td>
                                                             <td className="px-3 py-2 text-end">

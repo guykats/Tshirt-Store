@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
 import api from '../lib/api';
+import ColorSwatch from '../components/ColorSwatch';
 import GarmentMockup from '../components/GarmentMockup';
 import ProductReviews from '../components/ProductReviews';
 import WishlistButton from '../components/WishlistButton';
@@ -120,10 +121,11 @@ export default function ProductDetail() {
                                 <button
                                     key={c}
                                     onClick={() => setColor(c)}
-                                    className={`rounded-full border px-4 py-1.5 text-sm ${
+                                    className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-1.5 text-sm ${
                                         color === c ? 'border-ink bg-ink text-parchment' : 'border-line text-ink-soft'
                                     }`}
                                 >
+                                    <ColorSwatch color={c} />
                                     {c}
                                 </button>
                             ))}
