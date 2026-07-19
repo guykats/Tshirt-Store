@@ -5,6 +5,12 @@ import api from '../lib/api';
 import DesignArt from '../components/DesignArt';
 import useDocumentMeta from '../hooks/useDocumentMeta';
 
+const NEXT_FULFILLMENT_STATUS = {
+    approved: 'processing',
+    processing: 'shipped',
+    shipped: 'delivered',
+};
+
 export default function Dashboard() {
     const { t } = useTranslation();
 
@@ -12,6 +18,8 @@ export default function Dashboard() {
 
     const [designs, setDesigns] = useState([]);
     const [orders, setOrders] = useState([]);
+    const [fulfillmentOrders, setFulfillmentOrders] = useState([]);
+    const [advancingOrderId, setAdvancingOrderId] = useState(null);
     const [agents, setAgents] = useState([]);
     const [events, setEvents] = useState([]);
     const [activity, setActivity] = useState([]);
@@ -26,6 +34,12 @@ export default function Dashboard() {
     function loadOrders() {
         api.get('/api/orders', { params: { status: 'pending_approval' } })
             .then((res) => setOrders(res.data.data));
+    }
+
+    function loadFulfillmentOrders() {
+        api.get('/api/orders').then((res) => {
+            setFulfillmentOrders(res.data.data.filter((order) => order.status in NEXT_FULFILLMENT_STATUS));
+        });
     }
 
     function loadAgents() {
@@ -51,6 +65,7 @@ export default function Dashboard() {
     useEffect(() => {
         loadDesigns();
         loadOrders();
+        loadFulfillmentOrders();
         loadAgents();
         loadEvents();
         loadActivity();
@@ -73,7 +88,19 @@ export default function Dashboard() {
     async function approveOrder(id) {
         await api.post(`/api/orders/${id}/approve`);
         loadOrders();
+        loadFulfillmentOrders();
         loadEvents();
+    }
+
+    async function advanceOrderStatus(id) {
+        setAdvancingOrderId(id);
+        try {
+            await api.post(`/api/orders/${id}/advance-status`);
+            loadFulfillmentOrders();
+            loadEvents();
+        } finally {
+            setAdvancingOrderId(null);
+        }
     }
 
     async function updateAgent(id, status) {
@@ -138,6 +165,35 @@ export default function Dashboard() {
                             </button>
                         </li>
                     ))}
+                </ul>
+            </section>
+
+            <section className="mb-10">
+                <h2 className="mb-3 font-serif text-lg">{t('dashboard_fulfillment')}</h2>
+                <p className="mb-3 text-sm text-ink-soft">{t('dashboard_fulfillment_hint')}</p>
+                {fulfillmentOrders.length === 0 && <p className="text-ink-soft">{t('dashboard_no_fulfillment_orders')}</p>}
+                <ul className="space-y-3">
+                    {fulfillmentOrders.map((order) => {
+                        const nextStatus = NEXT_FULFILLMENT_STATUS[order.status];
+                        return (
+                            <li key={order.id} className="flex items-center justify-between rounded border border-line p-4">
+                                <div>
+                                    <p className="font-medium">{order.order_number}</p>
+                                    <p className="text-sm text-ink-soft">{t(`orders_status_${order.status}`)}</p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => advanceOrderStatus(order.id)}
+                                    disabled={advancingOrderId === order.id}
+                                    className="rounded bg-ink px-3 py-1.5 text-sm text-white disabled:opacity-60"
+                                >
+                                    {advancingOrderId === order.id
+                                        ? t('dashboard_fulfillment_advancing')
+                                        : t(`dashboard_fulfillment_mark_${nextStatus}`)}
+                                </button>
+                            </li>
+                        );
+                    })}
                 </ul>
             </section>
 

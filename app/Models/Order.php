@@ -14,6 +14,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 ])]
 class Order extends Model
 {
+    /**
+     * The forward-only fulfillment sequence. `advance-status` only ever
+     * moves an order one step to the right along this array — cancelled and
+     * refunded are deliberately excluded since they're side branches, not a
+     * forward step in the fulfillment progression.
+     */
+    public const STATUS_SEQUENCE = ['pending_approval', 'approved', 'processing', 'shipped', 'delivered'];
+
     protected function casts(): array
     {
         return [
@@ -75,5 +83,21 @@ class Order extends Model
     {
         return in_array($this->status, ['pending_approval', 'approved'], true)
             && $this->payment_status !== 'paid';
+    }
+
+    /**
+     * The single next status in the fulfillment sequence, or null if the
+     * order's current status isn't part of that sequence (e.g. it's already
+     * cancelled/refunded) or is already at the end of it (delivered).
+     */
+    public function nextFulfillmentStatus(): ?string
+    {
+        $index = array_search($this->status, self::STATUS_SEQUENCE, true);
+
+        if ($index === false || $index === count(self::STATUS_SEQUENCE) - 1) {
+            return null;
+        }
+
+        return self::STATUS_SEQUENCE[$index + 1];
     }
 }
