@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
 import api from '../lib/api';
 import DesignArt from '../components/DesignArt';
+import ProductReviews from '../components/ProductReviews';
 import { ProductDetailSkeleton } from '../components/Skeleton';
 import useDocumentMeta from '../hooks/useDocumentMeta';
 import useJsonLd from '../hooks/useJsonLd';
@@ -150,6 +151,8 @@ export default function ProductDetail() {
                     </Link>
                 </div>
             </div>
+
+            <ProductReviews productSlug={product.slug} />
         </div>
     );
 }

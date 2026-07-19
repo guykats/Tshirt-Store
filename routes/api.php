@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\PasswordResetController;
 use App\Http\Controllers\Api\PayPalWebhookController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\ProjectTaskController;
+use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\SiteSettingController;
 use App\Http\Controllers\Api\SystemEventController;
 use App\Http\Controllers\Api\VisionerChatController;
@@ -24,6 +25,7 @@ Route::post('/reset-password', [PasswordResetController::class, 'reset'])->middl
 
 Route::get('/products', [ProductController::class, 'index']);
 Route::get('/products/{product}', [ProductController::class, 'show']);
+Route::get('/products/{product}/reviews', [ReviewController::class, 'index']);
 
 // Public bootstrap read — the homepage renders logo/hero/stats for anonymous
 // visitors, so this has to be reachable without a Sanctum session.
@@ -42,6 +44,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/orders/{order}', [OrderController::class, 'show']);
     Route::post('/orders/{order}/approve', [OrderController::class, 'approve']);
     Route::get('/orders/{order}/invoice', [OrderController::class, 'invoice']);
+
+    Route::get('/products/{product}/reviews/eligibility', [ReviewController::class, 'eligibility']);
+    Route::post('/products/{product}/reviews', [ReviewController::class, 'store']);
 
     Route::get('/designs', [DesignController::class, 'index']);
     Route::post('/designs/{design}/approve', [DesignController::class, 'approve']);
