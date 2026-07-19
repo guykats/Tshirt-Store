@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Api\ActivityController;
+use App\Http\Controllers\Api\Admin\ProductController as AdminProductController;
+use App\Http\Controllers\Api\Admin\ProductVariantController as AdminProductVariantController;
 use App\Http\Controllers\Api\AgentStatusController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CheckoutController;
@@ -99,6 +101,23 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/testimonials', [TestimonialController::class, 'store']);
     Route::patch('/testimonials/{testimonial}', [TestimonialController::class, 'update']);
     Route::delete('/testimonials/{testimonial}', [TestimonialController::class, 'destroy']);
+
+    // Admin product & variant CRUD — separate from the public /products read
+    // surface above (which route-model-binds {product} by slug and only ever
+    // exposes status=active rows) so an admin can list/create/edit/delete
+    // products of any status and their variants. See
+    // App\Http\Controllers\Api\Admin\ProductController for the order-integrity
+    // rules around deletion.
+    Route::prefix('admin')->group(function () {
+        Route::get('/products', [AdminProductController::class, 'index']);
+        Route::post('/products', [AdminProductController::class, 'store']);
+        Route::put('/products/{product}', [AdminProductController::class, 'update']);
+        Route::delete('/products/{product}', [AdminProductController::class, 'destroy']);
+
+        Route::post('/products/{product}/variants', [AdminProductVariantController::class, 'store']);
+        Route::put('/products/{product}/variants/{variant}', [AdminProductVariantController::class, 'update']);
+        Route::delete('/products/{product}/variants/{variant}', [AdminProductVariantController::class, 'destroy']);
+    });
 
     Route::get('/epics', [EpicController::class, 'index']);
     Route::post('/epics/{epic}/approve', [EpicController::class, 'approve']);
