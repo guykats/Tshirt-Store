@@ -50,9 +50,16 @@ class OrderFulfillmentTest extends TestCase
             ->assertOk()->assertJsonPath('data.status', 'processing');
         $this->assertDatabaseHas('orders', ['id' => $order->id, 'status' => 'processing']);
 
-        $this->actingAs($admin)->postJson("/api/orders/{$order->id}/advance-status")
-            ->assertOk()->assertJsonPath('data.status', 'shipped');
-        $this->assertDatabaseHas('orders', ['id' => $order->id, 'status' => 'shipped']);
+        $this->actingAs($admin)->postJson("/api/orders/{$order->id}/advance-status", [
+            'tracking_number' => '1Z999AA10123456784',
+            'carrier' => 'UPS',
+        ])->assertOk()->assertJsonPath('data.status', 'shipped');
+        $this->assertDatabaseHas('orders', [
+            'id' => $order->id,
+            'status' => 'shipped',
+            'tracking_number' => '1Z999AA10123456784',
+            'carrier' => 'UPS',
+        ]);
 
         $this->actingAs($admin)->postJson("/api/orders/{$order->id}/advance-status")
             ->assertOk()->assertJsonPath('data.status', 'delivered');
@@ -127,9 +134,97 @@ class OrderFulfillmentTest extends TestCase
         $customer = User::factory()->create(['role' => 'customer']);
         $order = $this->makeOrder($customer, ['status' => 'processing']);
 
-        $response = $this->actingAs($admin)->postJson("/api/orders/{$order->id}/advance-status", ['status' => 'shipped']);
+        $response = $this->actingAs($admin)->postJson("/api/orders/{$order->id}/advance-status", [
+            'status' => 'shipped',
+            'tracking_number' => '9400111899223344556677',
+            'carrier' => 'USPS',
+        ]);
 
         $response->assertOk()->assertJsonPath('data.status', 'shipped');
         Mail::assertSent(OrderShippedMail::class);
+    }
+
+    public function test_advancing_to_shipped_without_a_tracking_number_is_rejected(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $customer = User::factory()->create(['role' => 'customer']);
+        $order = $this->makeOrder($customer, ['status' => 'processing']);
+
+        $response = $this->actingAs($admin)->postJson("/api/orders/{$order->id}/advance-status");
+
+        $response->assertStatus(422)->assertJsonValidationErrors(['tracking_number', 'carrier']);
+        $this->assertDatabaseHas('orders', ['id' => $order->id, 'status' => 'processing']);
+    }
+
+    public function test_advancing_to_shipped_without_a_carrier_is_rejected(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $customer = User::factory()->create(['role' => 'customer']);
+        $order = $this->makeOrder($customer, ['status' => 'processing']);
+
+        $response = $this->actingAs($admin)->postJson("/api/orders/{$order->id}/advance-status", [
+            'tracking_number' => '1Z999AA10123456784',
+        ]);
+
+        $response->assertStatus(422)->assertJsonValidationErrors(['carrier']);
+        $this->assertDatabaseHas('orders', ['id' => $order->id, 'status' => 'processing']);
+    }
+
+    public function test_advancing_to_shipped_with_tracking_number_and_carrier_sends_mail_with_tracking_info(): void
+    {
+        Mail::fake();
+
+        $admin = User::factory()->create(['role' => 'admin']);
+        $customer = User::factory()->create(['role' => 'customer']);
+        $order = $this->makeOrder($customer, ['status' => 'processing']);
+
+        $response = $this->actingAs($admin)->postJson("/api/orders/{$order->id}/advance-status", [
+            'tracking_number' => '1Z999AA10123456784',
+            'carrier' => 'UPS',
+        ]);
+
+        $response->assertOk()->assertJsonPath('data.tracking_number', '1Z999AA10123456784')
+            ->assertJsonPath('data.carrier', 'UPS')
+            ->assertJsonPath('data.tracking_url', 'https://www.ups.com/track?loc=en_US&tracknum=1Z999AA10123456784');
+
+        Mail::assertSent(OrderShippedMail::class, function (OrderShippedMail $mail) use ($order) {
+            if ($mail->order->id !== $order->id) {
+                return false;
+            }
+
+            $rendered = $mail->render();
+
+            return str_contains($rendered, '1Z999AA10123456784')
+                && str_contains($rendered, 'UPS')
+                && str_contains($rendered, 'https://www.ups.com/track?loc=en_US&amp;tracknum=1Z999AA10123456784');
+        });
+    }
+
+    public function test_advancing_to_shipped_with_an_unrecognized_carrier_has_no_tracking_link(): void
+    {
+        Mail::fake();
+
+        $admin = User::factory()->create(['role' => 'admin']);
+        $customer = User::factory()->create(['role' => 'customer']);
+        $order = $this->makeOrder($customer, ['status' => 'processing']);
+
+        $response = $this->actingAs($admin)->postJson("/api/orders/{$order->id}/advance-status", [
+            'tracking_number' => 'ABC123',
+            'carrier' => 'Some Regional Courier',
+        ]);
+
+        $response->assertOk()->assertJsonPath('data.tracking_url', null);
+
+        Mail::assertSent(OrderShippedMail::class, function (OrderShippedMail $mail) use ($order) {
+            if ($mail->order->id !== $order->id) {
+                return false;
+            }
+
+            $rendered = $mail->render();
+
+            return str_contains($rendered, 'ABC123')
+                && str_contains($rendered, 'Some Regional Courier')
+                && ! str_contains($rendered, 'href=');
+        });
     }
 }

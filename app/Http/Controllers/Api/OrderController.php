@@ -91,11 +91,23 @@ class OrderController extends Controller
             return response()->json(['message' => 'Orders can only be advanced one step at a time, in order.'], 422);
         }
 
+        if ($nextStatus === 'shipped') {
+            $request->validate([
+                'tracking_number' => ['required', 'string', 'max:100'],
+                'carrier' => ['required', 'string', 'max:100'],
+            ]);
+        }
+
         $attributes = ['status' => $nextStatus];
 
         if ($nextStatus === 'approved') {
             $attributes['approved_by'] = $request->user()->id;
             $attributes['approved_at'] = now();
+        }
+
+        if ($nextStatus === 'shipped') {
+            $attributes['tracking_number'] = $request->input('tracking_number');
+            $attributes['carrier'] = $request->input('carrier');
         }
 
         $order->update($attributes);

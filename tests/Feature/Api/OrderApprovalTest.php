@@ -2,6 +2,9 @@
 
 namespace Tests\Feature\Api;
 
+use App\Models\Design;
+use App\Models\Product;
+use App\Models\SystemEvent;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -33,8 +36,8 @@ class OrderApprovalTest extends TestCase
     public function test_order_history_includes_the_purchased_product_name(): void
     {
         $customer = User::factory()->create(['role' => 'customer']);
-        $design = \App\Models\Design::create(['title' => 'Test Design', 'status' => 'approved']);
-        $product = \App\Models\Product::create([
+        $design = Design::create(['title' => 'Test Design', 'status' => 'approved']);
+        $product = Product::create([
             'design_id' => $design->id, 'name' => 'Aleph Tee', 'slug' => 'aleph-tee-'.uniqid(),
             'base_price' => 32, 'sku' => 'AL-'.uniqid(), 'status' => 'active',
         ]);
@@ -114,7 +117,7 @@ class OrderApprovalTest extends TestCase
         $this->actingAs($admin)->postJson("/api/orders/{$order->id}/approve")->assertOk();
         $this->actingAs($admin)->postJson("/api/orders/{$order->id}/approve")->assertOk();
 
-        $this->assertSame(1, \App\Models\SystemEvent::where('event_type', 'order.approved')->count());
+        $this->assertSame(1, SystemEvent::where('event_type', 'order.approved')->count());
     }
 
     public function test_the_owner_can_download_their_own_invoice(): void
@@ -135,5 +138,70 @@ class OrderApprovalTest extends TestCase
         $order = $this->makeOrder($customer);
 
         $this->actingAs($stranger)->get("/api/orders/{$order->id}/invoice")->assertForbidden();
+    }
+
+    public function test_order_resource_exposes_tracking_details_once_set(): void
+    {
+        $customer = User::factory()->create(['role' => 'customer']);
+        $order = $this->makeOrder($customer, [
+            'status' => 'shipped',
+            'tracking_number' => '1Z999AA10123456784',
+            'carrier' => 'UPS',
+        ]);
+
+        $response = $this->actingAs($customer)->getJson("/api/orders/{$order->id}");
+
+        $response->assertOk()
+            ->assertJsonPath('data.tracking_number', '1Z999AA10123456784')
+            ->assertJsonPath('data.carrier', 'UPS')
+            ->assertJsonPath('data.tracking_url', 'https://www.ups.com/track?loc=en_US&tracknum=1Z999AA10123456784');
+    }
+
+    public function test_order_resource_omits_tracking_url_for_an_unset_or_unrecognized_carrier(): void
+    {
+        $customer = User::factory()->create(['role' => 'customer']);
+        $orderWithoutTracking = $this->makeOrder($customer);
+
+        $this->actingAs($customer)->getJson("/api/orders/{$orderWithoutTracking->id}")
+            ->assertOk()
+            ->assertJsonPath('data.tracking_number', null)
+            ->assertJsonPath('data.tracking_url', null);
+
+        $orderWithUnknownCarrier = $this->makeOrder($customer, [
+            'tracking_number' => 'ABC123',
+            'carrier' => 'Some Regional Courier',
+        ]);
+
+        $this->actingAs($customer)->getJson("/api/orders/{$orderWithUnknownCarrier->id}")
+            ->assertOk()
+            ->assertJsonPath('data.tracking_number', 'ABC123')
+            ->assertJsonPath('data.tracking_url', null);
+    }
+
+    public function test_the_invoice_view_includes_tracking_details_once_set(): void
+    {
+        $customer = User::factory()->create(['role' => 'customer']);
+        $order = $this->makeOrder($customer, [
+            'status' => 'shipped',
+            'tracking_number' => '1Z999AA10123456784',
+            'carrier' => 'UPS',
+        ]);
+        $order->load(['billingAddress', 'shippingAddress', 'items.productVariant.product', 'user']);
+
+        $html = view('invoices.order', ['order' => $order])->render();
+
+        $this->assertStringContainsString('1Z999AA10123456784', $html);
+        $this->assertStringContainsString('UPS', $html);
+    }
+
+    public function test_the_invoice_view_omits_tracking_details_when_unset(): void
+    {
+        $customer = User::factory()->create(['role' => 'customer']);
+        $order = $this->makeOrder($customer);
+        $order->load(['billingAddress', 'shippingAddress', 'items.productVariant.product', 'user']);
+
+        $html = view('invoices.order', ['order' => $order])->render();
+
+        $this->assertStringNotContainsString(__('invoice.tracking_number'), $html);
     }
 }

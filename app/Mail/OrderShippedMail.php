@@ -3,6 +3,7 @@
 namespace App\Mail;
 
 use App\Models\Order;
+use App\Services\CarrierTracking;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
@@ -29,7 +30,10 @@ class OrderShippedMail extends Mailable
     {
         return new Content(
             view: 'emails.order-shipped',
-            with: ['order' => $this->order],
+            with: [
+                'order' => $this->order,
+                'trackingUrl' => CarrierTracking::url($this->order->carrier, $this->order->tracking_number),
+            ],
         );
     }
 }

@@ -12,7 +12,23 @@
             <td style="padding: 4px 0; color: #666;">{{ __('mail.order_number') }}</td>
             <td style="padding: 4px 0; text-align: {{ app()->getLocale() === 'he' ? 'left' : 'right' }};">{{ $order->order_number }}</td>
         </tr>
+        @if($order->carrier)
+            <tr>
+                <td style="padding: 4px 0; color: #666;">{{ __('mail.carrier') }}</td>
+                <td style="padding: 4px 0; text-align: {{ app()->getLocale() === 'he' ? 'left' : 'right' }};">{{ $order->carrier }}</td>
+            </tr>
+        @endif
+        @if($order->tracking_number)
+            <tr>
+                <td style="padding: 4px 0; color: #666;">{{ __('mail.tracking_number') }}</td>
+                <td style="padding: 4px 0; text-align: {{ app()->getLocale() === 'he' ? 'left' : 'right' }};">{{ $order->tracking_number }}</td>
+            </tr>
+        @endif
     </table>
+
+    @if($trackingUrl)
+        <p><a href="{{ $trackingUrl }}">{{ __('mail.track_shipment') }}</a></p>
+    @endif
 
     <p>{{ __('mail.thanks') }}</p>
     <p>{{ __('mail.regards', ['app_name' => config('app.name')]) }}</p>

@@ -15,5 +15,7 @@ return [
     'shipping' => 'Shipping',
     'total' => 'Total',
     'payment_status' => 'Payment Status',
+    'carrier' => 'Carrier',
+    'tracking_number' => 'Tracking Number',
     'thank_you' => 'Thank you for your order!',
 ];

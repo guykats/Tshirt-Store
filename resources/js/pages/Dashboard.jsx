@@ -11,6 +11,10 @@ const NEXT_FULFILLMENT_STATUS = {
     shipped: 'delivered',
 };
 
+const CARRIER_OPTIONS = ['USPS', 'UPS', 'FedEx', 'Israel Post', 'Other'];
+
+const DEFAULT_SHIPPING_DRAFT = { carrier: CARRIER_OPTIONS[0], otherCarrier: '', trackingNumber: '' };
+
 export default function Dashboard() {
     const { t } = useTranslation();
 
@@ -21,6 +25,8 @@ export default function Dashboard() {
     const [fulfillmentOrders, setFulfillmentOrders] = useState([]);
     const [refundableOrders, setRefundableOrders] = useState([]);
     const [advancingOrderId, setAdvancingOrderId] = useState(null);
+    const [shippingDrafts, setShippingDrafts] = useState({});
+    const [shippingErrors, setShippingErrors] = useState({});
     const [refundingOrderId, setRefundingOrderId] = useState(null);
     const [agents, setAgents] = useState([]);
     const [events, setEvents] = useState([]);
@@ -96,12 +102,30 @@ export default function Dashboard() {
         loadEvents();
     }
 
-    async function advanceOrderStatus(id) {
+    function updateShippingDraft(orderId, field, value) {
+        setShippingDrafts((prev) => ({
+            ...prev,
+            [orderId]: { ...(prev[orderId] ?? DEFAULT_SHIPPING_DRAFT), [field]: value },
+        }));
+    }
+
+    async function advanceOrderStatus(id, nextStatus) {
         setAdvancingOrderId(id);
+        setShippingErrors((prev) => ({ ...prev, [id]: null }));
         try {
-            await api.post(`/api/orders/${id}/advance-status`);
+            const payload = {};
+
+            if (nextStatus === 'shipped') {
+                const draft = shippingDrafts[id] ?? DEFAULT_SHIPPING_DRAFT;
+                payload.carrier = (draft.carrier === 'Other' ? draft.otherCarrier : draft.carrier)?.trim();
+                payload.tracking_number = draft.trackingNumber?.trim();
+            }
+
+            await api.post(`/api/orders/${id}/advance-status`, payload);
             loadFulfillmentOrders();
             loadEvents();
+        } catch (err) {
+            setShippingErrors((prev) => ({ ...prev, [id]: t('dashboard_fulfillment_shipping_error') }));
         } finally {
             setAdvancingOrderId(null);
         }
@@ -191,22 +215,90 @@ export default function Dashboard() {
                 <ul className="space-y-3">
                     {fulfillmentOrders.map((order) => {
                         const nextStatus = NEXT_FULFILLMENT_STATUS[order.status];
+                        const requiresShippingDetails = nextStatus === 'shipped';
+                        const draft = shippingDrafts[order.id] ?? DEFAULT_SHIPPING_DRAFT;
+
                         return (
-                            <li key={order.id} className="flex items-center justify-between rounded border border-line p-4">
-                                <div>
-                                    <p className="font-medium">{order.order_number}</p>
-                                    <p className="text-sm text-ink-soft">{t(`orders_status_${order.status}`)}</p>
+                            <li key={order.id} className="rounded border border-line p-4">
+                                <div className="flex flex-wrap items-center justify-between gap-3">
+                                    <div>
+                                        <p className="font-medium">{order.order_number}</p>
+                                        <p className="text-sm text-ink-soft">{t(`orders_status_${order.status}`)}</p>
+                                    </div>
+                                    {!requiresShippingDetails && (
+                                        <button
+                                            type="button"
+                                            onClick={() => advanceOrderStatus(order.id, nextStatus)}
+                                            disabled={advancingOrderId === order.id}
+                                            className="rounded bg-ink px-3 py-1.5 text-sm text-white disabled:opacity-60"
+                                        >
+                                            {advancingOrderId === order.id
+                                                ? t('dashboard_fulfillment_advancing')
+                                                : t(`dashboard_fulfillment_mark_${nextStatus}`)}
+                                        </button>
+                                    )}
                                 </div>
-                                <button
-                                    type="button"
-                                    onClick={() => advanceOrderStatus(order.id)}
-                                    disabled={advancingOrderId === order.id}
-                                    className="rounded bg-ink px-3 py-1.5 text-sm text-white disabled:opacity-60"
-                                >
-                                    {advancingOrderId === order.id
-                                        ? t('dashboard_fulfillment_advancing')
-                                        : t(`dashboard_fulfillment_mark_${nextStatus}`)}
-                                </button>
+
+                                {requiresShippingDetails && (
+                                    <div className="mt-3 flex flex-wrap items-end gap-3 border-t border-line pt-3">
+                                        <div>
+                                            <label htmlFor={`carrier-${order.id}`} className="block text-xs text-ink-soft">
+                                                {t('dashboard_fulfillment_carrier_label')}
+                                            </label>
+                                            <select
+                                                id={`carrier-${order.id}`}
+                                                value={draft.carrier}
+                                                onChange={(e) => updateShippingDraft(order.id, 'carrier', e.target.value)}
+                                                className="rounded border border-line px-2 py-1 text-sm"
+                                            >
+                                                {CARRIER_OPTIONS.map((option) => (
+                                                    <option key={option} value={option}>{option}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        {draft.carrier === 'Other' && (
+                                            <div>
+                                                <label htmlFor={`carrier-other-${order.id}`} className="block text-xs text-ink-soft">
+                                                    {t('dashboard_fulfillment_carrier_other_label')}
+                                                </label>
+                                                <input
+                                                    id={`carrier-other-${order.id}`}
+                                                    type="text"
+                                                    value={draft.otherCarrier}
+                                                    onChange={(e) => updateShippingDraft(order.id, 'otherCarrier', e.target.value)}
+                                                    className="rounded border border-line px-2 py-1 text-sm"
+                                                />
+                                            </div>
+                                        )}
+                                        <div>
+                                            <label htmlFor={`tracking-${order.id}`} className="block text-xs text-ink-soft">
+                                                {t('dashboard_fulfillment_tracking_number_label')}
+                                            </label>
+                                            <input
+                                                id={`tracking-${order.id}`}
+                                                type="text"
+                                                value={draft.trackingNumber}
+                                                onChange={(e) => updateShippingDraft(order.id, 'trackingNumber', e.target.value)}
+                                                className="rounded border border-line px-2 py-1 text-sm"
+                                            />
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => advanceOrderStatus(order.id, nextStatus)}
+                                            disabled={advancingOrderId === order.id}
+                                            className="rounded bg-ink px-3 py-1.5 text-sm text-white disabled:opacity-60"
+                                        >
+                                            {advancingOrderId === order.id
+                                                ? t('dashboard_fulfillment_advancing')
+                                                : t('dashboard_fulfillment_mark_shipped')}
+                                        </button>
+                                        {shippingErrors[order.id] && (
+                                            <p role="alert" className="w-full text-sm text-red-700">
+                                                {shippingErrors[order.id]}
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
                             </li>
                         );
                     })}

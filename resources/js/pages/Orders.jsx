@@ -91,6 +91,25 @@ export default function Orders() {
                             ))}
                         </ul>
 
+                        {order.tracking_number && (
+                            <p className="mt-3 text-sm text-ink-soft">
+                                {t('orders_carrier_label')}: {order.carrier} — {t('orders_tracking_number_label')}: {order.tracking_number}
+                                {order.tracking_url && (
+                                    <>
+                                        {' '}
+                                        <a
+                                            href={order.tracking_url}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="text-brass hover:underline"
+                                        >
+                                            {t('orders_track_package')}
+                                        </a>
+                                    </>
+                                )}
+                            </p>
+                        )}
+
                         <div className="mt-3 flex items-center justify-between border-t border-line pt-3">
                             <p className="text-sm">
                                 {order.currency} {order.total_amount.toFixed(2)}

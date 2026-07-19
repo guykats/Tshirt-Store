@@ -25,6 +25,10 @@
         {{ __('invoice.invoice_number') }}: {{ $order->order_number }}<br>
         {{ __('invoice.date') }}: {{ $order->created_at->format('Y-m-d') }}<br>
         {{ __('invoice.payment_status') }}: {{ ucfirst($order->payment_status) }}
+        @if($order->tracking_number)
+            <br>{{ __('invoice.carrier') }}: {{ $order->carrier }}
+            <br>{{ __('invoice.tracking_number') }}: {{ $order->tracking_number }}
+        @endif
     </div>
 
     <table class="addresses">

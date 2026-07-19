@@ -15,5 +15,7 @@ return [
     'shipping' => 'משלוח',
     'total' => 'סה"כ',
     'payment_status' => 'סטטוס תשלום',
+    'carrier' => 'חברת השילוח',
+    'tracking_number' => 'מספר מעקב',
     'thank_you' => 'תודה על הזמנתך!',
 ];

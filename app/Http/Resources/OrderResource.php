@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Services\CarrierTracking;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -26,6 +27,9 @@ class OrderResource extends JsonResource
             'approved_by' => new UserResource($this->whenLoaded('approvedBy')),
             'approved_at' => $this->approved_at?->toIso8601String(),
             'notes' => $this->notes,
+            'tracking_number' => $this->tracking_number,
+            'carrier' => $this->carrier,
+            'tracking_url' => CarrierTracking::url($this->carrier, $this->tracking_number),
             'created_at' => $this->created_at?->toIso8601String(),
         ];
     }
