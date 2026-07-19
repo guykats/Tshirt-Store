@@ -16,6 +16,7 @@ export default function Dashboard() {
     const [events, setEvents] = useState([]);
     const [activity, setActivity] = useState([]);
     const [taskCounts, setTaskCounts] = useState({ todo: 0, in_progress: 0, blocked: 0, done: 0 });
+    const [lowStock, setLowStock] = useState([]);
 
     function loadDesigns() {
         api.get('/api/designs', { params: { status: 'pending_approval' } })
@@ -43,6 +44,10 @@ export default function Dashboard() {
         api.get('/api/project-tasks').then((res) => setTaskCounts(res.data.counts));
     }
 
+    function loadLowStock() {
+        api.get('/api/inventory/low-stock').then((res) => setLowStock(res.data.data));
+    }
+
     useEffect(() => {
         loadDesigns();
         loadOrders();
@@ -50,6 +55,7 @@ export default function Dashboard() {
         loadEvents();
         loadActivity();
         loadTaskCounts();
+        loadLowStock();
     }, []);
 
     async function approveDesign(id) {
@@ -133,6 +139,38 @@ export default function Dashboard() {
                         </li>
                     ))}
                 </ul>
+            </section>
+
+            <section className="mb-10">
+                <h2 className="mb-3 font-serif text-lg">{t('dashboard_low_stock')}</h2>
+                <p className="mb-3 text-sm text-ink-soft">{t('dashboard_low_stock_hint')}</p>
+                {lowStock.length === 0 && <p className="text-ink-soft">{t('dashboard_no_low_stock')}</p>}
+                {lowStock.length > 0 && (
+                    <div className="overflow-x-auto rounded border border-line">
+                        <table className="w-full text-sm">
+                            <thead className="bg-parchment-dim text-left">
+                                <tr>
+                                    <th className="px-4 py-2">{t('dashboard_low_stock_product')}</th>
+                                    <th className="px-4 py-2">{t('dashboard_low_stock_variant')}</th>
+                                    <th className="px-4 py-2">{t('dashboard_low_stock_remaining')}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {lowStock.map((variant) => (
+                                    <tr key={variant.id} className="border-t border-line">
+                                        <td className="px-4 py-2 font-medium">{variant.product?.name}</td>
+                                        <td className="px-4 py-2 text-ink-soft">{variant.size} / {variant.color}</td>
+                                        <td className="px-4 py-2">
+                                            <span className={variant.stock_quantity === 0 ? 'font-medium text-red-700' : 'font-medium text-amber-700'}>
+                                                {variant.stock_quantity}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
             </section>
 
             <section className="mb-10">

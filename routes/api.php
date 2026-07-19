@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\CheckoutController;
 use App\Http\Controllers\Api\DesignController;
 use App\Http\Controllers\Api\EpicController;
 use App\Http\Controllers\Api\HomeStatsController;
+use App\Http\Controllers\Api\InventoryController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\PasswordResetController;
 use App\Http\Controllers\Api\PayPalWebhookController;
@@ -62,6 +63,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/orders/{order}/approve', [OrderController::class, 'approve']);
     Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel']);
     Route::get('/orders/{order}/invoice', [OrderController::class, 'invoice']);
+
+    Route::get('/inventory/low-stock', [InventoryController::class, 'lowStock']);
 
     Route::get('/products/{product}/reviews/eligibility', [ReviewController::class, 'eligibility']);
     Route::post('/products/{product}/reviews', [ReviewController::class, 'store']);
