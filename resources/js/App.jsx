@@ -30,6 +30,8 @@ const Orders = lazy(() => import('./pages/Orders'));
 const AccountSettings = lazy(() => import('./pages/AccountSettings'));
 const Wishlist = lazy(() => import('./pages/Wishlist'));
 const About = lazy(() => import('./pages/About'));
+const Privacy = lazy(() => import('./pages/Privacy'));
+const Terms = lazy(() => import('./pages/Terms'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
 function RequireAdmin({ children }) {
@@ -77,6 +79,8 @@ export default function App() {
                                     <Routes>
                                         <Route path="/" element={<Catalog />} />
                                         <Route path="/about" element={<About />} />
+                                        <Route path="/privacy" element={<Privacy />} />
+                                        <Route path="/terms" element={<Terms />} />
                                         <Route path="/products/:slug" element={<ProductDetail />} />
                                         <Route path="/login" element={<Login />} />
                                         <Route path="/register" element={<Register />} />

@@ -73,7 +73,11 @@ export default function Layout({ children }) {
             </nav>
             <main>{children}</main>
             <footer className="mt-24 border-t border-line px-6 py-10 text-center text-xs text-ink-soft">
-                {t('footer_tagline')}
+                <p>{t('footer_tagline')}</p>
+                <div className="mt-3 flex items-center justify-center gap-4">
+                    <Link to="/privacy" className="hover:text-ink">{t('footer_privacy_link')}</Link>
+                    <Link to="/terms" className="hover:text-ink">{t('footer_terms_link')}</Link>
+                </div>
             </footer>
         </div>
     );
