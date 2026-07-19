@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\PasswordResetController;
 use App\Http\Controllers\Api\PayPalWebhookController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\ProjectTaskController;
+use App\Http\Controllers\Api\SiteSettingController;
 use App\Http\Controllers\Api\SystemEventController;
 use App\Http\Controllers\Api\VisionerChatController;
 use Illuminate\Support\Facades\Route;
@@ -23,6 +24,10 @@ Route::post('/reset-password', [PasswordResetController::class, 'reset'])->middl
 
 Route::get('/products', [ProductController::class, 'index']);
 Route::get('/products/{product}', [ProductController::class, 'show']);
+
+// Public bootstrap read — the homepage renders logo/hero/stats for anonymous
+// visitors, so this has to be reachable without a Sanctum session.
+Route::get('/site-settings', [SiteSettingController::class, 'show']);
 
 Route::post('/webhooks/paypal', [PayPalWebhookController::class, 'handle']);
 
@@ -48,6 +53,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/activity', [ActivityController::class, 'index']);
     Route::get('/project-tasks', [ProjectTaskController::class, 'index']);
+
+    Route::patch('/site-settings', [SiteSettingController::class, 'update']);
 
     Route::get('/epics', [EpicController::class, 'index']);
     Route::post('/epics/{epic}/approve', [EpicController::class, 'approve']);

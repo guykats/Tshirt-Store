@@ -5,11 +5,13 @@ import api from '../lib/api';
 import DesignArt from '../components/DesignArt';
 import { CatalogSkeleton } from '../components/Skeleton';
 import useDocumentMeta from '../hooks/useDocumentMeta';
+import { useSiteSettings } from '../lib/SiteSettingsContext';
 
 const SORT_OPTIONS = ['newest', 'price_asc', 'price_desc'];
 
 export default function Catalog() {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
+    const { settings } = useSiteSettings();
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [meta, setMeta] = useState({ current_page: 1, last_page: 1 });
@@ -71,6 +73,21 @@ export default function Catalog() {
         { key: 'shipping', titleKey: 'catalog_trust_shipping_title', descKey: 'catalog_trust_shipping_desc' },
     ];
 
+    // Admin-configurable via /dashboard/design (site_settings table); fall back to the
+    // static i18n copy while settings are loading or if the request ever fails, so the
+    // homepage never renders blank hero content.
+    const heroTagline = (i18n.language === 'he' ? settings?.hero_tagline_he : settings?.hero_tagline_en) || t('hero_title');
+    const heroSubheading = (i18n.language === 'he' ? settings?.hero_subheading_he : settings?.hero_subheading_en) || t('hero_subtitle');
+    const heroMotif = settings?.hero_motif || 'star-of-david';
+
+    const stats = settings
+        ? [
+              { key: 'pieces_shipped', value: `${settings.stat_pieces_shipped.toLocaleString(i18n.language)}+`, labelKey: 'home_stat_pieces_shipped_label' },
+              { key: 'rating', value: `${settings.stat_rating.toFixed(1)} ★`, labelKey: 'home_stat_rating_label' },
+              { key: 'countries', value: `${settings.stat_countries}+`, labelKey: 'home_stat_countries_label' },
+          ]
+        : [];
+
     return (
         <div>
             {/* Hero */}
@@ -78,8 +95,8 @@ export default function Catalog() {
                 <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-12 px-6 py-16 lg:grid-cols-2 lg:gap-16 lg:py-20">
                     <div>
                         <p className="mb-4 text-xs tracking-[0.3em] text-brass uppercase">{t('hero_eyebrow')}</p>
-                        <h1 className="font-serif text-4xl leading-tight sm:text-5xl">{t('hero_title')}</h1>
-                        <p className="mt-5 max-w-md text-ink-soft">{t('hero_subtitle')}</p>
+                        <h1 className="font-serif text-4xl leading-tight sm:text-5xl">{heroTagline}</h1>
+                        <p className="mt-5 max-w-md text-ink-soft">{heroSubheading}</p>
                         <div className="mt-8 flex flex-wrap gap-4">
                             <a
                                 href="#collection"
@@ -94,10 +111,20 @@ export default function Catalog() {
                                 {t('catalog_cta_story')}
                             </Link>
                         </div>
+                        {stats.length > 0 && (
+                            <dl className="mt-10 grid grid-cols-3 gap-6 border-t border-line pt-8">
+                                {stats.map((stat) => (
+                                    <div key={stat.key}>
+                                        <dd className="font-serif text-2xl">{stat.value}</dd>
+                                        <dt className="mt-1 text-xs text-ink-soft uppercase tracking-wide">{t(stat.labelKey)}</dt>
+                                    </div>
+                                ))}
+                            </dl>
+                        )}
                     </div>
                     <div className="mx-auto w-full max-w-sm lg:max-w-none">
                         <DesignArt
-                            motif="star-of-david"
+                            motif={heroMotif}
                             label={t('catalog_hero_motif_label')}
                             className="aspect-square rounded-lg"
                         />

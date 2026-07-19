@@ -1,10 +1,12 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from './lib/AuthContext';
+import { useSiteSettings } from './lib/SiteSettingsContext';
 
 export default function Layout({ children }) {
     const { t, i18n } = useTranslation();
     const { user, logout } = useAuth();
+    const { settings } = useSiteSettings();
     const navigate = useNavigate();
 
     function toggleLocale() {
@@ -20,11 +22,20 @@ export default function Layout({ children }) {
         navigate('/');
     }
 
+    // Admin-configurable accent color (Design settings panel) re-points the same
+    // --color-brass token the rest of the app already draws with, rather than
+    // inventing a second color system just for this override.
+    const themeStyle = settings?.accent_color ? { '--color-brass': settings.accent_color } : undefined;
+
     return (
-        <div className="min-h-screen bg-parchment text-ink">
+        <div className="min-h-screen bg-parchment text-ink" style={themeStyle}>
             <nav className="flex items-center justify-between border-b border-line px-6 py-5">
-                <Link to="/" className="font-serif text-xl tracking-wide">
-                    {t('app_name')}
+                <Link to="/" className="flex items-center gap-2 font-serif text-xl tracking-wide">
+                    {settings?.logo_url ? (
+                        <img src={settings.logo_url} alt={t('app_name')} className="h-8 w-auto" />
+                    ) : (
+                        t('app_name')
+                    )}
                 </Link>
                 <div className="flex items-center gap-5 text-sm text-ink-soft">
                     <Link to="/" className="hover:text-ink">{t('nav_catalog')}</Link>
@@ -38,6 +49,7 @@ export default function Layout({ children }) {
                             <Link to="/dashboard/progress" className="hover:text-ink">{t('nav_progress')}</Link>
                             <Link to="/dashboard/chat" className="hover:text-ink">{t('nav_chat')}</Link>
                             <Link to="/dashboard/style-guide" className="hover:text-ink">{t('nav_style_guide')}</Link>
+                            <Link to="/dashboard/design" className="hover:text-ink">{t('nav_design')}</Link>
                         </>
                     )}
                     {user ? (
