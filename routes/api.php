@@ -23,9 +23,14 @@ Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:lo
 Route::post('/forgot-password', [PasswordResetController::class, 'sendResetLink'])->middleware('throttle:forgot-password');
 Route::post('/reset-password', [PasswordResetController::class, 'reset'])->middleware('throttle:reset-password');
 
-Route::get('/products', [ProductController::class, 'index']);
-Route::get('/products/{product}', [ProductController::class, 'show']);
-Route::get('/products/{product}/reviews', [ReviewController::class, 'index']);
+// Public catalog read surface: listing/search, product detail, and reviews.
+// Per-IP throttled (see 'catalog-read' in AppServiceProvider) since none of
+// these require auth and they'd otherwise be trivially scrapeable.
+Route::middleware('throttle:catalog-read')->group(function () {
+    Route::get('/products', [ProductController::class, 'index']);
+    Route::get('/products/{product}', [ProductController::class, 'show']);
+    Route::get('/products/{product}/reviews', [ReviewController::class, 'index']);
+});
 
 // Public bootstrap read — the homepage renders logo/hero/stats for anonymous
 // visitors, so this has to be reachable without a Sanctum session.

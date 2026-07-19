@@ -47,5 +47,13 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('visioner-chat', function ($request) {
             return Limit::perMinute(10)->by($request->user()?->id ?: $request->ip());
         });
+
+        // Public catalog/search/product-detail/reviews reads have no auth to key off,
+        // so this is per-IP only. 60/min (1/sec sustained) comfortably covers a real
+        // shopper paginating, re-sorting, and typing a live search box, while still
+        // capping a scraper/bot from crawling the whole catalog in seconds.
+        RateLimiter::for('catalog-read', function ($request) {
+            return Limit::perMinute(60)->by($request->ip());
+        });
     }
 }
