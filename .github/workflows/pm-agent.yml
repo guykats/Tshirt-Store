@@ -21,7 +21,7 @@ permissions:
 jobs:
   pm-agent:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 90
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -67,7 +67,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           claude_args: >-
             --permission-mode acceptEdits
-            --max-turns 30
+            --max-turns 100
             --allowedTools "Read,Write,Edit,Bash,Grep,Glob,WebSearch"
           prompt: |
             You are running unattended as this project's PM, triggered on a 30-minute

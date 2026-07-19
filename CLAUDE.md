@@ -47,8 +47,11 @@ owner's machine is on — it reads this file, checks the board, ships or
 seeds work, and pushes to `main` on its own. If you're starting an
 interactive session, `git log` / the board may already reflect work you
 didn't do — that's expected, not a conflict to resolve. It authenticates
-with an `ANTHROPIC_API_KEY` repo secret and is capped at `--max-turns 30`
-per run as a cost/blast-radius bound; adjust that (or disable the workflow
+via `CLAUDE_CODE_OAUTH_TOKEN` (the owner's Claude subscription, generated
+with `claude setup-token` — not the metered `ANTHROPIC_API_KEY`, which is
+kept as a secret only as a fallback) and is capped at `--max-turns 100` /
+`timeout-minutes: 90` per run as a blast-radius bound, not a cost one now
+that it's subscription-authenticated; adjust that (or disable the workflow
 entirely) rather than removing the cap if it needs tuning.
 
 ## Standing operating agreement with the project owner
