@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import DesignArt from '../components/DesignArt';
 import useDocumentMeta from '../hooks/useDocumentMeta';
 
@@ -8,7 +9,7 @@ const CATEGORIES = [
         title: 'faq_cat_sizing_title',
         items: [
             { q: 'faq_sizing_q1', a: 'faq_sizing_a1' },
-            { q: 'faq_sizing_q2', a: 'faq_sizing_a2' },
+            { q: 'faq_sizing_q2', a: 'faq_sizing_a2', linkTo: '/size-guide', linkLabel: 'faq_sizing_link_label' },
         ],
     },
     {
@@ -45,7 +46,7 @@ const CATEGORIES = [
     },
 ];
 
-function FaqItem({ id, question, answer, open, onToggle }) {
+function FaqItem({ id, question, answer, open, onToggle, linkTo, linkLabel }) {
     const panelId = `${id}-panel`;
     const buttonId = `${id}-button`;
 
@@ -68,6 +69,11 @@ function FaqItem({ id, question, answer, open, onToggle }) {
             </h3>
             <div id={panelId} role="region" aria-labelledby={buttonId} hidden={!open} className="pb-4 leading-relaxed text-ink-soft">
                 <p>{answer}</p>
+                {linkTo && (
+                    <Link to={linkTo} className="mt-2 inline-block text-brass hover:underline">
+                        {linkLabel}
+                    </Link>
+                )}
             </div>
         </div>
     );
@@ -108,6 +114,8 @@ export default function Faq() {
                                         answer={t(item.a)}
                                         open={openId === id}
                                         onToggle={() => setOpenId(openId === id ? null : id)}
+                                        linkTo={item.linkTo}
+                                        linkLabel={item.linkLabel ? t(item.linkLabel) : undefined}
                                     />
                                 );
                             })}

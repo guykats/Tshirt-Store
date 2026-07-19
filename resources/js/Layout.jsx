@@ -77,6 +77,7 @@ export default function Layout({ children }) {
                 <p>{t('footer_tagline')}</p>
                 <div className="mt-3 flex items-center justify-center gap-4">
                     <Link to="/faq" className="hover:text-ink">{t('footer_faq_link')}</Link>
+                    <Link to="/size-guide" className="hover:text-ink">{t('footer_size_guide_link')}</Link>
                     <Link to="/privacy" className="hover:text-ink">{t('footer_privacy_link')}</Link>
                     <Link to="/terms" className="hover:text-ink">{t('footer_terms_link')}</Link>
                 </div>

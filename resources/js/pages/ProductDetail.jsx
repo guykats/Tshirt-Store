@@ -131,7 +131,12 @@ export default function ProductDetail() {
                     </div>
 
                     <div className="mt-4">
-                        <p className="mb-2 text-sm font-medium">{t('checkout_variant_size')}</p>
+                        <div className="mb-2 flex items-center justify-between gap-4">
+                            <p className="text-sm font-medium">{t('checkout_variant_size')}</p>
+                            <Link to="/size-guide" className="text-xs text-brass hover:underline">
+                                {t('product_size_guide_link')}
+                            </Link>
+                        </div>
                         <div className="flex gap-2">
                             {sizes.map((s) => {
                                 const inStock = product.variants.some((v) => v.size === s && v.color === color && v.stock_quantity > 0);
