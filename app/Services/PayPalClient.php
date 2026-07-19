@@ -87,6 +87,32 @@ class PayPalClient
     }
 
     /**
+     * Refund a previously captured payment, in full or in part. Returns the raw
+     * refund payload from PayPal. Pass $amount to issue a partial refund (in the
+     * capture's original currency); omit it (the default) to refund the full
+     * remaining captured amount.
+     */
+    public function refundCapture(string $captureId, ?float $amount = null, string $currency = 'USD'): array
+    {
+        $payload = [];
+
+        if ($amount !== null) {
+            $payload['amount'] = [
+                'value' => number_format($amount, 2, '.', ''),
+                'currency_code' => $currency,
+            ];
+        }
+
+        try {
+            $response = $this->client()->post("{$this->baseUrl}/v2/payments/captures/{$captureId}/refund", $payload)->throw();
+        } catch (RequestException $e) {
+            throw new RuntimeException('PayPal refundCapture failed: '.$e->response?->body(), previous: $e);
+        }
+
+        return $response->json();
+    }
+
+    /**
      * Verify an inbound webhook's signature via PayPal's verify-webhook-signature API.
      *
      * @param  array<string, string>  $headers  Expects transmission_id, transmission_time, cert_url, auth_algo, transmission_sig.

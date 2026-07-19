@@ -11,6 +11,8 @@ return [
     'order_shipped_intro' => 'Good news — your order is on its way to you.',
     'order_delivered_subject' => 'Your order :number has been delivered',
     'order_delivered_intro' => 'Your order has been delivered. We hope you love it.',
+    'order_refunded_subject' => 'Your order :number has been refunded',
+    'order_refunded_intro' => 'Your payment has been refunded. Please allow a few business days for it to appear on your statement.',
     'thanks' => 'Thanks for shopping with us.',
     'regards' => 'The :app_name Team',
     'reset_password_subject' => 'Reset your password',

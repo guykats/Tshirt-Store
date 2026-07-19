@@ -19,7 +19,9 @@ export default function Dashboard() {
     const [designs, setDesigns] = useState([]);
     const [orders, setOrders] = useState([]);
     const [fulfillmentOrders, setFulfillmentOrders] = useState([]);
+    const [refundableOrders, setRefundableOrders] = useState([]);
     const [advancingOrderId, setAdvancingOrderId] = useState(null);
+    const [refundingOrderId, setRefundingOrderId] = useState(null);
     const [agents, setAgents] = useState([]);
     const [events, setEvents] = useState([]);
     const [activity, setActivity] = useState([]);
@@ -38,7 +40,9 @@ export default function Dashboard() {
 
     function loadFulfillmentOrders() {
         api.get('/api/orders').then((res) => {
-            setFulfillmentOrders(res.data.data.filter((order) => order.status in NEXT_FULFILLMENT_STATUS));
+            const allOrders = res.data.data;
+            setFulfillmentOrders(allOrders.filter((order) => order.status in NEXT_FULFILLMENT_STATUS));
+            setRefundableOrders(allOrders.filter((order) => order.payment_status === 'paid'));
         });
     }
 
@@ -100,6 +104,18 @@ export default function Dashboard() {
             loadEvents();
         } finally {
             setAdvancingOrderId(null);
+        }
+    }
+
+    async function refundOrder(id) {
+        setRefundingOrderId(id);
+        try {
+            await api.post(`/api/orders/${id}/refund`);
+            loadFulfillmentOrders();
+            loadOrders();
+            loadEvents();
+        } finally {
+            setRefundingOrderId(null);
         }
     }
 
@@ -194,6 +210,32 @@ export default function Dashboard() {
                             </li>
                         );
                     })}
+                </ul>
+            </section>
+
+            <section className="mb-10">
+                <h2 className="mb-3 font-serif text-lg">{t('dashboard_refunds')}</h2>
+                <p className="mb-3 text-sm text-ink-soft">{t('dashboard_refunds_hint')}</p>
+                {refundableOrders.length === 0 && <p className="text-ink-soft">{t('dashboard_no_refundable_orders')}</p>}
+                <ul className="space-y-3">
+                    {refundableOrders.map((order) => (
+                        <li key={order.id} className="flex items-center justify-between rounded border border-line p-4">
+                            <div>
+                                <p className="font-medium">{order.order_number}</p>
+                                <p className="text-sm text-ink-soft">
+                                    {order.currency} {order.total_amount.toFixed(2)} — {t(`orders_status_${order.status}`)}
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => refundOrder(order.id)}
+                                disabled={refundingOrderId === order.id}
+                                className="rounded bg-red-700 px-3 py-1.5 text-sm text-white disabled:opacity-60"
+                            >
+                                {refundingOrderId === order.id ? t('dashboard_refund_processing') : t('dashboard_refund_action')}
+                            </button>
+                        </li>
+                    ))}
                 </ul>
             </section>
 

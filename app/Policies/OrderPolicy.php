@@ -31,4 +31,9 @@ class OrderPolicy
     {
         return $user->id === $order->user_id;
     }
+
+    public function refund(User $user, Order $order): bool
+    {
+        return $user->isAdmin();
+    }
 }

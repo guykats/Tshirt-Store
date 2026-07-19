@@ -72,6 +72,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/orders/{order}/approve', [OrderController::class, 'approve']);
     Route::post('/orders/{order}/advance-status', [OrderController::class, 'advanceStatus']);
     Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel']);
+    Route::post('/orders/{order}/refund', [OrderController::class, 'refund']);
     Route::get('/orders/{order}/invoice', [OrderController::class, 'invoice']);
 
     Route::get('/inventory/low-stock', [InventoryController::class, 'lowStock']);

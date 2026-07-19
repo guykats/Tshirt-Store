@@ -5,12 +5,15 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\OrderResource;
 use App\Mail\OrderDeliveredMail;
+use App\Mail\OrderRefundedMail;
 use App\Mail\OrderShippedMail;
 use App\Models\Order;
 use App\Models\SystemEvent;
 use App\Services\InvoiceService;
+use App\Services\PayPalClient;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
+use RuntimeException;
 
 class OrderController extends Controller
 {
@@ -133,6 +136,51 @@ class OrderController extends Controller
             'user',
             ['order_id' => $order->id],
         );
+
+        return new OrderResource($order->fresh(['user', 'items.productVariant.product']));
+    }
+
+    /**
+     * Refund a paid order's captured PayPal payment in full. Admin-only, and
+     * only possible while the order is still marked 'paid' — an order that's
+     * unpaid, already refunded, or cancelled has nothing to refund.
+     */
+    public function refund(Request $request, Order $order, PayPalClient $payPal)
+    {
+        $this->authorize('refund', $order);
+
+        if ($order->payment_status !== 'paid') {
+            return response()->json(['message' => 'Only paid orders can be refunded.'], 422);
+        }
+
+        if (! $order->paypal_transaction_id) {
+            return response()->json(['message' => 'This order has no captured PayPal payment to refund.'], 422);
+        }
+
+        try {
+            $payPal->refundCapture($order->paypal_transaction_id);
+        } catch (RuntimeException $e) {
+            report($e);
+
+            return response()->json(['message' => 'PayPal refund failed. Please try again.'], 502);
+        }
+
+        $order->update([
+            'status' => 'refunded',
+            'payment_status' => 'refunded',
+        ]);
+
+        SystemEvent::log(
+            'order.refunded',
+            "Order {$order->order_number} refunded by {$request->user()->name}.",
+            $request->user()->name,
+            'user',
+            ['order_id' => $order->id],
+        );
+
+        $order->refresh()->loadMissing('user');
+
+        Mail::to($order->user)->locale($order->user->preferred_locale ?? 'en')->send(new OrderRefundedMail($order));
 
         return new OrderResource($order->fresh(['user', 'items.productVariant.product']));
     }

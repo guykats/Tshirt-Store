@@ -11,6 +11,8 @@ return [
     'order_shipped_intro' => 'בשורה טובה — ההזמנה שלך בדרך אליך.',
     'order_delivered_subject' => 'ההזמנה שלך :number נמסרה',
     'order_delivered_intro' => 'ההזמנה שלך נמסרה. אנחנו מקווים שתאהבו אותה.',
+    'order_refunded_subject' => 'ההזמנה שלך :number זוכתה',
+    'order_refunded_intro' => 'התשלום שלך זוכה. אנא המתן/י מספר ימי עסקים עד שהזיכוי יופיע בדף החשבון שלך.',
     'thanks' => 'תודה שקנית אצלנו.',
     'regards' => 'צוות :app_name',
     'reset_password_subject' => 'איפוס הסיסמה שלך',
