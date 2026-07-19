@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CheckoutController;
 use App\Http\Controllers\Api\DesignController;
 use App\Http\Controllers\Api\EpicController;
+use App\Http\Controllers\Api\HealthController;
 use App\Http\Controllers\Api\HomeStatsController;
 use App\Http\Controllers\Api\InventoryController;
 use App\Http\Controllers\Api\OrderController;
@@ -20,6 +21,12 @@ use App\Http\Controllers\Api\TestimonialController;
 use App\Http\Controllers\Api\VisionerChatController;
 use App\Http\Controllers\Api\WishlistController;
 use Illuminate\Support\Facades\Route;
+
+// Unauthenticated health check for external uptime monitoring (UptimeRobot,
+// Pingdom, a load balancer) and the deploy pipeline — proves the DB is
+// actually reachable, not just that "/" returns a raw 200. See also the
+// framework's own GET /up (bootstrap/app.php) for a simpler liveness probe.
+Route::get('/health', [HealthController::class, 'show'])->middleware('throttle:health-check');
 
 Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:register');
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login');

@@ -55,5 +55,14 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('catalog-read', function ($request) {
             return Limit::perMinute(60)->by($request->ip());
         });
+
+        // Generous per-IP cap for the unauthenticated health-check endpoint —
+        // uptime monitors typically poll every 1-5 minutes, but this keeps
+        // the (cheap, single-query) endpoint from being hammered as a free DoS
+        // vector while still comfortably covering multiple monitors/load
+        // balancer health probes sharing an IP.
+        RateLimiter::for('health-check', function ($request) {
+            return Limit::perMinute(120)->by($request->ip());
+        });
     }
 }
