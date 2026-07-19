@@ -5,9 +5,10 @@ import { PayPalButtons } from '@paypal/react-paypal-js';
 import api from '../lib/api';
 import { useAuth } from '../lib/AuthContext';
 import useDocumentMeta from '../hooks/useDocumentMeta';
+import { formatPrice } from '../lib/formatPrice';
 
 export default function Checkout() {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const { productId } = useParams();
     const [searchParams] = useSearchParams();
     const { user, loading: authLoading } = useAuth();
@@ -94,7 +95,7 @@ export default function Checkout() {
 
             <div className="mb-6 rounded border border-line p-4">
                 <p className="font-medium">{product.name}</p>
-                <p className="text-sm text-ink-soft">{product.currency} {product.base_price.toFixed(2)}</p>
+                <p className="text-sm text-ink-soft">{formatPrice(product.base_price, product.currency, i18n.language)}</p>
             </div>
 
             {status === 'form' && (
@@ -191,7 +192,7 @@ export default function Checkout() {
                         <p className="mb-4 rounded border border-line bg-parchment-dim p-3 text-sm text-ink-soft">
                             {t('checkout_coupon_applied', {
                                 code: order.discount_code,
-                                amount: `${order.currency} ${order.discount_amount.toFixed(2)}`,
+                                amount: formatPrice(order.discount_amount, order.currency, i18n.language),
                             })}
                         </p>
                     )}

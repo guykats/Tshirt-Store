@@ -1,3 +1,10 @@
+@php
+    // Fall back to the orders table's own 'USD' column default in case an
+    // in-memory Order instance (e.g. one built via ->create() in a test and
+    // never refreshed from the DB) hasn't picked up the default yet — keeps
+    // Number::currency() from throwing on a null currency code.
+    $invoiceCurrency = $order->currency ?? 'USD';
+@endphp
 <!DOCTYPE html>
 <html lang="{{ app()->getLocale() }}" dir="{{ app()->getLocale() === 'he' ? 'rtl' : 'ltr' }}">
 <head>
@@ -73,8 +80,8 @@
                         ({{ $item->productVariant->size }} / {{ $item->productVariant->color }})
                     </td>
                     <td>{{ $item->quantity }}</td>
-                    <td>{{ $order->currency }} {{ number_format($item->unit_price, 2) }}</td>
-                    <td>{{ $order->currency }} {{ number_format($item->subtotal, 2) }}</td>
+                    <td>{{ \Illuminate\Support\Number::currency($item->unit_price ?? 0, in: $invoiceCurrency, locale: app()->getLocale()) }}</td>
+                    <td>{{ \Illuminate\Support\Number::currency($item->subtotal ?? 0, in: $invoiceCurrency, locale: app()->getLocale()) }}</td>
                 </tr>
             @endforeach
         </tbody>
@@ -83,25 +90,25 @@
     <table class="totals">
         <tr>
             <td class="label">{{ __('invoice.subtotal') }}</td>
-            <td>{{ $order->currency }} {{ number_format($order->subtotal, 2) }}</td>
+            <td>{{ \Illuminate\Support\Number::currency($order->subtotal ?? 0, in: $invoiceCurrency, locale: app()->getLocale()) }}</td>
         </tr>
         @if($order->discount_amount > 0)
             <tr>
                 <td class="label">{{ __('invoice.discount') }}{{ $order->discount_code ? ' ('.$order->discount_code.')' : '' }}</td>
-                <td>-{{ $order->currency }} {{ number_format($order->discount_amount, 2) }}</td>
+                <td>-{{ \Illuminate\Support\Number::currency($order->discount_amount ?? 0, in: $invoiceCurrency, locale: app()->getLocale()) }}</td>
             </tr>
         @endif
         <tr>
             <td class="label">{{ __('invoice.tax') }}</td>
-            <td>{{ $order->currency }} {{ number_format($order->tax_amount, 2) }}</td>
+            <td>{{ \Illuminate\Support\Number::currency($order->tax_amount ?? 0, in: $invoiceCurrency, locale: app()->getLocale()) }}</td>
         </tr>
         <tr>
             <td class="label">{{ __('invoice.shipping') }}</td>
-            <td>{{ $order->currency }} {{ number_format($order->shipping_amount, 2) }}</td>
+            <td>{{ \Illuminate\Support\Number::currency($order->shipping_amount ?? 0, in: $invoiceCurrency, locale: app()->getLocale()) }}</td>
         </tr>
         <tr class="grand-total">
             <td class="label">{{ __('invoice.total') }}</td>
-            <td>{{ $order->currency }} {{ number_format($order->total_amount, 2) }}</td>
+            <td>{{ \Illuminate\Support\Number::currency($order->total_amount ?? 0, in: $invoiceCurrency, locale: app()->getLocale()) }}</td>
         </tr>
     </table>
 

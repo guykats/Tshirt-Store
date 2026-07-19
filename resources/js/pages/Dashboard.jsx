@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import api from '../lib/api';
 import DesignArt from '../components/DesignArt';
 import useDocumentMeta from '../hooks/useDocumentMeta';
+import { formatPrice } from '../lib/formatPrice';
 
 const NEXT_FULFILLMENT_STATUS = {
     approved: 'processing',
@@ -16,7 +17,7 @@ const CARRIER_OPTIONS = ['USPS', 'UPS', 'FedEx', 'Israel Post', 'Other'];
 const DEFAULT_SHIPPING_DRAFT = { carrier: CARRIER_OPTIONS[0], otherCarrier: '', trackingNumber: '' };
 
 export default function Dashboard() {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
 
     useDocumentMeta(t('meta_dashboard_title', { app: t('app_name') }));
 
@@ -194,7 +195,7 @@ export default function Dashboard() {
                             <div>
                                 <p className="font-medium">{order.order_number}</p>
                                 <p className="text-sm text-ink-soft">
-                                    {order.currency} {order.total_amount.toFixed(2)}
+                                    {formatPrice(order.total_amount, order.currency, i18n.language)}
                                 </p>
                             </div>
                             <button
@@ -315,7 +316,7 @@ export default function Dashboard() {
                             <div>
                                 <p className="font-medium">{order.order_number}</p>
                                 <p className="text-sm text-ink-soft">
-                                    {order.currency} {order.total_amount.toFixed(2)} — {t(`orders_status_${order.status}`)}
+                                    {formatPrice(order.total_amount, order.currency, i18n.language)} — {t(`orders_status_${order.status}`)}
                                 </p>
                             </div>
                             <button

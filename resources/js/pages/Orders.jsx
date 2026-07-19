@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import api from '../lib/api';
 import useDocumentMeta from '../hooks/useDocumentMeta';
+import { formatPrice } from '../lib/formatPrice';
 
 const STATUS_STYLES = {
     pending_approval: 'bg-line text-ink-soft',
@@ -26,7 +27,7 @@ function isCancellable(order) {
 }
 
 export default function Orders() {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [confirmingId, setConfirmingId] = useState(null);
@@ -112,7 +113,7 @@ export default function Orders() {
 
                         <div className="mt-3 flex items-center justify-between border-t border-line pt-3">
                             <p className="text-sm">
-                                {order.currency} {order.total_amount.toFixed(2)}
+                                {formatPrice(order.total_amount, order.currency, i18n.language)}
                             </p>
                             <div className="flex items-center gap-3">
                                 {order.payment_status === 'paid' && (

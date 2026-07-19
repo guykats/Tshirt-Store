@@ -9,9 +9,10 @@ import WishlistButton from '../components/WishlistButton';
 import { ProductDetailSkeleton } from '../components/Skeleton';
 import useDocumentMeta from '../hooks/useDocumentMeta';
 import useJsonLd from '../hooks/useJsonLd';
+import { formatPrice } from '../lib/formatPrice';
 
 export default function ProductDetail() {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const { slug } = useParams();
     const [product, setProduct] = useState(null);
     const [size, setSize] = useState('');
@@ -104,7 +105,7 @@ export default function ProductDetail() {
                 <div>
                     <h1 className="font-serif text-3xl">{product.name}</h1>
                     <p className="mt-2 text-lg text-ink-soft">
-                        {product.currency} {product.base_price.toFixed(2)}
+                        {formatPrice(product.base_price, product.currency, i18n.language)}
                     </p>
                     <p className="mt-6 leading-relaxed text-ink-soft">{product.description}</p>
 

@@ -4,6 +4,7 @@ import api from '../lib/api';
 import ColorSwatch from '../components/ColorSwatch';
 import DesignArt from '../components/DesignArt';
 import useDocumentMeta from '../hooks/useDocumentMeta';
+import { formatPrice } from '../lib/formatPrice';
 
 const STATUS_OPTIONS = ['draft', 'active', 'archived'];
 const SIZE_OPTIONS = ['S', 'M', 'L', 'XL', 'XXL'];
@@ -33,7 +34,7 @@ const EMPTY_IMAGE_FORM = {
 };
 
 export default function ProductManagement() {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
 
     useDocumentMeta(t('meta_products_management_title', { app: t('app_name') }));
 
@@ -342,7 +343,7 @@ export default function ProductManagement() {
                                             </span>
                                         </p>
                                         <p className="mt-1 text-sm text-ink-soft">
-                                            {product.sku} · {product.currency} {Number(product.base_price).toFixed(2)}
+                                            {product.sku} · {formatPrice(product.base_price, product.currency, i18n.language)}
                                         </p>
                                     </div>
                                 </div>

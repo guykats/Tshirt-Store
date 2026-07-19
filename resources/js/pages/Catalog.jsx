@@ -8,6 +8,7 @@ import WishlistButton from '../components/WishlistButton';
 import { CatalogSkeleton } from '../components/Skeleton';
 import useDocumentMeta from '../hooks/useDocumentMeta';
 import { useSiteSettings } from '../lib/SiteSettingsContext';
+import { formatPrice } from '../lib/formatPrice';
 
 const SORT_OPTIONS = ['newest', 'price_asc', 'price_desc'];
 
@@ -268,7 +269,7 @@ export default function Catalog() {
                                     />
                                     <h2 className="mt-4 font-serif text-lg">{product.name}</h2>
                                     <p className="mt-1 text-sm text-ink-soft">
-                                        {product.currency} {product.base_price.toFixed(2)}
+                                        {formatPrice(product.base_price, product.currency, i18n.language)}
                                     </p>
                                 </Link>
                                 <WishlistButton product={product} className="absolute top-3 right-3" />

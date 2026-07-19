@@ -6,9 +6,10 @@ import DesignArt from '../components/DesignArt';
 import WishlistButton from '../components/WishlistButton';
 import useDocumentMeta from '../hooks/useDocumentMeta';
 import { useWishlist } from '../lib/WishlistContext';
+import { formatPrice } from '../lib/formatPrice';
 
 export default function Wishlist() {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const { productIds } = useWishlist();
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -40,7 +41,7 @@ export default function Wishlist() {
                             <DesignArt motif={item.product.design?.mockup_url} className="aspect-square rounded transition-colors group-hover:bg-line" />
                             <h2 className="mt-4 font-serif text-lg">{item.product.name}</h2>
                             <p className="mt-1 text-sm text-ink-soft">
-                                {item.product.currency} {item.product.base_price.toFixed(2)}
+                                {formatPrice(item.product.base_price, item.product.currency, i18n.language)}
                             </p>
                         </Link>
                         <WishlistButton product={item.product} className="absolute top-3 right-3" />
