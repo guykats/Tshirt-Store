@@ -55,6 +55,9 @@ export default function Layout({ children }) {
                             <Link to="/dashboard/design" className="hover:text-ink">{t('nav_design')}</Link>
                         </>
                     )}
+                    {user && (
+                        <Link to="/account" className="hover:text-ink">{t('nav_account')}</Link>
+                    )}
                     {user ? (
                         <button onClick={handleLogout} className="hover:text-ink">{t('nav_logout')}</button>
                     ) : (

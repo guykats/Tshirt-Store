@@ -27,6 +27,7 @@ const VisionerChat = lazy(() => import('./pages/VisionerChat'));
 const StyleGuide = lazy(() => import('./pages/StyleGuide'));
 const DesignSettings = lazy(() => import('./pages/DesignSettings'));
 const Orders = lazy(() => import('./pages/Orders'));
+const AccountSettings = lazy(() => import('./pages/AccountSettings'));
 const Wishlist = lazy(() => import('./pages/Wishlist'));
 const About = lazy(() => import('./pages/About'));
 const NotFound = lazy(() => import('./pages/NotFound'));
@@ -95,6 +96,14 @@ export default function App() {
                                             element={
                                                 <RequireAuth>
                                                     <Wishlist />
+                                                </RequireAuth>
+                                            }
+                                        />
+                                        <Route
+                                            path="/account"
+                                            element={
+                                                <RequireAuth>
+                                                    <AccountSettings />
                                                 </RequireAuth>
                                             }
                                         />

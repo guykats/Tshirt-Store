@@ -42,8 +42,12 @@ export function AuthProvider({ children }) {
         await api.post('/api/reset-password', payload);
     }
 
+    async function changePassword(payload) {
+        await api.post('/api/change-password', payload);
+    }
+
     return (
-        <AuthContext.Provider value={{ user, loading, login, register, logout, requestPasswordReset, resetPassword }}>
+        <AuthContext.Provider value={{ user, loading, login, register, logout, requestPasswordReset, resetPassword, changePassword }}>
             {children}
         </AuthContext.Provider>
     );

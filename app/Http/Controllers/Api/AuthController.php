@@ -7,6 +7,7 @@ use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -59,5 +60,32 @@ class AuthController extends Controller
     public function me(Request $request)
     {
         return new UserResource($request->user());
+    }
+
+    /**
+     * Self-service password change for an already-authenticated user (as
+     * opposed to PasswordResetController's forgot-password email flow). The
+     * current password is re-verified against the authenticated user's own
+     * hash rather than trusted from the session, so a hijacked/left-open
+     * session alone isn't enough to lock the real owner out.
+     */
+    public function changePassword(Request $request)
+    {
+        $data = $request->validate([
+            'current_password' => ['required', 'string'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+        ]);
+
+        $user = $request->user();
+
+        if (! Hash::check($data['current_password'], $user->password)) {
+            throw ValidationException::withMessages([
+                'current_password' => __('auth.password'),
+            ]);
+        }
+
+        $user->forceFill(['password' => $data['password']])->save();
+
+        return response()->json(['message' => __('Your password has been changed.')]);
     }
 }
