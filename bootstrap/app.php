@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\SecurityHeaders;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -21,6 +22,10 @@ return Application::configure(basePath: dirname(__DIR__))
         // marked Secure. '*' is safe here since the only thing that can set these headers
         // is the proxy on the same box, not an untrusted network hop.
         $middleware->trustProxies(at: '*');
+
+        // Runs on every request (web + API) so CSP/HSTS/X-Frame-Options etc.
+        // land on API JSON responses too, not just the SPA shell.
+        $middleware->append(SecurityHeaders::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
