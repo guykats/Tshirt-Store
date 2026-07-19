@@ -85,6 +85,12 @@
             <td class="label">{{ __('invoice.subtotal') }}</td>
             <td>{{ $order->currency }} {{ number_format($order->subtotal, 2) }}</td>
         </tr>
+        @if($order->discount_amount > 0)
+            <tr>
+                <td class="label">{{ __('invoice.discount') }}{{ $order->discount_code ? ' ('.$order->discount_code.')' : '' }}</td>
+                <td>-{{ $order->currency }} {{ number_format($order->discount_amount, 2) }}</td>
+            </tr>
+        @endif
         <tr>
             <td class="label">{{ __('invoice.tax') }}</td>
             <td>{{ $order->currency }} {{ number_format($order->tax_amount, 2) }}</td>

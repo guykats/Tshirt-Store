@@ -11,6 +11,7 @@ return [
     'unit_price' => 'Unit Price',
     'subtotal_line' => 'Subtotal',
     'subtotal' => 'Subtotal',
+    'discount' => 'Discount',
     'tax' => 'Tax',
     'shipping' => 'Shipping',
     'total' => 'Total',

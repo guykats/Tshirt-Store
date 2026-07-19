@@ -19,6 +19,7 @@ export default function Checkout() {
     const [variantId, setVariantId] = useState('');
     const [quantity, setQuantity] = useState(1);
     const [email, setEmail] = useState('');
+    const [couponCode, setCouponCode] = useState('');
     const [address, setAddress] = useState({
         full_name: '', line1: '', line2: '', city: '', state: '', postal_code: '', country: 'US', phone: '',
     });
@@ -49,6 +50,7 @@ export default function Checkout() {
         try {
             const res = await api.post('/api/checkout', {
                 ...(user ? {} : { email }),
+                ...(couponCode.trim() ? { code: couponCode.trim() } : {}),
                 product_variant_id: Number(variantId),
                 quantity: Number(quantity),
                 shipping_address: address,
@@ -159,6 +161,18 @@ export default function Checkout() {
                         </div>
                     ))}
 
+                    <div>
+                        <label htmlFor="checkout-coupon" className="mb-1 block text-sm">{t('checkout_coupon_label')}</label>
+                        <input
+                            id="checkout-coupon"
+                            type="text"
+                            value={couponCode}
+                            onChange={(e) => setCouponCode(e.target.value)}
+                            placeholder={t('checkout_coupon_placeholder')}
+                            className="w-full rounded border border-line bg-parchment px-3 py-2 uppercase"
+                        />
+                    </div>
+
                     {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
 
                     <button
@@ -173,6 +187,14 @@ export default function Checkout() {
 
             {status === 'paying' && paypalOrderId && (
                 <div>
+                    {order?.discount_amount > 0 && (
+                        <p className="mb-4 rounded border border-line bg-parchment-dim p-3 text-sm text-ink-soft">
+                            {t('checkout_coupon_applied', {
+                                code: order.discount_code,
+                                amount: `${order.currency} ${order.discount_amount.toFixed(2)}`,
+                            })}
+                        </p>
+                    )}
                     <p className="mb-4 text-sm text-ink-soft">{t('checkout_complete_with_paypal')}</p>
                     <PayPalButtons
                         createOrder={() => Promise.resolve(paypalOrderId)}

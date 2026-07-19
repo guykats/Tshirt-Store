@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Exceptions\InsufficientStockException;
+use App\Exceptions\InvalidCouponException;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\OrderResource;
 use App\Mail\OrderConfirmationMail;
@@ -10,6 +11,7 @@ use App\Models\Order;
 use App\Models\ProductVariant;
 use App\Models\SystemEvent;
 use App\Models\User;
+use App\Services\CouponService;
 use App\Services\PayPalClient;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -21,7 +23,7 @@ use RuntimeException;
 
 class CheckoutController extends Controller
 {
-    public function __construct(protected PayPalClient $payPal) {}
+    public function __construct(protected PayPalClient $payPal, protected CouponService $coupons) {}
 
     /**
      * Create a local order plus a matching PayPal order for the buyer to approve.
@@ -52,6 +54,7 @@ class CheckoutController extends Controller
             'shipping_address.postal_code' => ['required', 'string', 'max:20'],
             'shipping_address.country' => ['nullable', 'string', 'size:2'],
             'shipping_address.phone' => ['nullable', 'string', 'max:50'],
+            'code' => ['nullable', 'string', 'max:50'],
         ];
 
         if (! $request->user()) {
@@ -104,6 +107,18 @@ class CheckoutController extends Controller
 
                 $locked->decrement('stock_quantity', $data['quantity']);
 
+                $discountCode = null;
+                $discountAmount = 0.0;
+
+                if (! empty($data['code'])) {
+                    $coupon = $this->coupons->lockAndValidate($data['code']);
+                    $discountAmount = $this->coupons->discountFor($coupon, $subtotal);
+                    $discountCode = $coupon->code;
+                    $coupon->increment('redemptions_count');
+                }
+
+                $totalAmount = round($subtotal - $discountAmount, 2);
+
                 $address = $buyer->addresses()->create([
                     'type' => 'shipping',
                     ...$data['shipping_address'],
@@ -112,7 +127,9 @@ class CheckoutController extends Controller
                 $order = $buyer->orders()->create([
                     'order_number' => 'ORD-'.now()->format('ymd').'-'.strtoupper(Str::random(6)),
                     'subtotal' => $subtotal,
-                    'total_amount' => $subtotal,
+                    'discount_code' => $discountCode,
+                    'discount_amount' => $discountAmount,
+                    'total_amount' => $totalAmount,
                     'currency' => $currency,
                     'shipping_address_id' => $address->id,
                     'billing_address_id' => $address->id,
@@ -129,6 +146,8 @@ class CheckoutController extends Controller
             });
         } catch (InsufficientStockException) {
             return response()->json(['message' => 'Not enough stock for the requested quantity.'], 422);
+        } catch (InvalidCouponException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
         }
 
         try {

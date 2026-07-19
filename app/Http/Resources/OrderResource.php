@@ -19,6 +19,8 @@ class OrderResource extends JsonResource
             'shipping_amount' => (float) $this->shipping_amount,
             'total_amount' => (float) $this->total_amount,
             'currency' => $this->currency,
+            'discount_code' => $this->discount_code,
+            'discount_amount' => (float) $this->discount_amount,
             'payment_status' => $this->payment_status,
             'user' => new UserResource($this->whenLoaded('user')),
             'shipping_address' => new AddressResource($this->whenLoaded('shippingAddress')),

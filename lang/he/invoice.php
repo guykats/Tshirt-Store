@@ -11,6 +11,7 @@ return [
     'unit_price' => 'מחיר יחידה',
     'subtotal_line' => 'סכום ביניים',
     'subtotal' => 'סכום ביניים',
+    'discount' => 'הנחה',
     'tax' => 'מס',
     'shipping' => 'משלוח',
     'total' => 'סה"כ',
