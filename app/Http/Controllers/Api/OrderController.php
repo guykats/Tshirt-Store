@@ -17,6 +17,35 @@ use RuntimeException;
 
 class OrderController extends Controller
 {
+    /**
+     * Public, unauthenticated order lookup for a guest whose checkout
+     * session has ended (closed browser, different device, cleared
+     * cookies) and so can't rely on GET /orders/{order} the way a
+     * still-logged-in guest or a registered customer can. Deliberately
+     * requires both order_number and email to match, and returns an
+     * identical 404 whether the order_number doesn't exist at all or it
+     * exists but the email is wrong — so this can't be used to enumerate
+     * valid order numbers or confirm someone else's email is on file.
+     */
+    public function lookup(Request $request)
+    {
+        $data = $request->validate([
+            'order_number' => ['required', 'string', 'max:50'],
+            'email' => ['required', 'email', 'max:255'],
+        ]);
+
+        $order = Order::query()
+            ->with(['user', 'items.productVariant.product'])
+            ->where('order_number', $data['order_number'])
+            ->first();
+
+        if (! $order || ! $order->user || strcasecmp($order->user->email, $data['email']) !== 0) {
+            return response()->json(['message' => 'No order found matching that order number and email.'], 404);
+        }
+
+        return new OrderResource($order);
+    }
+
     public function index(Request $request)
     {
         $this->authorize('viewAny', Order::class);

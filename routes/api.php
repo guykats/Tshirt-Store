@@ -69,6 +69,14 @@ Route::post('/webhooks/paypal', [PayPalWebhookController::class, 'handle']);
 // browser session.
 Route::post('/checkout', [CheckoutController::class, 'store'])->middleware('throttle:checkout');
 
+// Guest order lookup: the counterpart to the guest-checkout comment above —
+// once that browser session/cookie is gone (closed browser, different
+// device, cache cleared) a guest has no real password to log back in with,
+// so this is the only way left to check an order's status or pull it back
+// up. Requires both order_number and email to match so it can't be used to
+// browse someone else's order by number alone; see OrderController::lookup.
+Route::post('/orders/lookup', [OrderController::class, 'lookup'])->middleware('throttle:order-lookup');
+
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);

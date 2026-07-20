@@ -52,6 +52,17 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(10)->by($request->ip());
         });
 
+        // Guest order lookup (POST /orders/lookup) is the only way a guest can
+        // find their order again once their post-checkout session/cookie is
+        // gone, since guest accounts have no real password to log back in
+        // with — but it's also a two-field guessing surface (order_number +
+        // email), so keep it tighter than 'checkout' and per-IP only (no
+        // email field is guaranteed valid before validation runs, same
+        // reasoning as 'checkout').
+        RateLimiter::for('order-lookup', function ($request) {
+            return Limit::perMinute(5)->by($request->ip());
+        });
+
         // Each message can trigger a real, billed Anthropic API call (and possibly a
         // multi-round tool-use loop) - cap how fast one admin can fire them off.
         RateLimiter::for('visioner-chat', function ($request) {
