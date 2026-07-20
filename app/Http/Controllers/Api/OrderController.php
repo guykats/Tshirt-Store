@@ -8,10 +8,12 @@ use App\Mail\OrderDeliveredMail;
 use App\Mail\OrderRefundedMail;
 use App\Mail\OrderShippedMail;
 use App\Models\Order;
+use App\Models\ProductVariant;
 use App\Models\SystemEvent;
 use App\Services\InvoiceService;
 use App\Services\PayPalClient;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use RuntimeException;
 
@@ -168,7 +170,27 @@ class OrderController extends Controller
             return response()->json(['message' => 'This order can no longer be cancelled.'], 422);
         }
 
-        $order->update(['status' => 'cancelled']);
+        // Re-check isCancellable() inside the transaction, on a row-locked
+        // copy of the order, the same way CheckoutController re-checks stock
+        // after locking the variant: it closes the race where two concurrent
+        // cancel requests both pass the check above before either commits,
+        // which would otherwise restore the same reserved stock twice.
+        $cancelled = DB::transaction(function () use ($order) {
+            $locked = Order::where('id', $order->id)->lockForUpdate()->firstOrFail();
+
+            if (! $locked->isCancellable()) {
+                return false;
+            }
+
+            $locked->update(['status' => 'cancelled']);
+            $this->restoreStock($locked);
+
+            return true;
+        });
+
+        if (! $cancelled) {
+            return response()->json(['message' => 'This order can no longer be cancelled.'], 422);
+        }
 
         SystemEvent::log(
             'order.cancelled',
@@ -206,10 +228,29 @@ class OrderController extends Controller
             return response()->json(['message' => 'PayPal refund failed. Please try again.'], 502);
         }
 
-        $order->update([
-            'status' => 'refunded',
-            'payment_status' => 'refunded',
-        ]);
+        // Same race-closing pattern as cancel(): re-check payment_status on a
+        // row-locked copy inside the transaction so two concurrent refund
+        // requests can't both restore the reserved stock for this order.
+        $refunded = DB::transaction(function () use ($order) {
+            $locked = Order::where('id', $order->id)->lockForUpdate()->firstOrFail();
+
+            if ($locked->payment_status !== 'paid') {
+                return false;
+            }
+
+            $locked->update([
+                'status' => 'refunded',
+                'payment_status' => 'refunded',
+            ]);
+
+            $this->restoreStock($locked);
+
+            return true;
+        });
+
+        if (! $refunded) {
+            return response()->json(['message' => 'Only paid orders can be refunded.'], 422);
+        }
 
         SystemEvent::log(
             'order.refunded',
@@ -231,5 +272,40 @@ class OrderController extends Controller
         $this->authorize('view', $order);
 
         return $invoices->generate($order)->stream("invoice-{$order->order_number}.pdf");
+    }
+
+    /**
+     * Give back the stock CheckoutController::store reserved (decremented)
+     * for this order at the moment it was placed — regardless of whether the
+     * order was ever paid. Must only be called from inside the same
+     * transaction as, and after, a status transition guarded by a row lock
+     * on the order (see cancel()/refund()) so it can never run twice for the
+     * same order.
+     */
+    protected function restoreStock(Order $order): void
+    {
+        $order->loadMissing('items');
+
+        foreach ($order->items as $item) {
+            $variant = ProductVariant::where('id', $item->product_variant_id)->lockForUpdate()->first();
+
+            if (! $variant) {
+                // order_items.product_variant_id is a RESTRICT foreign key
+                // (see ProductVariantController::destroy), so this shouldn't
+                // be reachable — guarded defensively rather than assumed.
+                continue;
+            }
+
+            $variant->increment('stock_quantity', $item->quantity);
+
+            // Mirror Admin\ProductVariantController::update: stock coming
+            // back above the low-stock threshold re-arms the alert, so the
+            // next time this variant sells back down to it, an admin is
+            // notified again instead of staying silenced from the order that
+            // originally triggered the alert.
+            if ($variant->stock_quantity > InventoryController::DEFAULT_THRESHOLD && $variant->low_stock_alerted_at !== null) {
+                $variant->forceFill(['low_stock_alerted_at' => null])->save();
+            }
+        }
     }
 }
