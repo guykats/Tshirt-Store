@@ -55,6 +55,8 @@ export default function AccountSettings() {
         } catch (err) {
             if (err.response?.data?.errors?.current_password) {
                 setDeleteError(t('account_delete_wrong_current'));
+            } else if (err.response?.data?.errors?.account) {
+                setDeleteError(t('account_delete_admin_blocked'));
             } else {
                 setDeleteError(t('account_delete_error'));
             }

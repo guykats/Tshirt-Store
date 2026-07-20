@@ -70,6 +70,20 @@ class DeleteAccountTest extends TestCase
         $this->assertTrue(Hash::check('correct-password123', $user->fresh()->password));
     }
 
+    public function test_an_admin_cannot_self_delete_through_this_endpoint(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'password' => 'correct-password123', 'name' => 'The Admin', 'email' => 'admin2@example.com']);
+
+        $response = $this->actingAs($admin)->deleteJson('/api/account', [
+            'current_password' => 'correct-password123',
+        ]);
+
+        $response->assertUnprocessable();
+        $response->assertJsonValidationErrors('account');
+        $this->assertDatabaseHas('users', ['id' => $admin->id, 'name' => 'The Admin', 'email' => 'admin2@example.com']);
+        $this->assertTrue(Hash::check('correct-password123', $admin->fresh()->password));
+    }
+
     public function test_correct_password_anonymizes_the_account_and_old_credentials_no_longer_work(): void
     {
         $user = User::factory()->create([

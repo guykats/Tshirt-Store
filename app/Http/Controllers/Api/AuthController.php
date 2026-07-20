@@ -107,6 +107,12 @@ class AuthController extends Controller
      * Current password is re-verified the same way changePassword does, so a
      * hijacked/left-open session alone can't be used to wipe the real
      * owner's account.
+     *
+     * Admin accounts are excluded: this repo's only way to fix production
+     * state is a git-tracked migration (see CLAUDE.md), so an admin
+     * self-deleting through this self-service action with no other admin
+     * account left could permanently lock the store out of its own admin
+     * area with no in-app recovery path.
      */
     public function deleteAccount(Request $request)
     {
@@ -119,6 +125,12 @@ class AuthController extends Controller
         if (! Hash::check($data['current_password'], $user->password)) {
             throw ValidationException::withMessages([
                 'current_password' => __('auth.password'),
+            ]);
+        }
+
+        if ($user->isAdmin()) {
+            throw ValidationException::withMessages([
+                'account' => __('Admin accounts cannot be deleted through self-service. Please contact another administrator.'),
             ]);
         }
 
