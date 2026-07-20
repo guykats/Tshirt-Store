@@ -69,6 +69,15 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(10)->by($request->user()?->id ?: $request->ip());
         });
 
+        // Review submission/deletion (POST/DELETE /products/{product}/reviews) is
+        // behind auth:sanctum so a real user is always available to key off, same
+        // as 'visioner-chat' - keyed by user id so one abusive account can't be
+        // used to hammer the endpoint (e.g. repeatedly retrying after the
+        // duplicate-review 422) while other users are unaffected.
+        RateLimiter::for('reviews', function ($request) {
+            return Limit::perMinute(10)->by($request->user()?->id ?: $request->ip());
+        });
+
         // Public catalog/search/product-detail/reviews reads have no auth to key off,
         // so this is per-IP only. 60/min (1/sec sustained) comfortably covers a real
         // shopper paginating, re-sorting, and typing a live search box, while still

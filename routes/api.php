@@ -95,8 +95,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/inventory/low-stock', [InventoryController::class, 'lowStock']);
 
     Route::get('/products/{product}/reviews/eligibility', [ReviewController::class, 'eligibility']);
-    Route::post('/products/{product}/reviews', [ReviewController::class, 'store']);
-    Route::delete('/products/{product}/reviews/{review}', [ReviewController::class, 'destroy']);
+    Route::post('/products/{product}/reviews', [ReviewController::class, 'store'])->middleware('throttle:reviews');
+    Route::delete('/products/{product}/reviews/{review}', [ReviewController::class, 'destroy'])->middleware('throttle:reviews');
 
     Route::get('/wishlist', [WishlistController::class, 'index']);
     Route::post('/products/{product}/wishlist', [WishlistController::class, 'store']);
