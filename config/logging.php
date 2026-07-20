@@ -54,7 +54,15 @@ return [
 
         'stack' => [
             'driver' => 'stack',
-            'channels' => explode(',', (string) env('LOG_STACK', 'single')),
+            // Default to 'daily' (not 'single') so a fresh deploy that hasn't
+            // explicitly set LOG_STACK in its .env still gets bounded, rotated
+            // logs out of the box — a 'single' handler writes forever to one
+            // storage/logs/laravel.log with no size cap, rotation, or pruning,
+            // which is a real disk-exhaustion risk over months of uptime. This
+            // mirrors app/Console/Commands/BackupDatabase.php's explicit
+            // retention/rotation for DB backups on the same box; the 'daily'
+            // channel below already prunes via LOG_DAILY_DAYS (default 14).
+            'channels' => explode(',', (string) env('LOG_STACK', 'daily')),
             'ignore_exceptions' => false,
         ],
 
