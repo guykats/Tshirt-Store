@@ -16,6 +16,30 @@ const CARRIER_OPTIONS = ['USPS', 'UPS', 'FedEx', 'Israel Post', 'Other'];
 
 const DEFAULT_SHIPPING_DRAFT = { carrier: CARRIER_OPTIONS[0], otherCarrier: '', trackingNumber: '' };
 
+/**
+ * Both /api/orders and /api/designs paginate 20-at-a-time server-side. The
+ * dashboard's admin queues (fulfillment, refunds, pending approvals) need the
+ * *entire* matching set to filter over client-side, not just page 1 — a store
+ * with more than 20 total orders or more than 20 pending designs would
+ * otherwise silently drop older rows with no error or "load more" affordance.
+ * Loop through meta.last_page (same pattern AuditLog.jsx uses for its visible
+ * pager) until every page has been fetched.
+ */
+async function fetchAllPages(url, params = {}) {
+    const results = [];
+    let page = 1;
+    let lastPage = 1;
+
+    do {
+        const res = await api.get(url, { params: { ...params, page } });
+        results.push(...res.data.data);
+        lastPage = res.data.meta?.last_page ?? 1;
+        page += 1;
+    } while (page <= lastPage);
+
+    return results;
+}
+
 export default function Dashboard() {
     const { t, i18n } = useTranslation();
 
@@ -36,18 +60,15 @@ export default function Dashboard() {
     const [lowStock, setLowStock] = useState([]);
 
     function loadDesigns() {
-        api.get('/api/designs', { params: { status: 'pending_approval' } })
-            .then((res) => setDesigns(res.data.data));
+        fetchAllPages('/api/designs', { status: 'pending_approval' }).then(setDesigns);
     }
 
     function loadOrders() {
-        api.get('/api/orders', { params: { status: 'pending_approval' } })
-            .then((res) => setOrders(res.data.data));
+        fetchAllPages('/api/orders', { status: 'pending_approval' }).then(setOrders);
     }
 
     function loadFulfillmentOrders() {
-        api.get('/api/orders').then((res) => {
-            const allOrders = res.data.data;
+        fetchAllPages('/api/orders').then((allOrders) => {
             setFulfillmentOrders(allOrders.filter((order) => order.status in NEXT_FULFILLMENT_STATUS));
             setRefundableOrders(allOrders.filter((order) => order.payment_status === 'paid'));
         });
