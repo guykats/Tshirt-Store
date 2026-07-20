@@ -27,6 +27,7 @@ const VisionerChat = lazy(() => import('./pages/VisionerChat'));
 const StyleGuide = lazy(() => import('./pages/StyleGuide'));
 const DesignSettings = lazy(() => import('./pages/DesignSettings'));
 const ProductManagement = lazy(() => import('./pages/ProductManagement'));
+const AuditLog = lazy(() => import('./pages/AuditLog'));
 const Orders = lazy(() => import('./pages/Orders'));
 const AccountSettings = lazy(() => import('./pages/AccountSettings'));
 const Wishlist = lazy(() => import('./pages/Wishlist'));
@@ -161,6 +162,14 @@ export default function App() {
                                             element={
                                                 <RequireAdmin>
                                                     <ProductManagement />
+                                                </RequireAdmin>
+                                            }
+                                        />
+                                        <Route
+                                            path="/dashboard/audit-log"
+                                            element={
+                                                <RequireAdmin>
+                                                    <AuditLog />
                                                 </RequireAdmin>
                                             }
                                         />

@@ -402,7 +402,12 @@ export default function Dashboard() {
             </section>
 
             <section className="mb-10">
-                <h2 className="mb-3 font-serif text-lg">{t('dashboard_events')}</h2>
+                <div className="mb-3 flex items-center justify-between">
+                    <h2 className="font-serif text-lg">{t('dashboard_events')}</h2>
+                    <Link to="/dashboard/audit-log" className="text-sm text-brass hover:underline">
+                        {t('dashboard_events_view_all')}
+                    </Link>
+                </div>
                 <ul className="max-h-96 space-y-2 overflow-y-auto rounded border border-line p-4">
                     {events.length === 0 && <p className="text-ink-soft">{t('dashboard_no_events')}</p>}
                     {events.map((event) => (
