@@ -20,6 +20,13 @@ return Application::configure(basePath: dirname(__DIR__))
         // minute for that to matter in production — deploy.yml wires that up via
         // an idempotent crontab entry on the Hostinger host.
         $schedule->command('app:backup-database')->dailyAt('03:00');
+
+        // Checkout reserves (decrements) stock at order-creation time, before
+        // payment is captured (see CheckoutController::store) — a shopper
+        // who never comes back to pay would otherwise lock that stock away
+        // forever. Runs frequently since the reservation window itself is
+        // short (config('checkout.reservation_minutes'), default 60 min).
+        $schedule->command('app:expire-abandoned-orders')->everyFifteenMinutes();
     })
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->statefulApi();
