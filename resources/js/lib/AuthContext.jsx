@@ -46,8 +46,13 @@ export function AuthProvider({ children }) {
         await api.post('/api/change-password', payload);
     }
 
+    async function deleteAccount(currentPassword) {
+        await api.delete('/api/account', { data: { current_password: currentPassword } });
+        setUser(null);
+    }
+
     return (
-        <AuthContext.Provider value={{ user, loading, login, register, logout, requestPasswordReset, resetPassword, changePassword }}>
+        <AuthContext.Provider value={{ user, loading, login, register, logout, requestPasswordReset, resetPassword, changePassword, deleteAccount }}>
             {children}
         </AuthContext.Provider>
     );
