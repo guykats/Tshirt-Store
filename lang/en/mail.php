@@ -29,4 +29,8 @@ return [
     'low_stock_alert_quantity' => 'Remaining quantity: :count',
     'low_stock_alert_sku' => 'SKU: :sku',
     'low_stock_alert_action' => 'View Low Stock',
+    'backup_failed_subject' => 'Database backup failed',
+    'backup_failed_intro' => 'Tonight\'s scheduled database backup did not complete successfully. Please check the server as soon as possible — an unresolved failure means backups may not be recoverable.',
+    'backup_failed_reason' => 'Reason',
+    'backup_failed_action' => 'View Audit Log',
 ];

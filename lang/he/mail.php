@@ -29,4 +29,8 @@ return [
     'low_stock_alert_quantity' => 'כמות שנותרה: :count',
     'low_stock_alert_sku' => 'מק"ט: :sku',
     'low_stock_alert_action' => 'לצפייה במלאי הנמוך',
+    'backup_failed_subject' => 'גיבוי בסיס הנתונים נכשל',
+    'backup_failed_intro' => 'הגיבוי המתוזמן של בסיס הנתונים הלילה לא הושלם בהצלחה. יש לבדוק את השרת בהקדם האפשרי — כשל שלא מטופל עלול לפגוע ביכולת השחזור מגיבויים.',
+    'backup_failed_reason' => 'סיבה',
+    'backup_failed_action' => 'לצפייה ביומן הביקורת',
 ];

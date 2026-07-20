@@ -3,9 +3,13 @@
 namespace App\Console\Commands;
 
 use App\Models\SystemEvent;
+use App\Models\User;
+use App\Notifications\BackupFailed;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Process;
 
 #[Signature('app:backup-database')]
@@ -73,13 +77,24 @@ class BackupDatabase extends Command
     }
 
     /**
-     * Log a SystemEvent AND print + return failure — the whole point is that a
-     * broken backup job is noticed (via the admin-facing system_events feed)
-     * rather than silently assumed to be working.
+     * Log a SystemEvent, email every admin, AND print + return failure — the
+     * whole point is that a broken backup job is actually noticed rather than
+     * silently assumed to be working. The audit-log entry and the email are
+     * complementary (mirrors CheckoutController's low-stock alert), not a
+     * replacement for each other: the SystemEvent is there if nobody opens
+     * their inbox, and the email doesn't depend on an admin remembering to
+     * check the dashboard.
      */
     private function failLoudly(string $message): int
     {
         SystemEvent::log('backup.failed', $message, 'schedule:run', 'system');
+
+        try {
+            Notification::send(User::where('role', 'admin')->get(), new BackupFailed($message));
+        } catch (\Throwable $e) {
+            report($e);
+            Log::warning('Backup failure notification failed to send.', ['reason' => $message]);
+        }
 
         $this->error($message);
 

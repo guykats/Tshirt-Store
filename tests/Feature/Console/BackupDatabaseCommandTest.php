@@ -2,9 +2,12 @@
 
 namespace Tests\Feature\Console;
 
+use App\Models\User;
+use App\Notifications\BackupFailed;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Process;
 use Tests\TestCase;
 
@@ -74,6 +77,46 @@ class BackupDatabaseCommandTest extends TestCase
         $this->assertDatabaseHas('system_events', [
             'event_type' => 'backup.failed',
         ]);
+    }
+
+    public function test_it_emails_every_admin_exactly_once_when_a_backup_fails(): void
+    {
+        Notification::fake();
+
+        $admin1 = User::factory()->create(['role' => 'admin']);
+        $admin2 = User::factory()->create(['role' => 'admin']);
+        User::factory()->create(); // non-admin, should not be notified
+
+        Process::fake([
+            '*mysqldump*' => Process::result(output: '', errorOutput: 'mysqldump: command not found', exitCode: 127),
+        ]);
+
+        $this->artisan('app:backup-database')->assertExitCode(1);
+
+        Notification::assertSentTo($admin1, BackupFailed::class);
+        Notification::assertSentTo($admin2, BackupFailed::class);
+        Notification::assertSentTimes(BackupFailed::class, 2);
+    }
+
+    public function test_it_sends_no_backup_failed_notification_when_the_backup_succeeds(): void
+    {
+        Notification::fake();
+
+        User::factory()->create(['role' => 'admin']);
+
+        Process::fake(function ($process) {
+            foreach ($process->command as $arg) {
+                if (str_starts_with($arg, '--result-file=')) {
+                    file_put_contents(substr($arg, strlen('--result-file=')), "-- fake dump\n");
+                }
+            }
+
+            return Process::result(output: '', errorOutput: '', exitCode: 0);
+        });
+
+        $this->artisan('app:backup-database')->assertExitCode(0);
+
+        Notification::assertNothingSent();
     }
 
     public function test_it_prunes_backups_beyond_the_retention_window(): void
