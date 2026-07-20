@@ -15,7 +15,7 @@
         <tr>
             <td style="padding: 4px 0; color: #666; font-weight: bold;">{{ __('mail.order_total') }}</td>
             <td style="padding: 4px 0; text-align: {{ app()->getLocale() === 'he' ? 'left' : 'right' }}; font-weight: bold;">
-                {{ $order->currency }} {{ number_format($order->total_amount, 2) }}
+                {{ \Illuminate\Support\Number::currency($order->total_amount, in: $order->currency, locale: app()->getLocale()) }}
             </td>
         </tr>
     </table>
