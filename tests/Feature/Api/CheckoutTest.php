@@ -219,6 +219,68 @@ class CheckoutTest extends TestCase
         ]);
     }
 
+    public function test_a_logged_in_customer_can_check_out_with_an_existing_saved_address(): void
+    {
+        $user = User::factory()->create();
+        $address = $user->addresses()->create(array_merge(['type' => 'shipping'], $this->validAddress()));
+        $variant = $this->makeVariant();
+
+        $this->mock(PayPalClient::class, function ($mock) {
+            $mock->shouldReceive('createOrder')->once()->andReturn(['id' => 'PAYPAL-SAVED-ADDR']);
+        });
+
+        $response = $this->actingAs($user)->postJson('/api/checkout', [
+            'product_variant_id' => $variant->id,
+            'quantity' => 1,
+            'shipping_address_id' => $address->id,
+        ]);
+
+        $response->assertCreated();
+
+        $this->assertDatabaseCount('addresses', 1);
+        $this->assertDatabaseHas('orders', [
+            'user_id' => $user->id,
+            'shipping_address_id' => $address->id,
+            'billing_address_id' => $address->id,
+        ]);
+    }
+
+    public function test_a_logged_in_customer_checking_out_without_a_saved_address_id_still_creates_a_new_address(): void
+    {
+        $user = User::factory()->create();
+        $variant = $this->makeVariant();
+
+        $this->mock(PayPalClient::class, function ($mock) {
+            $mock->shouldReceive('createOrder')->once()->andReturn(['id' => 'PAYPAL-NEW-ADDR']);
+        });
+
+        $response = $this->actingAs($user)->postJson('/api/checkout', [
+            'product_variant_id' => $variant->id,
+            'quantity' => 1,
+            'shipping_address' => $this->validAddress(),
+        ]);
+
+        $response->assertCreated();
+        $this->assertDatabaseCount('addresses', 1);
+    }
+
+    public function test_a_customer_cannot_check_out_with_another_customers_saved_address(): void
+    {
+        $owner = User::factory()->create();
+        $stranger = User::factory()->create();
+        $address = $owner->addresses()->create(array_merge(['type' => 'shipping'], $this->validAddress()));
+        $variant = $this->makeVariant();
+
+        $response = $this->actingAs($stranger)->postJson('/api/checkout', [
+            'product_variant_id' => $variant->id,
+            'quantity' => 1,
+            'shipping_address_id' => $address->id,
+        ]);
+
+        $response->assertForbidden();
+        $this->assertDatabaseCount('orders', 0);
+    }
+
     public function test_a_low_stock_alert_is_sent_once_when_a_checkout_takes_a_variant_to_the_threshold(): void
     {
         Notification::fake();

@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\Admin\CouponController as AdminCouponController;
 use App\Http\Controllers\Api\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Api\Admin\ProductImageController as AdminProductImageController;
 use App\Http\Controllers\Api\Admin\ProductVariantController as AdminProductVariantController;
+use App\Http\Controllers\Api\AddressController;
 use App\Http\Controllers\Api\AgentStatusController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CheckoutController;
@@ -83,6 +84,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/change-password', [AuthController::class, 'changePassword']);
     Route::delete('/account', [AuthController::class, 'deleteAccount']);
+
+    // Saved-address book, so checkout doesn't force a full re-entry of the
+    // shipping address on every order — see CheckoutController::store's
+    // optional shipping_address_id. Every action is ownership-scoped via
+    // AddressPolicy (see AddressController).
+    Route::get('/account/addresses', [AddressController::class, 'index']);
+    Route::post('/account/addresses', [AddressController::class, 'store']);
+    Route::put('/account/addresses/{address}', [AddressController::class, 'update']);
+    Route::delete('/account/addresses/{address}', [AddressController::class, 'destroy']);
+    Route::post('/account/addresses/{address}/default', [AddressController::class, 'setDefault']);
 
     Route::post('/checkout/{order}/capture', [CheckoutController::class, 'capture']);
 

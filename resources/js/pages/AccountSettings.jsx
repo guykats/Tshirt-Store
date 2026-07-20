@@ -1,8 +1,13 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import useDocumentMeta from '../hooks/useDocumentMeta';
+import api from '../lib/api';
+
+const EMPTY_ADDRESS_FORM = {
+    full_name: '', line1: '', line2: '', city: '', state: '', postal_code: '', country: 'US', phone: '',
+};
 
 export default function AccountSettings() {
     const { t } = useTranslation();
@@ -21,8 +26,102 @@ export default function AccountSettings() {
     const [deleteError, setDeleteError] = useState(null);
     const [deleting, setDeleting] = useState(false);
 
+    const [addresses, setAddresses] = useState([]);
+    const [addressForm, setAddressForm] = useState(EMPTY_ADDRESS_FORM);
+    const [editingAddressId, setEditingAddressId] = useState(null);
+    const [showAddressForm, setShowAddressForm] = useState(false);
+    const [addressError, setAddressError] = useState(null);
+    const [addressSaving, setAddressSaving] = useState(false);
+    const [confirmingDeleteAddressId, setConfirmingDeleteAddressId] = useState(null);
+    const [addressActionError, setAddressActionError] = useState(null);
+
+    useEffect(() => {
+        api.get('/api/account/addresses').then((res) => setAddresses(res.data.data));
+    }, []);
+
     function update(field) {
         return (e) => setForm((f) => ({ ...f, [field]: e.target.value }));
+    }
+
+    function updateAddressField(field) {
+        return (e) => setAddressForm((f) => ({ ...f, [field]: e.target.value }));
+    }
+
+    function startAddAddress() {
+        setEditingAddressId(null);
+        setAddressForm(EMPTY_ADDRESS_FORM);
+        setAddressError(null);
+        setShowAddressForm(true);
+    }
+
+    function startEditAddress(address) {
+        setEditingAddressId(address.id);
+        setAddressForm({
+            full_name: address.full_name,
+            line1: address.line1,
+            line2: address.line2 || '',
+            city: address.city,
+            state: address.state,
+            postal_code: address.postal_code,
+            country: address.country || 'US',
+            phone: address.phone || '',
+        });
+        setAddressError(null);
+        setShowAddressForm(true);
+    }
+
+    function cancelAddressForm() {
+        setShowAddressForm(false);
+        setEditingAddressId(null);
+        setAddressForm(EMPTY_ADDRESS_FORM);
+        setAddressError(null);
+    }
+
+    async function handleAddressSubmit(e) {
+        e.preventDefault();
+        setAddressError(null);
+        setAddressSaving(true);
+        try {
+            if (editingAddressId) {
+                const res = await api.put(`/api/account/addresses/${editingAddressId}`, addressForm);
+                setAddresses((list) => list.map((a) => (a.id === editingAddressId ? res.data.data : a)));
+            } else {
+                const res = await api.post('/api/account/addresses', addressForm);
+                setAddresses((list) => [...list, res.data.data]);
+            }
+            cancelAddressForm();
+        } catch (err) {
+            setAddressError(err.response?.data?.message || t('account_addresses_save_error'));
+        } finally {
+            setAddressSaving(false);
+        }
+    }
+
+    async function handleSetDefaultAddress(id) {
+        setAddressActionError(null);
+        try {
+            const res = await api.post(`/api/account/addresses/${id}/default`);
+            setAddresses((list) => list.map((a) => (a.id === id ? res.data.data : { ...a, is_default: false })));
+        } catch (err) {
+            setAddressActionError(err.response?.data?.message || t('account_addresses_set_default_error'));
+        }
+    }
+
+    async function handleDeleteAddress(id) {
+        if (confirmingDeleteAddressId !== id) {
+            setConfirmingDeleteAddressId(id);
+            setAddressActionError(null);
+            return;
+        }
+        setAddressActionError(null);
+        try {
+            await api.delete(`/api/account/addresses/${id}`);
+            setAddresses((list) => list.filter((a) => a.id !== id));
+        } catch (err) {
+            setAddressActionError(err.response?.data?.message || t('account_addresses_delete_error'));
+        } finally {
+            setConfirmingDeleteAddressId(null);
+        }
     }
 
     async function handleSubmit(e) {
@@ -115,6 +214,128 @@ export default function AccountSettings() {
                     {t('account_change_password_button')}
                 </button>
             </form>
+
+            <div className="mt-12">
+                <h2 className="mb-4 text-lg">{t('account_addresses_title')}</h2>
+
+                {addresses.length === 0 && !showAddressForm && (
+                    <p className="mb-4 text-sm text-ink-soft">{t('account_addresses_empty')}</p>
+                )}
+
+                {addressActionError && <p role="alert" className="mb-3 text-sm text-red-700">{addressActionError}</p>}
+
+                <ul className="space-y-3">
+                    {addresses.map((a) => (
+                        <li key={a.id} className="rounded border border-line p-3">
+                            <div className="flex items-start justify-between gap-2">
+                                <div className="text-sm">
+                                    <p className="font-medium">
+                                        {a.full_name}
+                                        {a.is_default && (
+                                            <span className="ms-2 rounded bg-parchment-dim px-2 py-0.5 text-xs text-ink-soft uppercase">
+                                                {t('account_addresses_default_badge')}
+                                            </span>
+                                        )}
+                                    </p>
+                                    <p className="text-ink-soft">{a.line1}{a.line2 ? `, ${a.line2}` : ''}</p>
+                                    <p className="text-ink-soft">{a.city}, {a.state} {a.postal_code}</p>
+                                </div>
+                            </div>
+                            <div className="mt-2 flex flex-wrap items-center gap-3">
+                                {!a.is_default && (
+                                    <button
+                                        type="button"
+                                        onClick={() => handleSetDefaultAddress(a.id)}
+                                        className="text-sm text-brass hover:underline"
+                                    >
+                                        {t('account_addresses_set_default_button')}
+                                    </button>
+                                )}
+                                <button
+                                    type="button"
+                                    onClick={() => startEditAddress(a)}
+                                    className="text-sm text-ink-soft hover:underline"
+                                >
+                                    {t('account_addresses_edit_button')}
+                                </button>
+                                {confirmingDeleteAddressId === a.id ? (
+                                    <span className="flex items-center gap-2 text-sm">
+                                        <span className="text-red-800">{t('account_addresses_delete_confirm_prompt')}</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleDeleteAddress(a.id)}
+                                            className="text-red-700 hover:underline"
+                                        >
+                                            {t('account_addresses_delete_confirm_yes')}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setConfirmingDeleteAddressId(null)}
+                                            className="text-ink-soft hover:underline"
+                                        >
+                                            {t('account_addresses_delete_confirm_no')}
+                                        </button>
+                                    </span>
+                                ) : (
+                                    <button
+                                        type="button"
+                                        onClick={() => handleDeleteAddress(a.id)}
+                                        className="text-sm text-red-700 hover:underline"
+                                    >
+                                        {t('account_addresses_delete_button')}
+                                    </button>
+                                )}
+                            </div>
+                        </li>
+                    ))}
+                </ul>
+
+                {showAddressForm ? (
+                    <form onSubmit={handleAddressSubmit} className="mt-4 space-y-4 rounded border border-line p-4">
+                        <h3 className="text-sm font-medium">
+                            {editingAddressId ? t('account_addresses_form_title_edit') : t('account_addresses_form_title_add')}
+                        </h3>
+                        {['full_name', 'line1', 'line2', 'city', 'state', 'postal_code', 'phone'].map((field) => (
+                            <div key={field}>
+                                <label htmlFor={`account-address-${field}`} className="mb-1 block text-sm">{t(`address_${field}`)}</label>
+                                <input
+                                    id={`account-address-${field}`}
+                                    required={field !== 'line2' && field !== 'phone'}
+                                    value={addressForm[field]}
+                                    onChange={updateAddressField(field)}
+                                    className="w-full rounded border border-line bg-parchment px-3 py-2"
+                                />
+                            </div>
+                        ))}
+                        {addressError && <p role="alert" className="text-sm text-red-700">{addressError}</p>}
+                        <div className="flex items-center gap-3">
+                            <button
+                                type="submit"
+                                disabled={addressSaving}
+                                className="rounded bg-ink px-4 py-2.5 text-sm tracking-wide text-parchment uppercase hover:bg-ink-soft disabled:opacity-50"
+                            >
+                                {t('account_addresses_save_button')}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={cancelAddressForm}
+                                disabled={addressSaving}
+                                className="text-sm text-ink-soft hover:underline"
+                            >
+                                {t('account_addresses_cancel_button')}
+                            </button>
+                        </div>
+                    </form>
+                ) : (
+                    <button
+                        type="button"
+                        onClick={startAddAddress}
+                        className="mt-4 w-full rounded border border-line px-4 py-2.5 text-sm tracking-wide text-ink uppercase hover:bg-parchment-dim"
+                    >
+                        {t('account_addresses_add_button')}
+                    </button>
+                )}
+            </div>
 
             <div className="mt-12 rounded border border-red-200 bg-red-50 p-4">
                 <h2 className="mb-2 text-lg text-red-800">{t('account_delete_title')}</h2>

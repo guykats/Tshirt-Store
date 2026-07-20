@@ -7,6 +7,7 @@ use App\Exceptions\InvalidCouponException;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\OrderResource;
 use App\Mail\OrderConfirmationMail;
+use App\Models\Address;
 use App\Models\Order;
 use App\Models\ProductVariant;
 use App\Models\SystemEvent;
@@ -21,6 +22,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use RuntimeException;
 
 class CheckoutController extends Controller
@@ -44,26 +46,65 @@ class CheckoutController extends Controller
      */
     public function store(Request $request)
     {
+        // Whether this request arrived with a real, already-authenticated
+        // session *before* any guest account auto-creation below — only
+        // that case is ever allowed to reference an existing saved address,
+        // since a guest has no addresses on file yet at this point in the
+        // request.
+        $loggedInBuyer = $request->user();
+
         $rules = [
             'product_variant_id' => ['required', 'exists:product_variants,id'],
             'quantity' => ['required', 'integer', 'min:1', 'max:20'],
-            'shipping_address' => ['required', 'array'],
-            'shipping_address.full_name' => ['required', 'string', 'max:255'],
-            'shipping_address.line1' => ['required', 'string', 'max:255'],
+            // A logged-in customer may pass an existing saved address instead
+            // of a full inline shipping_address (see AddressController) — the
+            // frontend is responsible for defaulting the selection to the
+            // buyer's is_default address; the backend deliberately does not
+            // silently substitute one on the caller's behalf when neither is
+            // sent, so an order never lands on an address the caller didn't
+            // explicitly choose.
+            'shipping_address_id' => ['nullable', 'integer', 'exists:addresses,id'],
+            'shipping_address' => ['nullable', 'array'],
+            'shipping_address.full_name' => ['required_with:shipping_address', 'string', 'max:255'],
+            'shipping_address.line1' => ['required_with:shipping_address', 'string', 'max:255'],
             'shipping_address.line2' => ['nullable', 'string', 'max:255'],
-            'shipping_address.city' => ['required', 'string', 'max:100'],
-            'shipping_address.state' => ['required', 'string', 'max:100'],
-            'shipping_address.postal_code' => ['required', 'string', 'max:20'],
+            'shipping_address.city' => ['required_with:shipping_address', 'string', 'max:100'],
+            'shipping_address.state' => ['required_with:shipping_address', 'string', 'max:100'],
+            'shipping_address.postal_code' => ['required_with:shipping_address', 'string', 'max:20'],
             'shipping_address.country' => ['nullable', 'string', 'size:2'],
             'shipping_address.phone' => ['nullable', 'string', 'max:50'],
             'code' => ['nullable', 'string', 'max:50'],
         ];
 
-        if (! $request->user()) {
+        if (! $loggedInBuyer) {
             $rules['email'] = ['required', 'email', 'max:255'];
         }
 
         $data = $request->validate($rules);
+
+        if (empty($data['shipping_address_id']) && empty($data['shipping_address'])) {
+            throw ValidationException::withMessages([
+                'shipping_address' => 'A shipping address is required.',
+            ]);
+        }
+
+        $existingAddress = null;
+
+        if (! empty($data['shipping_address_id'])) {
+            if (! $loggedInBuyer) {
+                return response()->json([
+                    'message' => 'Only signed-in customers can check out with a saved address.',
+                ], 422);
+            }
+
+            $existingAddress = Address::find($data['shipping_address_id']);
+
+            if (! $existingAddress || $existingAddress->user_id !== $loggedInBuyer->id) {
+                return response()->json([
+                    'message' => 'That address does not belong to your account.',
+                ], 403);
+            }
+        }
 
         $buyer = $request->user();
 
@@ -102,7 +143,7 @@ class CheckoutController extends Controller
         $variantToAlert = null;
 
         try {
-            $order = DB::transaction(function () use ($buyer, $data, $variant, $unitPrice, $subtotal, $currency, &$variantToAlert) {
+            $order = DB::transaction(function () use ($buyer, $data, $variant, $unitPrice, $subtotal, $currency, $existingAddress, &$variantToAlert) {
                 $locked = ProductVariant::where('id', $variant->id)->lockForUpdate()->firstOrFail();
 
                 if ($locked->stock_quantity < $data['quantity']) {
@@ -136,7 +177,11 @@ class CheckoutController extends Controller
 
                 $totalAmount = round($subtotal - $discountAmount, 2);
 
-                $address = $buyer->addresses()->create([
+                // Reuse an existing saved address (no new addresses row) when
+                // the buyer picked one; otherwise create a fresh one exactly
+                // as before this feature existed, for both a logged-in
+                // customer entering a brand-new address and every guest.
+                $address = $existingAddress ?? $buyer->addresses()->create([
                     'type' => 'shipping',
                     ...$data['shipping_address'],
                 ]);

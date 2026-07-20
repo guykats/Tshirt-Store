@@ -94,6 +94,10 @@ export default function Checkout() {
     const [address, setAddress] = useState({
         full_name: '', line1: '', line2: '', city: '', state: '', postal_code: '', country: 'US', phone: '',
     });
+    const [savedAddresses, setSavedAddresses] = useState([]);
+    // 'new' means "enter a brand-new address below"; any other value is the
+    // id (as a string, to match <select> option values) of a saved address.
+    const [selectedAddressOption, setSelectedAddressOption] = useState('new');
     const [order, setOrder] = useState(null);
     const [paypalOrderId, setPaypalOrderId] = useState(null);
     const [error, setError] = useState(null);
@@ -112,19 +116,35 @@ export default function Checkout() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [productId]);
 
+    // A logged-in customer with saved addresses gets to pick from their
+    // address book instead of always seeing blank inline fields; a guest
+    // (no session yet) keeps the exact always-blank-fields experience.
+    useEffect(() => {
+        if (!user) return;
+        api.get('/api/account/addresses').then((res) => {
+            const list = res.data.data;
+            setSavedAddresses(list);
+            const defaultAddress = list.find((a) => a.is_default);
+            if (defaultAddress) setSelectedAddressOption(String(defaultAddress.id));
+        });
+    }, [user]);
+
     if (authLoading || !product) return null;
 
     async function createOrder() {
         if (submitting) return;
         setSubmitting(true);
         setError(null);
+        const usingSavedAddress = user && savedAddresses.length > 0 && selectedAddressOption !== 'new';
         try {
             const res = await api.post('/api/checkout', {
                 ...(user ? {} : { email }),
                 ...(couponCode.trim() ? { code: couponCode.trim() } : {}),
                 product_variant_id: Number(variantId),
                 quantity: Number(quantity),
-                shipping_address: address,
+                ...(usingSavedAddress
+                    ? { shipping_address_id: Number(selectedAddressOption) }
+                    : { shipping_address: address }),
             });
             setOrder(res.data.order);
             setPaypalOrderId(res.data.paypal_order_id);
@@ -214,18 +234,40 @@ export default function Checkout() {
                         />
                     </div>
 
-                    {['full_name', 'line1', 'line2', 'city', 'state', 'postal_code', 'phone'].map((field) => (
-                        <div key={field}>
-                            <label htmlFor={`checkout-${field}`} className="mb-1 block text-sm">{t(`address_${field}`)}</label>
-                            <input
-                                id={`checkout-${field}`}
-                                required={field !== 'line2' && field !== 'phone'}
-                                value={address[field]}
-                                onChange={(e) => setAddress((a) => ({ ...a, [field]: e.target.value }))}
+                    {user && savedAddresses.length > 0 && (
+                        <div>
+                            <label htmlFor="checkout-saved-address" className="mb-1 block text-sm">
+                                {t('checkout_saved_address_label')}
+                            </label>
+                            <select
+                                id="checkout-saved-address"
+                                value={selectedAddressOption}
+                                onChange={(e) => setSelectedAddressOption(e.target.value)}
                                 className="w-full rounded border border-line bg-parchment px-3 py-2"
-                            />
+                            >
+                                {savedAddresses.map((a) => (
+                                    <option key={a.id} value={String(a.id)}>
+                                        {t('checkout_saved_address_option', { name: a.full_name, line1: a.line1, city: a.city })}
+                                    </option>
+                                ))}
+                                <option value="new">{t('checkout_saved_address_new_option')}</option>
+                            </select>
                         </div>
-                    ))}
+                    )}
+
+                    {(!user || savedAddresses.length === 0 || selectedAddressOption === 'new') &&
+                        ['full_name', 'line1', 'line2', 'city', 'state', 'postal_code', 'phone'].map((field) => (
+                            <div key={field}>
+                                <label htmlFor={`checkout-${field}`} className="mb-1 block text-sm">{t(`address_${field}`)}</label>
+                                <input
+                                    id={`checkout-${field}`}
+                                    required={field !== 'line2' && field !== 'phone'}
+                                    value={address[field]}
+                                    onChange={(e) => setAddress((a) => ({ ...a, [field]: e.target.value }))}
+                                    className="w-full rounded border border-line bg-parchment px-3 py-2"
+                                />
+                            </div>
+                        ))}
 
                     <div>
                         <label htmlFor="checkout-coupon" className="mb-1 block text-sm">{t('checkout_coupon_label')}</label>
