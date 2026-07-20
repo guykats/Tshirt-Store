@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link, useSearchParams } from 'react-router-dom';
 import api from '../lib/api';
 import DesignArt from '../components/DesignArt';
+import EmptyState from '../components/EmptyState';
 import GarmentMockup from '../components/GarmentMockup';
 import WishlistButton from '../components/WishlistButton';
 import { CatalogSkeleton } from '../components/Skeleton';
@@ -254,7 +255,21 @@ export default function Catalog() {
                 {loading && <CatalogSkeleton />}
 
                 {!loading && products.length === 0 && (
-                    <p className="text-ink-soft">{isSearching ? t('catalog_no_search_results', { search }) : t('catalog_empty')}</p>
+                    isSearching ? (
+                        <EmptyState
+                            motif="olive-branch"
+                            motifLabel={t('catalog_no_search_results_art_label')}
+                            title={t('catalog_no_search_results_title')}
+                            body={t('catalog_no_search_results', { search })}
+                        />
+                    ) : (
+                        <EmptyState
+                            motif="star-of-david"
+                            motifLabel={t('catalog_empty_art_label')}
+                            title={t('catalog_empty_title')}
+                            body={t('catalog_empty')}
+                        />
+                    )
                 )}
 
                 {!loading && products.length > 0 && (

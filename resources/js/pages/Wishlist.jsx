@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import api from '../lib/api';
 import DesignArt from '../components/DesignArt';
+import EmptyState from '../components/EmptyState';
 import WishlistButton from '../components/WishlistButton';
 import useDocumentMeta from '../hooks/useDocumentMeta';
 import { useWishlist } from '../lib/WishlistContext';
@@ -32,7 +33,14 @@ export default function Wishlist() {
             <h1 className="mb-6 font-serif text-2xl">{t('wishlist_title')}</h1>
 
             {loading && <p className="text-ink-soft">…</p>}
-            {!loading && visibleItems.length === 0 && <p className="text-ink-soft">{t('wishlist_empty')}</p>}
+            {!loading && visibleItems.length === 0 && (
+                <EmptyState
+                    motif="hamsa"
+                    motifLabel={t('wishlist_empty_art_label')}
+                    title={t('wishlist_empty_title')}
+                    body={t('wishlist_empty')}
+                />
+            )}
 
             <ul className="grid grid-cols-1 gap-x-8 gap-y-10 sm:grid-cols-2">
                 {visibleItems.map((item) => (

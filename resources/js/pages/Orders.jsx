@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import api from '../lib/api';
+import EmptyState from '../components/EmptyState';
 import useDocumentMeta from '../hooks/useDocumentMeta';
 import { formatPrice } from '../lib/formatPrice';
 
@@ -61,7 +62,14 @@ export default function Orders() {
             <h1 className="mb-6 font-serif text-2xl">{t('orders_title')}</h1>
 
             {loading && <p className="text-ink-soft">…</p>}
-            {!loading && orders.length === 0 && <p className="text-ink-soft">{t('orders_empty')}</p>}
+            {!loading && orders.length === 0 && (
+                <EmptyState
+                    motif="pomegranate"
+                    motifLabel={t('orders_empty_art_label')}
+                    title={t('orders_empty_title')}
+                    body={t('orders_empty')}
+                />
+            )}
 
             <ul className="space-y-4">
                 {orders.map((order) => (
