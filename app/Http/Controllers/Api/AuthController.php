@@ -12,20 +12,58 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
+    /**
+     * Register a new account, or — if the email belongs to an existing
+     * guest row created by CheckoutController::store() during guest
+     * checkout — claim that row in place instead of rejecting the email
+     * as taken. Guest rows are created with an unusable random password
+     * and `is_guest => true`; only those rows are eligible to be claimed,
+     * so a real (non-guest) account with that email is still rejected
+     * exactly as before.
+     */
     public function register(Request $request)
     {
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'unique:users,email'],
+            'email' => [
+                'required',
+                'email',
+                // Only a real (non-guest) account with this email blocks
+                // registration; a guest row is eligible to be claimed
+                // below instead of counting as "taken".
+                Rule::unique('users', 'email')->where(fn ($query) => $query->where('is_guest', false)),
+            ],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
             'phone' => ['nullable', 'string', 'max:50'],
         ]);
 
-        $user = User::create($data)->fresh();
+        $existingGuest = User::where('email', $data['email'])->where('is_guest', true)->first();
+
+        if ($existingGuest) {
+            $existingGuest->forceFill([
+                'name' => $data['name'],
+                'phone' => $data['phone'] ?? $existingGuest->phone,
+                'password' => $data['password'],
+                'is_guest' => false,
+            ])->save();
+
+            $user = $existingGuest->fresh();
+
+            SystemEvent::log(
+                'user.guest_claimed',
+                "User #{$user->id} claimed their guest account by registering a real password.",
+                $user->name,
+                'user',
+                ['user_id' => $user->id],
+            );
+        } else {
+            $user = User::create($data)->fresh();
+        }
 
         Auth::login($user);
         $request->session()->regenerate();

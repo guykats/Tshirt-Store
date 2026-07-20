@@ -4,11 +4,118 @@ namespace Tests\Feature\Api;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class AuthTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function makeGuestUser(array $overrides = []): User
+    {
+        return User::factory()->create(array_merge([
+            'email' => 'guest-buyer@example.com',
+            'password' => Str::random(40),
+            'is_guest' => true,
+        ], $overrides));
+    }
+
+    public function test_registering_with_a_guest_email_claims_the_existing_row(): void
+    {
+        $guest = $this->makeGuestUser();
+
+        $response = $this->postJson('/api/register', [
+            'name' => 'Real Name',
+            'email' => 'guest-buyer@example.com',
+            'password' => 'new-password123',
+            'password_confirmation' => 'new-password123',
+        ]);
+
+        $response->assertCreated()->assertJsonPath('data.id', $guest->id);
+        $this->assertSame(1, User::where('email', 'guest-buyer@example.com')->count());
+
+        $guest->refresh();
+        $this->assertFalse($guest->is_guest);
+        $this->assertSame('Real Name', $guest->name);
+        $this->assertTrue(Hash::check('new-password123', $guest->password));
+    }
+
+    public function test_claiming_a_guest_account_preserves_its_prior_orders(): void
+    {
+        $guest = $this->makeGuestUser();
+
+        $address = $guest->addresses()->create([
+            'type' => 'shipping',
+            'full_name' => 'Guest Buyer',
+            'line1' => '1 Test St',
+            'city' => 'New York',
+            'state' => 'NY',
+            'postal_code' => '10001',
+        ]);
+
+        $guest->orders()->create([
+            'order_number' => 'ORD-'.uniqid(),
+            'subtotal' => 30,
+            'total_amount' => 30,
+            'shipping_address_id' => $address->id,
+            'billing_address_id' => $address->id,
+        ]);
+
+        $ordersBefore = $guest->orders()->count();
+
+        $this->postJson('/api/register', [
+            'name' => 'Real Name',
+            'email' => 'guest-buyer@example.com',
+            'password' => 'new-password123',
+            'password_confirmation' => 'new-password123',
+        ])->assertCreated();
+
+        $guest->refresh();
+        $this->assertSame($ordersBefore, $guest->orders()->count());
+    }
+
+    public function test_registering_with_an_email_already_tied_to_a_real_account_is_still_rejected(): void
+    {
+        User::factory()->create(['email' => 'real-customer@example.com', 'is_guest' => false]);
+
+        $response = $this->postJson('/api/register', [
+            'name' => 'Someone Else',
+            'email' => 'real-customer@example.com',
+            'password' => 'new-password123',
+            'password_confirmation' => 'new-password123',
+        ]);
+
+        $response->assertUnprocessable();
+        $response->assertJsonValidationErrors('email');
+        $this->assertSame(1, User::where('email', 'real-customer@example.com')->count());
+    }
+
+    public function test_a_freshly_claimed_account_can_log_in_with_the_new_password(): void
+    {
+        $this->makeGuestUser();
+
+        $this->postJson('/api/register', [
+            'name' => 'Real Name',
+            'email' => 'guest-buyer@example.com',
+            'password' => 'new-password123',
+            'password_confirmation' => 'new-password123',
+        ])->assertCreated();
+
+        // Deliberately not calling /api/logout first: that route sits behind
+        // `auth:sanctum` middleware, which pins the Auth facade's default
+        // guard to 'sanctum' for the rest of the (shared, in-test) app
+        // lifecycle — a RequestGuard with no attempt() method, which would
+        // break the plain Auth::attempt() call in login() below. Hitting
+        // /api/login directly (as a fresh, unauthenticated-guard request)
+        // still proves the new password authenticates.
+        $response = $this->postJson('/api/login', [
+            'email' => 'guest-buyer@example.com',
+            'password' => 'new-password123',
+        ]);
+
+        $response->assertOk()->assertJsonPath('data.email', 'guest-buyer@example.com');
+    }
 
     public function test_a_user_can_register(): void
     {
