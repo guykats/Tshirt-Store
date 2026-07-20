@@ -2,15 +2,18 @@
 
 namespace Tests\Feature\Api;
 
+use App\Http\Controllers\Api\InventoryController;
 use App\Mail\OrderConfirmationMail;
 use App\Models\Design;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\User;
+use App\Notifications\LowStockAlert;
 use App\Services\PayPalClient;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Notification;
 use RuntimeException;
 use Tests\TestCase;
 
@@ -214,6 +217,65 @@ class CheckoutTest extends TestCase
             'id' => $variant->id,
             'stock_quantity' => 3,
         ]);
+    }
+
+    public function test_a_low_stock_alert_is_sent_once_when_a_checkout_takes_a_variant_to_the_threshold(): void
+    {
+        Notification::fake();
+
+        $admin = User::factory()->create(['role' => 'admin']);
+        $buyer = User::factory()->create();
+        $variant = $this->makeVariant(['stock_quantity' => InventoryController::DEFAULT_THRESHOLD + 1]);
+
+        $this->mock(PayPalClient::class, function ($mock) {
+            $mock->shouldReceive('createOrder')->twice()->andReturn(['id' => 'PAYPAL-LOW-STOCK']);
+        });
+
+        // Takes stock from (threshold + 1) down to exactly the threshold — should alert.
+        $this->actingAs($buyer)->postJson('/api/checkout', [
+            'product_variant_id' => $variant->id,
+            'quantity' => 1,
+            'shipping_address' => $this->validAddress(),
+        ])->assertCreated();
+
+        Notification::assertSentTo($admin, LowStockAlert::class, fn ($notification) => $notification->variant->id === $variant->id);
+        Notification::assertSentTimes(LowStockAlert::class, 1);
+
+        $this->assertDatabaseHas('product_variants', [
+            'id' => $variant->id,
+            'stock_quantity' => InventoryController::DEFAULT_THRESHOLD,
+        ]);
+
+        // A second order against the same, already-alerted variant decrements
+        // it further (now below the threshold) but must not re-alert.
+        $this->actingAs($buyer)->postJson('/api/checkout', [
+            'product_variant_id' => $variant->id,
+            'quantity' => 1,
+            'shipping_address' => $this->validAddress(),
+        ])->assertCreated();
+
+        Notification::assertSentTimes(LowStockAlert::class, 1);
+    }
+
+    public function test_no_low_stock_alert_is_sent_when_a_variant_stays_above_the_threshold(): void
+    {
+        Notification::fake();
+
+        User::factory()->create(['role' => 'admin']);
+        $buyer = User::factory()->create();
+        $variant = $this->makeVariant(['stock_quantity' => InventoryController::DEFAULT_THRESHOLD + 10]);
+
+        $this->mock(PayPalClient::class, function ($mock) {
+            $mock->shouldReceive('createOrder')->once()->andReturn(['id' => 'PAYPAL-PLENTY-STOCK']);
+        });
+
+        $this->actingAs($buyer)->postJson('/api/checkout', [
+            'product_variant_id' => $variant->id,
+            'quantity' => 1,
+            'shipping_address' => $this->validAddress(),
+        ])->assertCreated();
+
+        Notification::assertNothingSent();
     }
 
     public function test_checkout_rejects_a_variant_of_a_non_active_product(): void

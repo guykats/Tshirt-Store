@@ -23,4 +23,9 @@ return [
     'reset_password_action' => 'איפוס סיסמה',
     'reset_password_expire' => 'קישור איפוס הסיסמה הזה יפוג בעוד :count דקות.',
     'reset_password_no_action' => 'אם לא ביקשת לאפס את הסיסמה, אין צורך לבצע פעולה נוספת.',
+    'low_stock_alert_subject' => 'מלאי נמוך: :product',
+    'low_stock_alert_intro' => 'הווריאציה של ":product" (:variant) נותרה עם מלאי נמוך.',
+    'low_stock_alert_quantity' => 'כמות שנותרה: :count',
+    'low_stock_alert_sku' => 'מק"ט: :sku',
+    'low_stock_alert_action' => 'לצפייה במלאי הנמוך',
 ];

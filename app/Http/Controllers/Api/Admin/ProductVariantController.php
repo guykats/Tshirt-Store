@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Admin;
 
+use App\Http\Controllers\Api\InventoryController;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ProductVariantResource;
 use App\Models\Product;
@@ -48,6 +49,14 @@ class ProductVariantController extends Controller
         }
 
         $variant->update($data);
+
+        // Restocking above the low-stock threshold re-arms the alert (see
+        // CheckoutController::store / App\Notifications\LowStockAlert) so
+        // the next time this variant sells down to the threshold again, an
+        // admin is notified rather than staying silenced from the last time.
+        if ($variant->stock_quantity > InventoryController::DEFAULT_THRESHOLD && $variant->low_stock_alerted_at !== null) {
+            $variant->forceFill(['low_stock_alerted_at' => null])->save();
+        }
 
         SystemEvent::log(
             'product_variant.updated',

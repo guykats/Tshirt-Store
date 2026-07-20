@@ -23,4 +23,9 @@ return [
     'reset_password_action' => 'Reset Password',
     'reset_password_expire' => 'This password reset link will expire in :count minutes.',
     'reset_password_no_action' => 'If you did not request a password reset, no further action is required.',
+    'low_stock_alert_subject' => 'Low stock: :product',
+    'low_stock_alert_intro' => 'A variant of ":product" (:variant) has run low on stock.',
+    'low_stock_alert_quantity' => 'Remaining quantity: :count',
+    'low_stock_alert_sku' => 'SKU: :sku',
+    'low_stock_alert_action' => 'View Low Stock',
 ];

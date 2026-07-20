@@ -11,6 +11,7 @@ use App\Models\Order;
 use App\Models\ProductVariant;
 use App\Models\SystemEvent;
 use App\Models\User;
+use App\Notifications\LowStockAlert;
 use App\Services\CouponService;
 use App\Services\PayPalClient;
 use Illuminate\Http\Request;
@@ -18,6 +19,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 use RuntimeException;
 
@@ -97,8 +99,10 @@ class CheckoutController extends Controller
         $subtotal = round($unitPrice * $data['quantity'], 2);
         $currency = $variant->product->currency;
 
+        $variantToAlert = null;
+
         try {
-            $order = DB::transaction(function () use ($buyer, $data, $variant, $unitPrice, $subtotal, $currency) {
+            $order = DB::transaction(function () use ($buyer, $data, $variant, $unitPrice, $subtotal, $currency, &$variantToAlert) {
                 $locked = ProductVariant::where('id', $variant->id)->lockForUpdate()->firstOrFail();
 
                 if ($locked->stock_quantity < $data['quantity']) {
@@ -106,6 +110,19 @@ class CheckoutController extends Controller
                 }
 
                 $locked->decrement('stock_quantity', $data['quantity']);
+
+                // Only alert the first time this variant crosses the
+                // threshold — low_stock_alerted_at is cleared again once an
+                // admin restocks it above the threshold (see
+                // Admin\ProductVariantController::update), so a variant that
+                // repeatedly sells out doesn't spam an alert on every order.
+                if (
+                    $locked->stock_quantity <= InventoryController::DEFAULT_THRESHOLD
+                    && $locked->low_stock_alerted_at === null
+                ) {
+                    $locked->forceFill(['low_stock_alerted_at' => now()])->save();
+                    $variantToAlert = $locked;
+                }
 
                 $discountCode = null;
                 $discountAmount = 0.0;
@@ -148,6 +165,15 @@ class CheckoutController extends Controller
             return response()->json(['message' => 'Not enough stock for the requested quantity.'], 422);
         } catch (InvalidCouponException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        if ($variantToAlert !== null) {
+            try {
+                Notification::send(User::where('role', 'admin')->get(), new LowStockAlert($variantToAlert));
+            } catch (\Throwable $e) {
+                report($e);
+                Log::warning('Low stock alert failed to send.', ['product_variant_id' => $variantToAlert->id]);
+            }
         }
 
         try {
