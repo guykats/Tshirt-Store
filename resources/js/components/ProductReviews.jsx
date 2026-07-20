@@ -20,6 +20,15 @@ export default function ProductReviews({ productSlug }) {
     const [success, setSuccess] = useState(false);
     const [submitting, setSubmitting] = useState(false);
 
+    const [editingReviewId, setEditingReviewId] = useState(null);
+    const [editRating, setEditRating] = useState(0);
+    const [editBody, setEditBody] = useState('');
+    const [editError, setEditError] = useState(null);
+    const [editSubmitting, setEditSubmitting] = useState(false);
+
+    const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+    const [deleteError, setDeleteError] = useState(null);
+
     function loadReviews() {
         return api.get(`/api/products/${productSlug}/reviews`).then((res) => {
             setReviews(res.data.data);
@@ -66,6 +75,55 @@ export default function ProductReviews({ productSlug }) {
         }
     }
 
+    function startEdit(review) {
+        setEditingReviewId(review.id);
+        setEditRating(review.rating);
+        setEditBody(review.body || '');
+        setEditError(null);
+    }
+
+    function cancelEdit() {
+        setEditingReviewId(null);
+        setEditError(null);
+    }
+
+    async function handleEditSubmit(e, reviewId) {
+        e.preventDefault();
+        setEditError(null);
+
+        if (!editRating) {
+            setEditError(t('reviews_rating_required'));
+            return;
+        }
+
+        setEditSubmitting(true);
+        try {
+            await api.patch(`/api/products/${productSlug}/reviews/${reviewId}`, {
+                rating: editRating,
+                body: editBody || null,
+            });
+            setEditingReviewId(null);
+            await loadReviews();
+        } catch {
+            setEditError(t('reviews_edit_error'));
+        } finally {
+            setEditSubmitting(false);
+        }
+    }
+
+    async function handleDelete(reviewId) {
+        setDeleteError(null);
+        try {
+            await api.delete(`/api/products/${productSlug}/reviews/${reviewId}`);
+            setConfirmDeleteId(null);
+            setEligibility((prev) => (prev ? { ...prev, can_review: true, already_reviewed: false } : prev));
+            await loadReviews();
+        } catch {
+            setConfirmDeleteId(null);
+            setDeleteError(t('reviews_delete_error'));
+        }
+    }
+
     return (
         <section className="mt-16 border-t border-line pt-10">
             <h2 className="font-serif text-2xl">{t('reviews_title')}</h2>
@@ -83,15 +141,95 @@ export default function ProductReviews({ productSlug }) {
                 )}
             </div>
 
+            {deleteError && (
+                <p role="alert" className="mt-4 text-sm text-red-700">
+                    {deleteError}
+                </p>
+            )}
+
             {reviews.length > 0 && (
                 <ul className="mt-6 space-y-6">
                     {reviews.map((review) => (
                         <li key={review.id} className="border-b border-line pb-6 last:border-0">
-                            <div className="flex items-center gap-3">
-                                <StarRating value={review.rating} />
-                                <span className="text-sm font-medium">{review.reviewer_name}</span>
-                            </div>
-                            {review.body && <p className="mt-2 leading-relaxed text-ink-soft">{review.body}</p>}
+                            {editingReviewId === review.id ? (
+                                <form
+                                    onSubmit={(e) => handleEditSubmit(e, review.id)}
+                                    className="max-w-md space-y-4"
+                                >
+                                    <StarRating value={editRating} onChange={setEditRating} size="lg" />
+                                    <div>
+                                        <label htmlFor={`review-edit-body-${review.id}`} className="mb-1 block text-sm">
+                                            {t('reviews_body_label')}
+                                        </label>
+                                        <textarea
+                                            id={`review-edit-body-${review.id}`}
+                                            value={editBody}
+                                            onChange={(e) => setEditBody(e.target.value)}
+                                            rows={4}
+                                            maxLength={5000}
+                                            className="w-full rounded border border-line bg-parchment px-3 py-2"
+                                        />
+                                    </div>
+                                    {editError && (
+                                        <p role="alert" className="text-sm text-red-700">
+                                            {editError}
+                                        </p>
+                                    )}
+                                    <span className="flex items-center gap-4">
+                                        <button
+                                            type="submit"
+                                            disabled={editSubmitting}
+                                            className="rounded bg-ink px-5 py-2.5 text-sm tracking-wide text-parchment uppercase hover:bg-ink-soft disabled:opacity-50"
+                                        >
+                                            {t('reviews_edit_save')}
+                                        </button>
+                                        <button type="button" onClick={cancelEdit} className="text-sm underline">
+                                            {t('reviews_edit_cancel')}
+                                        </button>
+                                    </span>
+                                </form>
+                            ) : (
+                                <>
+                                    <div className="flex items-center gap-3">
+                                        <StarRating value={review.rating} />
+                                        <span className="text-sm font-medium">{review.reviewer_name}</span>
+                                    </div>
+                                    {review.body && <p className="mt-2 leading-relaxed text-ink-soft">{review.body}</p>}
+                                    {review.is_own && (
+                                        <div className="mt-2 flex items-center gap-4 text-sm">
+                                            <button type="button" onClick={() => startEdit(review)} className="underline">
+                                                {t('reviews_edit_button')}
+                                            </button>
+                                            {confirmDeleteId === review.id ? (
+                                                <span className="flex items-center gap-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleDelete(review.id)}
+                                                        className="font-medium text-red-700 underline"
+                                                    >
+                                                        {t('reviews_confirm_delete_yes')}
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setConfirmDeleteId(null)}
+                                                        className="underline"
+                                                    >
+                                                        {t('reviews_confirm_delete_no')}
+                                                    </button>
+                                                </span>
+                                            ) : (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setConfirmDeleteId(review.id)}
+                                                    className="text-red-700 underline hover:text-red-800"
+                                                >
+                                                    {t('reviews_delete_button')}
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
+                                </>
+                            )}
                         </li>
                     ))}
                 </ul>

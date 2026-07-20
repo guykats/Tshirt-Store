@@ -14,6 +14,9 @@ class ReviewResource extends JsonResource
             'rating' => (int) $this->rating,
             'body' => $this->body,
             'reviewer_name' => $this->whenLoaded('user', fn () => $this->user->name),
+            // Lets the frontend show edit/delete controls on the current
+            // user's own review without exposing the raw user_id.
+            'is_own' => $request->user()?->id === $this->user_id,
             // Only populated for the admin moderation listing (see
             // ReviewController::manage), which eager-loads 'product' across many
             // products at once — the public per-product listing never loads this

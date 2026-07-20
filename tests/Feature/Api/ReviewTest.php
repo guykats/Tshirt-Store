@@ -296,6 +296,172 @@ class ReviewTest extends TestCase
         $this->assertDatabaseHas('reviews', ['id' => $review->id]);
     }
 
+    public function test_a_review_authors_own_review_is_flagged_is_own_and_others_are_not(): void
+    {
+        $reviewer = User::factory()->create();
+        $product = $this->makeProduct();
+        $variant = $this->makeVariant($product);
+        $this->makePaidOrder($reviewer, $variant);
+        $this->actingAs($reviewer)->postJson("/api/products/{$product->slug}/reviews", ['rating' => 5])->assertCreated();
+        $review = Review::first();
+
+        $this->actingAs($reviewer)
+            ->getJson("/api/products/{$product->slug}/reviews")
+            ->assertJsonPath('data.0.is_own', true);
+
+        $otherCustomer = User::factory()->create();
+        $this->actingAs($otherCustomer)
+            ->getJson("/api/products/{$product->slug}/reviews")
+            ->assertJsonPath('data.0.is_own', false);
+
+        $this->getJson("/api/products/{$product->slug}/reviews")
+            ->assertJsonPath('data.0.is_own', false);
+    }
+
+    public function test_a_review_author_can_edit_their_own_review(): void
+    {
+        $reviewer = User::factory()->create();
+        $product = $this->makeProduct();
+        $variant = $this->makeVariant($product);
+        $this->makePaidOrder($reviewer, $variant);
+        $this->actingAs($reviewer)->postJson("/api/products/{$product->slug}/reviews", [
+            'rating' => 3,
+            'body' => 'It was okay.',
+        ])->assertCreated();
+        $review = Review::first();
+
+        $response = $this->actingAs($reviewer)->patchJson("/api/products/{$product->slug}/reviews/{$review->id}", [
+            'rating' => 5,
+            'body' => 'Actually, it grew on me.',
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('data.rating', 5)
+            ->assertJsonPath('data.body', 'Actually, it grew on me.');
+
+        $this->assertDatabaseHas('reviews', [
+            'id' => $review->id,
+            'rating' => 5,
+            'body' => 'Actually, it grew on me.',
+        ]);
+    }
+
+    public function test_a_non_owner_cannot_edit_someone_elses_review(): void
+    {
+        $reviewer = User::factory()->create();
+        $product = $this->makeProduct();
+        $variant = $this->makeVariant($product);
+        $this->makePaidOrder($reviewer, $variant);
+        $this->actingAs($reviewer)->postJson("/api/products/{$product->slug}/reviews", ['rating' => 3])->assertCreated();
+        $review = Review::first();
+
+        $otherCustomer = User::factory()->create(['role' => 'customer']);
+
+        $this->actingAs($otherCustomer)
+            ->patchJson("/api/products/{$product->slug}/reviews/{$review->id}", ['rating' => 1])
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('reviews', ['id' => $review->id, 'rating' => 3]);
+    }
+
+    public function test_an_admin_cannot_edit_someone_elses_review_via_the_self_service_endpoint(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $reviewer = User::factory()->create();
+        $product = $this->makeProduct();
+        $variant = $this->makeVariant($product);
+        $this->makePaidOrder($reviewer, $variant);
+        $this->actingAs($reviewer)->postJson("/api/products/{$product->slug}/reviews", ['rating' => 3])->assertCreated();
+        $review = Review::first();
+
+        $this->actingAs($admin)
+            ->patchJson("/api/products/{$product->slug}/reviews/{$review->id}", ['rating' => 1])
+            ->assertForbidden();
+    }
+
+    public function test_a_guest_cannot_edit_a_review(): void
+    {
+        $reviewer = User::factory()->create();
+        $product = $this->makeProduct();
+        $variant = $this->makeVariant($product);
+        $order = $this->makePaidOrder($reviewer, $variant);
+        $review = Review::create([
+            'product_id' => $product->id,
+            'user_id' => $reviewer->id,
+            'order_id' => $order->id,
+            'rating' => 5,
+        ]);
+
+        $this->patchJson("/api/products/{$product->slug}/reviews/{$review->id}", ['rating' => 1])
+            ->assertUnauthorized();
+    }
+
+    public function test_editing_a_review_validates_rating(): void
+    {
+        $reviewer = User::factory()->create();
+        $product = $this->makeProduct();
+        $variant = $this->makeVariant($product);
+        $this->makePaidOrder($reviewer, $variant);
+        $this->actingAs($reviewer)->postJson("/api/products/{$product->slug}/reviews", ['rating' => 3])->assertCreated();
+        $review = Review::first();
+
+        $this->actingAs($reviewer)
+            ->patchJson("/api/products/{$product->slug}/reviews/{$review->id}", ['rating' => 6])
+            ->assertUnprocessable()->assertJsonValidationErrors('rating');
+    }
+
+    public function test_editing_a_review_belonging_to_a_different_product_returns_404(): void
+    {
+        $reviewer = User::factory()->create();
+        $productA = $this->makeProduct(['name' => 'Product A']);
+        $productB = $this->makeProduct(['name' => 'Product B']);
+        $variantB = $this->makeVariant($productB);
+        $this->makePaidOrder($reviewer, $variantB);
+        $this->actingAs($reviewer)->postJson("/api/products/{$productB->slug}/reviews", ['rating' => 4])->assertCreated();
+        $review = Review::first();
+
+        $this->actingAs($reviewer)
+            ->patchJson("/api/products/{$productA->slug}/reviews/{$review->id}", ['rating' => 2])
+            ->assertNotFound();
+    }
+
+    public function test_a_review_author_can_delete_their_own_review(): void
+    {
+        $reviewer = User::factory()->create();
+        $product = $this->makeProduct();
+        $variant = $this->makeVariant($product);
+        $this->makePaidOrder($reviewer, $variant);
+        $this->actingAs($reviewer)->postJson("/api/products/{$product->slug}/reviews", ['rating' => 5])->assertCreated();
+        $review = Review::first();
+
+        $this->actingAs($reviewer)
+            ->deleteJson("/api/products/{$product->slug}/reviews/{$review->id}")
+            ->assertOk();
+
+        $this->assertDatabaseMissing('reviews', ['id' => $review->id]);
+    }
+
+    public function test_a_review_author_can_delete_then_resubmit_a_review(): void
+    {
+        $reviewer = User::factory()->create();
+        $product = $this->makeProduct();
+        $variant = $this->makeVariant($product);
+        $this->makePaidOrder($reviewer, $variant);
+        $this->actingAs($reviewer)->postJson("/api/products/{$product->slug}/reviews", ['rating' => 2])->assertCreated();
+        $review = Review::first();
+
+        $this->actingAs($reviewer)
+            ->deleteJson("/api/products/{$product->slug}/reviews/{$review->id}")
+            ->assertOk();
+
+        $this->actingAs($reviewer)
+            ->postJson("/api/products/{$product->slug}/reviews", ['rating' => 5])
+            ->assertCreated();
+
+        $this->assertDatabaseCount('reviews', 1);
+        $this->assertDatabaseHas('reviews', ['user_id' => $reviewer->id, 'rating' => 5]);
+    }
+
     public function test_a_guest_cannot_delete_a_review(): void
     {
         $reviewer = User::factory()->create();

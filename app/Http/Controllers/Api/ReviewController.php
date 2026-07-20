@@ -62,10 +62,7 @@ class ReviewController extends Controller
      */
     public function store(Request $request, Product $product)
     {
-        $data = $request->validate([
-            'rating' => ['required', 'integer', 'min:1', 'max:5'],
-            'body' => ['nullable', 'string', 'max:5000'],
-        ]);
+        $data = $this->validateRatingAndBody($request);
 
         $user = $request->user();
 
@@ -100,6 +97,28 @@ class ReviewController extends Controller
     }
 
     /**
+     * Self-service edit of the reviewer's own review (fix a typo, correct a
+     * rating) without going through the unique(product_id, user_id) delete-
+     * then-resubmit dance. Admin moderation of other people's reviews is a
+     * separate grant — see ReviewPolicy::update().
+     */
+    public function update(Request $request, Product $product, Review $review)
+    {
+        $this->authorize('update', $review);
+
+        abort_unless($review->product_id === $product->id, 404);
+
+        $data = $this->validateRatingAndBody($request);
+
+        $review->update([
+            'rating' => $data['rating'],
+            'body' => $data['body'] ?? null,
+        ]);
+
+        return new ReviewResource($review->load('user'));
+    }
+
+    /**
      * Admin moderation listing — every review across every product (not scoped
      * to one product like the public index above), so an admin can find and
      * remove an abusive/fake one without already knowing which product it's on.
@@ -117,10 +136,12 @@ class ReviewController extends Controller
     }
 
     /**
-     * Admin-only removal of a review (moderating abusive/fake content). The
-     * unique(product_id, user_id) constraint that blocks a second legitimate
-     * review from the same purchaser also means deleting a bad one is the only
-     * way to let them submit a corrected one afterwards.
+     * Removal of a review — either an admin moderating abusive/fake content,
+     * or the review's own author removing it themselves (see
+     * ReviewPolicy::delete()). The unique(product_id, user_id) constraint
+     * that blocks a second legitimate review from the same purchaser also
+     * means deleting a bad one is the only way to let them submit a
+     * corrected one afterwards.
      */
     public function destroy(Request $request, Product $product, Review $review)
     {
@@ -141,6 +162,18 @@ class ReviewController extends Controller
         );
 
         return response()->json(['message' => 'Deleted.']);
+    }
+
+    /**
+     * Shared rating/body validation for both create (store) and self-service
+     * edit (update).
+     */
+    protected function validateRatingAndBody(Request $request): array
+    {
+        return $request->validate([
+            'rating' => ['required', 'integer', 'min:1', 'max:5'],
+            'body' => ['nullable', 'string', 'max:5000'],
+        ]);
     }
 
     /**
