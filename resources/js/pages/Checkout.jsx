@@ -2,10 +2,80 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { PayPalButtons } from '@paypal/react-paypal-js';
+import { Link } from 'react-router-dom';
 import api from '../lib/api';
 import { useAuth } from '../lib/AuthContext';
 import useDocumentMeta from '../hooks/useDocumentMeta';
 import { formatPrice } from '../lib/formatPrice';
+import DesignArt from '../components/DesignArt';
+
+/**
+ * The post-purchase confirmation screen. Split out from Checkout's render
+ * body so it has a stable, directly-testable/previewable shape — everything
+ * it needs (order summary, total, tracking link) already lives on the
+ * `order` object returned by CheckoutController::capture(), no extra
+ * fetch required. `user` may be null (guest checkout).
+ */
+export function OrderConfirmation({ order, user, t, i18n }) {
+    return (
+        <div className="mx-auto max-w-lg px-6 py-16 text-center">
+            <DesignArt
+                motif="chai"
+                className="mx-auto mb-6 h-28 w-28 rounded-full"
+                label={t('checkout_success_art_label')}
+            />
+            <h1 className="mb-2 font-serif text-2xl">{t('checkout_success')}</h1>
+            <p className="mb-8 text-ink-soft">{t('checkout_order_number', { number: order.order_number })}</p>
+
+            <div className="rounded border border-line p-4 text-start">
+                <h2 className="mb-3 text-sm tracking-wide text-ink-soft uppercase">
+                    {t('checkout_order_summary_title')}
+                </h2>
+                <ul className="space-y-1 text-sm text-ink-soft">
+                    {order.items.map((item) => (
+                        <li key={item.id}>
+                            {item.quantity} × {item.product_variant?.product?.name ?? t('orders_unknown_product')}
+                            {item.product_variant && ` (${item.product_variant.size} / ${item.product_variant.color})`}
+                        </li>
+                    ))}
+                </ul>
+                <div className="mt-3 flex items-center justify-between border-t border-line pt-3">
+                    <span className="text-sm">{t('checkout_order_total_label')}</span>
+                    <span className="text-sm font-medium">
+                        {formatPrice(order.total_amount, order.currency, i18n.language)}
+                    </span>
+                </div>
+            </div>
+
+            <div className="mt-8 flex flex-col items-center gap-3">
+                <Link
+                    to="/"
+                    className="w-full rounded bg-ink px-4 py-3 text-sm tracking-wide text-parchment uppercase hover:bg-ink-soft"
+                >
+                    {t('checkout_continue_shopping')}
+                </Link>
+                {order.tracking_url && (
+                    <a
+                        href={order.tracking_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-sm text-brass hover:underline"
+                    >
+                        {t('checkout_track_order')}
+                    </a>
+                )}
+                {!user && (
+                    <p className="text-xs text-ink-soft">
+                        {t('checkout_success_guest_notice')}{' '}
+                        <Link to="/track-order" className="underline hover:text-ink">
+                            {t('footer_track_order_link')}
+                        </Link>
+                    </p>
+                )}
+            </div>
+        </div>
+    );
+}
 
 export default function Checkout() {
     const { t, i18n } = useTranslation();
@@ -81,12 +151,7 @@ export default function Checkout() {
     }
 
     if (status === 'paid') {
-        return (
-            <div className="mx-auto max-w-md px-6 py-16 text-center">
-                <h1 className="mb-4 font-serif text-2xl">{t('checkout_success')}</h1>
-                <p className="text-ink-soft">{t('checkout_order_number', { number: order.order_number })}</p>
-            </div>
-        );
+        return <OrderConfirmation order={order} user={user} t={t} i18n={i18n} />;
     }
 
     return (
