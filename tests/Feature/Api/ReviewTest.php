@@ -6,6 +6,7 @@ use App\Models\Design;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Models\Review;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -275,5 +276,133 @@ class ReviewTest extends TestCase
         $product = $this->makeProduct();
 
         $this->getJson("/api/products/{$product->slug}/reviews/eligibility")->assertUnauthorized();
+    }
+
+    public function test_a_non_admin_cannot_delete_a_review(): void
+    {
+        $reviewer = User::factory()->create();
+        $product = $this->makeProduct();
+        $variant = $this->makeVariant($product);
+        $this->makePaidOrder($reviewer, $variant);
+        $this->actingAs($reviewer)->postJson("/api/products/{$product->slug}/reviews", ['rating' => 5])->assertCreated();
+        $review = Review::first();
+
+        $otherCustomer = User::factory()->create(['role' => 'customer']);
+
+        $this->actingAs($otherCustomer)
+            ->deleteJson("/api/products/{$product->slug}/reviews/{$review->id}")
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('reviews', ['id' => $review->id]);
+    }
+
+    public function test_a_guest_cannot_delete_a_review(): void
+    {
+        $reviewer = User::factory()->create();
+        $product = $this->makeProduct();
+        $variant = $this->makeVariant($product);
+        $order = $this->makePaidOrder($reviewer, $variant);
+        // Created directly (not via actingAs()->postJson()) so this request truly
+        // has no authenticated actor — actingAs() would otherwise persist across
+        // the rest of this test method's requests.
+        $review = Review::create([
+            'product_id' => $product->id,
+            'user_id' => $reviewer->id,
+            'order_id' => $order->id,
+            'rating' => 5,
+        ]);
+
+        $this->deleteJson("/api/products/{$product->slug}/reviews/{$review->id}")->assertUnauthorized();
+    }
+
+    public function test_an_admin_can_delete_a_review_and_the_average_rating_is_recalculated(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $product = $this->makeProduct();
+        $variant = $this->makeVariant($product);
+
+        $userA = User::factory()->create(['name' => 'Alice']);
+        $this->makePaidOrder($userA, $variant);
+        $this->actingAs($userA)->postJson("/api/products/{$product->slug}/reviews", ['rating' => 5])->assertCreated();
+
+        $userB = User::factory()->create(['name' => 'Bob']);
+        $this->makePaidOrder($userB, $variant);
+        $this->actingAs($userB)->postJson("/api/products/{$product->slug}/reviews", ['rating' => 1])->assertCreated();
+
+        // round((5+1)/2, 1) is a whole number, which json_encode()s as an int (3),
+        // not a float (3.0) — assert against the int so this matches what the
+        // response actually contains rather than a strict-typed literal.
+        $this->getJson("/api/products/{$product->slug}/reviews")->assertJsonPath('meta.average_rating', 3);
+
+        $badReview = Review::where('user_id', $userB->id)->firstOrFail();
+
+        $this->actingAs($admin)
+            ->deleteJson("/api/products/{$product->slug}/reviews/{$badReview->id}")
+            ->assertOk();
+
+        $this->assertDatabaseMissing('reviews', ['id' => $badReview->id]);
+        $this->assertDatabaseHas('system_events', ['event_type' => 'review.deleted']);
+
+        $this->getJson("/api/products/{$product->slug}/reviews")
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('meta.average_rating', 5);
+    }
+
+    public function test_deleting_a_nonexistent_review_returns_404(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $product = $this->makeProduct();
+
+        $this->actingAs($admin)
+            ->deleteJson("/api/products/{$product->slug}/reviews/999999")
+            ->assertNotFound();
+    }
+
+    public function test_deleting_a_review_belonging_to_a_different_product_returns_404(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $productA = $this->makeProduct(['name' => 'Product A']);
+        $productB = $this->makeProduct(['name' => 'Product B']);
+        $variantB = $this->makeVariant($productB);
+
+        $reviewer = User::factory()->create();
+        $this->makePaidOrder($reviewer, $variantB);
+        $this->actingAs($reviewer)->postJson("/api/products/{$productB->slug}/reviews", ['rating' => 4])->assertCreated();
+        $review = Review::first();
+
+        $this->actingAs($admin)
+            ->deleteJson("/api/products/{$productA->slug}/reviews/{$review->id}")
+            ->assertNotFound();
+    }
+
+    public function test_the_admin_manage_endpoint_lists_reviews_across_products_and_is_admin_only(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $customer = User::factory()->create(['role' => 'customer']);
+        $product = $this->makeProduct();
+        $variant = $this->makeVariant($product);
+
+        $reviewer = User::factory()->create(['name' => 'Carol']);
+        $order = $this->makePaidOrder($reviewer, $variant);
+        // Created directly rather than via actingAs()->postJson() so the guest
+        // assertion right below genuinely has no lingering authenticated actor —
+        // actingAs() otherwise persists across the rest of this test's requests.
+        Review::create([
+            'product_id' => $product->id,
+            'user_id' => $reviewer->id,
+            'order_id' => $order->id,
+            'rating' => 5,
+            'body' => 'Excellent.',
+        ]);
+
+        $this->getJson('/api/admin/reviews')->assertUnauthorized();
+        $this->actingAs($customer)->getJson('/api/admin/reviews')->assertForbidden();
+
+        $response = $this->actingAs($admin)->getJson('/api/admin/reviews');
+
+        $response->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.reviewer_name', 'Carol')
+            ->assertJsonPath('data.0.product_name', $product->name);
     }
 }

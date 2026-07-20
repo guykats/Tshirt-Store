@@ -55,6 +55,7 @@ export default function Layout({ children }) {
                             <Link to="/dashboard/design" className="hover:text-ink">{t('nav_design')}</Link>
                             <Link to="/dashboard/products" className="hover:text-ink">{t('nav_products')}</Link>
                             <Link to="/dashboard/audit-log" className="hover:text-ink">{t('nav_audit_log')}</Link>
+                            <Link to="/dashboard/reviews" className="hover:text-ink">{t('nav_reviews')}</Link>
                         </>
                     )}
                     {user && (

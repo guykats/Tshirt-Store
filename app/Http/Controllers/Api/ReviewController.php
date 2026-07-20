@@ -7,6 +7,7 @@ use App\Http\Resources\ReviewResource;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\Review;
+use App\Models\SystemEvent;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 
@@ -96,6 +97,50 @@ class ReviewController extends Controller
         return (new ReviewResource($review->load('user')))
             ->response()
             ->setStatusCode(201);
+    }
+
+    /**
+     * Admin moderation listing — every review across every product (not scoped
+     * to one product like the public index above), so an admin can find and
+     * remove an abusive/fake one without already knowing which product it's on.
+     */
+    public function manage(Request $request)
+    {
+        abort_unless($request->user()->isAdmin(), 403);
+
+        $reviews = Review::query()
+            ->with(['user', 'product'])
+            ->latest()
+            ->paginate(20);
+
+        return ReviewResource::collection($reviews);
+    }
+
+    /**
+     * Admin-only removal of a review (moderating abusive/fake content). The
+     * unique(product_id, user_id) constraint that blocks a second legitimate
+     * review from the same purchaser also means deleting a bad one is the only
+     * way to let them submit a corrected one afterwards.
+     */
+    public function destroy(Request $request, Product $product, Review $review)
+    {
+        $this->authorize('delete', $review);
+
+        abort_unless($review->product_id === $product->id, 404);
+
+        $review->loadMissing('user');
+        $reviewerName = $review->user?->name ?? 'A user';
+
+        $review->delete();
+
+        SystemEvent::log(
+            'review.deleted',
+            "Review by {$reviewerName} for \"{$product->name}\" removed by {$request->user()->name}.",
+            $request->user()->name,
+            'user',
+        );
+
+        return response()->json(['message' => 'Deleted.']);
     }
 
     /**

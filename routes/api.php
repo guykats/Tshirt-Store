@@ -88,6 +88,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/products/{product}/reviews/eligibility', [ReviewController::class, 'eligibility']);
     Route::post('/products/{product}/reviews', [ReviewController::class, 'store']);
+    Route::delete('/products/{product}/reviews/{review}', [ReviewController::class, 'destroy']);
 
     Route::get('/wishlist', [WishlistController::class, 'index']);
     Route::post('/products/{product}/wishlist', [WishlistController::class, 'store']);
@@ -135,6 +136,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/products/{product}/images', [AdminProductImageController::class, 'store']);
         Route::put('/products/{product}/images/{image}', [AdminProductImageController::class, 'update']);
         Route::delete('/products/{product}/images/{image}', [AdminProductImageController::class, 'destroy']);
+
+        // Cross-product review moderation listing — see App\Http\Controllers\Api\ReviewController::manage.
+        // The actual DELETE lives at /api/products/{product}/reviews/{review} above (outside this
+        // admin/ prefix) since it's scoped under a specific product, matching how reviews are
+        // addressed everywhere else in the app.
+        Route::get('/reviews', [ReviewController::class, 'manage']);
     });
 
     Route::get('/epics', [EpicController::class, 'index']);
