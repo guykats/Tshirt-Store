@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'brand_name' => 'חנות החולצות',
     'order_confirmation_subject' => 'ההזמנה שלך :number אושרה',
     'greeting' => 'שלום :name,',
     'order_confirmation_intro' => 'תודה על ההזמנה! קיבלנו את התשלום שלך וההזמנה כעת בבדיקה.',
