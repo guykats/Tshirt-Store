@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\ActivityController;
+use App\Http\Controllers\Api\Admin\CouponController as AdminCouponController;
 use App\Http\Controllers\Api\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Api\Admin\ProductImageController as AdminProductImageController;
 use App\Http\Controllers\Api\Admin\ProductVariantController as AdminProductVariantController;
@@ -150,6 +151,20 @@ Route::middleware('auth:sanctum')->group(function () {
         // admin/ prefix) since it's scoped under a specific product, matching how reviews are
         // addressed everywhere else in the app.
         Route::get('/reviews', [ReviewController::class, 'manage']);
+
+        // Coupon admin CRUD. Redemption/validation already lives server-side in
+        // App\Services\CouponService for the checkout flow — this is the missing
+        // management surface (list/create/edit/deactivate) that was previously
+        // only reachable via a raw DB insert. No destroy route: coupons that have
+        // already been redeemed (redemptions_count > 0) need to stay around as a
+        // historical record for the orders that used them, so "deactivate" via
+        // PUT with active=false is the supported way to retire one, matching how
+        // products use status=archived instead of hard deletion once they have
+        // order history.
+        Route::get('/coupons', [AdminCouponController::class, 'index']);
+        Route::post('/coupons', [AdminCouponController::class, 'store']);
+        Route::get('/coupons/{coupon}', [AdminCouponController::class, 'show']);
+        Route::put('/coupons/{coupon}', [AdminCouponController::class, 'update']);
     });
 
     Route::get('/epics', [EpicController::class, 'index']);

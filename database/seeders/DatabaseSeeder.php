@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\AgentStatus;
+use App\Models\Coupon;
 use App\Models\Design;
 use App\Models\Order;
 use App\Models\Product;
@@ -188,6 +189,14 @@ class DatabaseSeeder extends Seeder
         ] as $agent) {
             AgentStatus::create($agent);
         }
+
+        // A couple of demo coupons so the checkout coupon field and the new admin
+        // coupon-management screen both have something real to show — previously
+        // the only way to get a redeemable row into this table at all was a raw
+        // DB insert.
+        Coupon::create(['code' => 'WELCOME10', 'type' => 'percent', 'value' => 10, 'active' => true]);
+        Coupon::create(['code' => 'SHIP5', 'type' => 'fixed', 'value' => 5, 'active' => true, 'max_redemptions' => 200]);
+        Coupon::create(['code' => 'SUMMER-ENDED', 'type' => 'percent', 'value' => 15, 'active' => false, 'expires_at' => now()->subMonth()]);
 
         SystemEvent::log('system.seeded', 'Database seeded with demo data.', 'DatabaseSeeder', 'system');
     }
