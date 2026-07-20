@@ -42,6 +42,16 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(10)->by($request->ip());
         });
 
+        // Guest checkout (POST /checkout) is reachable with no session, same as
+        // register/login - keyed per-IP (no email field is guaranteed present/valid
+        // before validation runs) at the same order of magnitude as 'register' so a
+        // real shopper retrying a declined card or a mistyped coupon a few times
+        // never gets blocked, while a script can't hammer coupon codes, spin up
+        // unlimited guest User rows, or spam PayPal order-creation calls.
+        RateLimiter::for('checkout', function ($request) {
+            return Limit::perMinute(10)->by($request->ip());
+        });
+
         // Each message can trigger a real, billed Anthropic API call (and possibly a
         // multi-round tool-use loop) - cap how fast one admin can fire them off.
         RateLimiter::for('visioner-chat', function ($request) {

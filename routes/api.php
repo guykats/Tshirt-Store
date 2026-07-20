@@ -67,7 +67,7 @@ Route::post('/webhooks/paypal', [PayPalWebhookController::class, 'handle']);
 // group's user_id-based routes (capture included) work for that guest
 // exactly as they would for a real registered user for the remainder of the
 // browser session.
-Route::post('/checkout', [CheckoutController::class, 'store']);
+Route::post('/checkout', [CheckoutController::class, 'store'])->middleware('throttle:checkout');
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
