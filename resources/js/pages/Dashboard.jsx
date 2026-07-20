@@ -353,6 +353,8 @@ export default function Dashboard() {
                 </ul>
             </section>
 
+            <OrderSearchSection t={t} i18n={i18n} />
+
             <section className="mb-10">
                 <h2 className="mb-3 font-serif text-lg">{t('dashboard_low_stock')}</h2>
                 <p className="mb-3 text-sm text-ink-soft">{t('dashboard_low_stock_hint')}</p>
@@ -467,6 +469,138 @@ function ProgressStat({ label, value, tone }) {
             <p className={`text-2xl font-serif ${tone}`}>{value ?? 0}</p>
             <p className="mt-1 text-xs text-ink-soft">{label}</p>
         </div>
+    );
+}
+
+/**
+ * General "find one specific customer's order" search, distinct from the
+ * fixed status-bucket sections above (pending approval / fulfillment /
+ * refunds), which only ever show orders in those specific statuses. Uses
+ * real server-side pagination (unlike fetchAllPages above) since a search
+ * result set isn't bounded to a small admin queue — follows the same
+ * search-box + prev/next pager shape as CouponManagement.jsx.
+ */
+function OrderSearchSection({ t, i18n }) {
+    const [searchInput, setSearchInput] = useState('');
+    const [search, setSearch] = useState('');
+    const [page, setPage] = useState(1);
+    const [results, setResults] = useState([]);
+    const [meta, setMeta] = useState({ current_page: 1, last_page: 1, total: 0 });
+    const [loading, setLoading] = useState(false);
+    const [hasSearched, setHasSearched] = useState(false);
+
+    useEffect(() => {
+        if (search === '') {
+            setResults([]);
+            setMeta({ current_page: 1, last_page: 1, total: 0 });
+            return;
+        }
+
+        setLoading(true);
+        api.get('/api/orders', { params: { search, page } })
+            .then((res) => {
+                setResults(res.data.data);
+                setMeta(res.data.meta);
+            })
+            .finally(() => setLoading(false));
+    }, [search, page]);
+
+    function handleSubmit(e) {
+        e.preventDefault();
+        setHasSearched(true);
+        setPage(1);
+        setSearch(searchInput.trim());
+    }
+
+    return (
+        <section className="mb-10">
+            <h2 className="mb-3 font-serif text-lg">{t('dashboard_order_search')}</h2>
+            <p className="mb-3 text-sm text-ink-soft">{t('dashboard_order_search_hint')}</p>
+
+            <form onSubmit={handleSubmit} className="mb-4 flex items-end gap-3">
+                <div>
+                    <label htmlFor="order-search" className="mb-1 block text-sm">
+                        {t('dashboard_order_search_label')}
+                    </label>
+                    <input
+                        id="order-search"
+                        type="text"
+                        value={searchInput}
+                        onChange={(e) => setSearchInput(e.target.value)}
+                        placeholder={t('dashboard_order_search_placeholder')}
+                        className="w-64 rounded border border-line bg-parchment px-3 py-2"
+                    />
+                </div>
+                <button
+                    type="submit"
+                    className="rounded border border-ink px-4 py-2 text-sm tracking-wide uppercase hover:bg-parchment-dim"
+                >
+                    {t('dashboard_order_search_button')}
+                </button>
+            </form>
+
+            {loading && <p className="text-ink-soft">…</p>}
+
+            {!loading && hasSearched && search !== '' && results.length === 0 && (
+                <p className="text-ink-soft">{t('dashboard_order_search_no_results')}</p>
+            )}
+
+            {!loading && results.length > 0 && (
+                <div className="mb-4 overflow-x-auto rounded border border-line">
+                    <table className="w-full text-sm">
+                        <thead className="bg-parchment-dim text-left">
+                            <tr>
+                                <th className="px-4 py-2">{t('dashboard_order_search_col_order')}</th>
+                                <th className="px-4 py-2">{t('dashboard_order_search_col_customer')}</th>
+                                <th className="px-4 py-2">{t('dashboard_order_search_col_status')}</th>
+                                <th className="px-4 py-2">{t('dashboard_order_search_col_total')}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {results.map((order) => (
+                                <tr key={order.id} className="border-t border-line">
+                                    <td className="px-4 py-2 font-medium">{order.order_number}</td>
+                                    <td className="px-4 py-2 text-ink-soft">
+                                        <div>{order.user?.name}</div>
+                                        {order.user?.email && (
+                                            <div className="text-xs">{order.user.email}</div>
+                                        )}
+                                    </td>
+                                    <td className="px-4 py-2">{t(`orders_status_${order.status}`)}</td>
+                                    <td className="px-4 py-2">
+                                        {formatPrice(order.total_amount, order.currency, i18n.language)}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+
+            {results.length > 0 && meta.last_page > 1 && (
+                <div className="flex items-center justify-center gap-4">
+                    <button
+                        type="button"
+                        onClick={() => setPage((current) => current - 1)}
+                        disabled={meta.current_page <= 1}
+                        className="rounded border border-line px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-30"
+                    >
+                        {t('dashboard_order_search_previous')}
+                    </button>
+                    <span className="text-sm text-ink-soft">
+                        {t('dashboard_order_search_page_of', { current: meta.current_page, last: meta.last_page })}
+                    </span>
+                    <button
+                        type="button"
+                        onClick={() => setPage((current) => current + 1)}
+                        disabled={meta.current_page >= meta.last_page}
+                        className="rounded border border-line px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-30"
+                    >
+                        {t('dashboard_order_search_next')}
+                    </button>
+                </div>
+            )}
+        </section>
     );
 }
 

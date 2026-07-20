@@ -50,6 +50,17 @@ class OrderController extends Controller
         return new OrderResource($order);
     }
 
+    /**
+     * Admin-only browse/search: a general "find one specific customer's
+     * order" escape hatch alongside the dashboard's fixed status buckets
+     * (pending_approval/fulfillment/refundable). Matches the `search` query
+     * param case-insensitively against the order's user's name and email —
+     * orders always have a real User row behind them (guest checkout creates
+     * one, see CheckoutController::store), so there's no separate
+     * customer_name/customer_email column to search. Non-admins never reach
+     * this branch: their results are always scoped to their own user_id
+     * regardless of what status/search params they pass.
+     */
     public function index(Request $request)
     {
         $this->authorize('viewAny', Order::class);
@@ -58,8 +69,21 @@ class OrderController extends Controller
 
         if (! $request->user()->isAdmin()) {
             $query->where('user_id', $request->user()->id);
-        } elseif ($request->query('status')) {
-            $query->where('status', $request->query('status'));
+        } else {
+            if ($request->query('status')) {
+                $query->where('status', $request->query('status'));
+            }
+
+            $search = trim((string) $request->query('search', ''));
+
+            if ($search !== '') {
+                $like = '%'.strtolower($search).'%';
+
+                $query->whereHas('user', function ($userQuery) use ($like) {
+                    $userQuery->whereRaw('LOWER(name) LIKE ?', [$like])
+                        ->orWhereRaw('LOWER(email) LIKE ?', [$like]);
+                });
+            }
         }
 
         return OrderResource::collection($query->latest()->paginate(20));
