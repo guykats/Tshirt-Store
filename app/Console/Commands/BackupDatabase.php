@@ -11,6 +11,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Process;
+use Illuminate\Support\Facades\Storage;
 
 #[Signature('app:backup-database')]
 #[Description('Dump the production MySQL database to a timestamped file outside the git-deployed path, and prune backups beyond the retention window.')]
@@ -71,9 +72,76 @@ class BackupDatabase extends Command
 
         $this->info("Backup written to {$path}");
 
+        $this->uploadOffsite($path, $filename, $size);
+
         $this->rotate($backupDir, $keep);
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Copy the just-completed local dump to an off-site disk, so a full loss
+     * of the Hostinger box doesn't take every backup down with it. This is
+     * strictly additive to the local backup, which has already succeeded by
+     * the time this runs: an off-site failure is logged and (loudly) emailed
+     * to admins, but it must never delete the local dump or flip the
+     * command's overall result to failure — see config/backup.php for why
+     * 'offsite_disk' defaults to null (deferred off-site credentials, same
+     * posture as the PayPal/SMTP secrets documented in CLAUDE.md).
+     */
+    private function uploadOffsite(string $path, string $filename, int $size): void
+    {
+        $disk = config('backup.offsite_disk');
+
+        if (! $disk) {
+            Log::info('Off-site backup upload skipped: backup.offsite_disk is not configured.');
+
+            return;
+        }
+
+        try {
+            $uploaded = Storage::disk($disk)->put($filename, fopen($path, 'r'));
+        } catch (\Throwable $e) {
+            $uploaded = false;
+            report($e);
+        }
+
+        if (! $uploaded) {
+            $message = "Off-site backup upload to disk '{$disk}' failed for {$filename}. The local backup itself succeeded and was left in place.";
+
+            SystemEvent::log(
+                'backup.offsite_failed',
+                $message,
+                'schedule:run',
+                'system',
+                ['disk' => $disk, 'path' => $path, 'size_bytes' => $size],
+            );
+
+            $this->warn($message);
+
+            try {
+                // Reuses BackupFailed rather than a separate notification class:
+                // the message text itself makes clear this is the lesser-severity
+                // off-site-only failure (local backup intact), so admins still
+                // get an inbox alert without a second notification class/view/
+                // lang-string set to maintain for what is, in substance, the
+                // same "a backup step silently broke" situation.
+                Notification::send(User::where('role', 'admin')->get(), new BackupFailed($message));
+            } catch (\Throwable $e) {
+                report($e);
+                Log::warning('Off-site backup failure notification failed to send.', ['reason' => $message]);
+            }
+
+            return;
+        }
+
+        SystemEvent::log(
+            'backup.offsite_uploaded',
+            "Database backup {$filename} ({$size} bytes) uploaded to off-site disk '{$disk}'.",
+            'schedule:run',
+            'system',
+            ['disk' => $disk, 'path' => $filename, 'size_bytes' => $size],
+        );
     }
 
     /**

@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Process;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class BackupDatabaseCommandTest extends TestCase
@@ -172,5 +173,93 @@ class BackupDatabaseCommandTest extends TestCase
         $this->artisan('app:backup-database')->assertExitCode(0);
 
         $this->assertDirectoryExists($this->backupDir);
+    }
+
+    public function test_it_uploads_the_dump_to_the_configured_offsite_disk_and_logs_a_system_event(): void
+    {
+        Date::setTestNow('2026-07-19 03:00:00');
+
+        config(['backup.offsite_disk' => 'offsite-fake']);
+        Storage::fake('offsite-fake');
+
+        Process::fake(function ($process) {
+            foreach ($process->command as $arg) {
+                if (str_starts_with($arg, '--result-file=')) {
+                    file_put_contents(substr($arg, strlen('--result-file=')), "-- fake dump\n");
+                }
+            }
+
+            return Process::result(output: '', errorOutput: '', exitCode: 0);
+        });
+
+        $this->artisan('app:backup-database')->assertExitCode(0);
+
+        Storage::disk('offsite-fake')->assertExists('backup_2026-07-19_030000.sql');
+
+        $this->assertDatabaseHas('system_events', [
+            'event_type' => 'backup.offsite_uploaded',
+        ]);
+    }
+
+    public function test_it_logs_an_offsite_failure_without_deleting_the_local_dump_or_failing_the_command(): void
+    {
+        Date::setTestNow('2026-07-19 03:00:00');
+        Notification::fake();
+
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        config(['backup.offsite_disk' => 'offsite-broken']);
+
+        // Simulate the off-site disk itself throwing (e.g. a network/auth
+        // error against the S3-compatible endpoint) rather than Storage::put
+        // simply returning false, since that's a realistic failure mode for
+        // the s3 driver and the command's catch block needs to handle it.
+        Storage::shouldReceive('disk')
+            ->with('offsite-broken')
+            ->once()
+            ->andThrow(new \RuntimeException('offsite disk unreachable'));
+
+        Process::fake(function ($process) {
+            foreach ($process->command as $arg) {
+                if (str_starts_with($arg, '--result-file=')) {
+                    file_put_contents(substr($arg, strlen('--result-file=')), "-- fake dump\n");
+                }
+            }
+
+            return Process::result(output: '', errorOutput: '', exitCode: 0);
+        });
+
+        $this->artisan('app:backup-database')->assertExitCode(0);
+
+        $expectedFile = $this->backupDir.'/backup_2026-07-19_030000.sql';
+        $this->assertFileExists($expectedFile);
+
+        $this->assertDatabaseHas('system_events', ['event_type' => 'backup.completed']);
+        $this->assertDatabaseHas('system_events', ['event_type' => 'backup.offsite_failed']);
+
+        Notification::assertSentTo($admin, BackupFailed::class);
+    }
+
+    public function test_it_skips_offsite_upload_cleanly_when_unconfigured(): void
+    {
+        Date::setTestNow('2026-07-19 03:00:00');
+
+        // backup.offsite_disk is null/unset by default (see config/backup.php)
+        // and setUp() above doesn't configure it, so this exercises the
+        // deferred-credentials no-op path.
+        Process::fake(function ($process) {
+            foreach ($process->command as $arg) {
+                if (str_starts_with($arg, '--result-file=')) {
+                    file_put_contents(substr($arg, strlen('--result-file=')), "-- fake dump\n");
+                }
+            }
+
+            return Process::result(output: '', errorOutput: '', exitCode: 0);
+        });
+
+        $this->artisan('app:backup-database')->assertExitCode(0);
+
+        $this->assertDatabaseMissing('system_events', ['event_type' => 'backup.offsite_uploaded']);
+        $this->assertDatabaseMissing('system_events', ['event_type' => 'backup.offsite_failed']);
     }
 }
