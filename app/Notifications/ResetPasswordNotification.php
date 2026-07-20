@@ -24,16 +24,17 @@ class ResetPasswordNotification extends Notification
 
     public function toMail(mixed $notifiable): MailMessage
     {
-        $url = $this->resetUrl($notifiable);
-
+        // Rendered through the site's own branded layout (see
+        // resources/views/emails/reset-password.blade.php, which reuses the
+        // same emails.partials.header component as the order emails) rather
+        // than Laravel's default blue-button notification theme.
         return (new MailMessage)
             ->subject(__('mail.reset_password_subject'))
-            ->greeting(__('mail.greeting', ['name' => $notifiable->name]))
-            ->line(__('mail.reset_password_intro'))
-            ->action(__('mail.reset_password_action'), $url)
-            ->line(__('mail.reset_password_expire', ['count' => (int) config('auth.passwords.users.expire')]))
-            ->line(__('mail.reset_password_no_action'))
-            ->line(__('mail.regards', ['app_name' => config('app.name')]));
+            ->view('emails.reset-password', [
+                'name' => $notifiable->name,
+                'url' => $this->resetUrl($notifiable),
+                'expireMinutes' => (int) config('auth.passwords.users.expire'),
+            ]);
     }
 
     protected function resetUrl(mixed $notifiable): string

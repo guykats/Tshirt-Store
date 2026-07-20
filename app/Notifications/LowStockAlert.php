@@ -38,16 +38,19 @@ class LowStockAlert extends Notification
         $variant = $this->variant;
         $label = trim("{$variant->size}/{$variant->color}");
 
+        // Rendered through the site's own branded layout (see
+        // resources/views/emails/low-stock-alert.blade.php, which reuses the
+        // same emails.partials.header component as the order emails) rather
+        // than Laravel's default blue-button notification theme.
         return (new MailMessage)
             ->subject(__('mail.low_stock_alert_subject', ['product' => $variant->product->name]))
-            ->greeting(__('mail.greeting', ['name' => $notifiable->name]))
-            ->line(__('mail.low_stock_alert_intro', [
-                'product' => $variant->product->name,
-                'variant' => $label,
-            ]))
-            ->line(__('mail.low_stock_alert_quantity', ['count' => $variant->stock_quantity]))
-            ->line(__('mail.low_stock_alert_sku', ['sku' => $variant->sku]))
-            ->action(__('mail.low_stock_alert_action'), rtrim((string) config('app.url'), '/').'/dashboard')
-            ->line(__('mail.regards', ['app_name' => config('app.name')]));
+            ->view('emails.low-stock-alert', [
+                'name' => $notifiable->name,
+                'productName' => $variant->product->name,
+                'variantLabel' => $label,
+                'quantity' => $variant->stock_quantity,
+                'sku' => $variant->sku,
+                'url' => rtrim((string) config('app.url'), '/').'/dashboard',
+            ]);
     }
 }
