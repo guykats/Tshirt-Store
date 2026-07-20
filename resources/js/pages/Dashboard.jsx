@@ -236,9 +236,7 @@ export default function Dashboard() {
                 {fulfillmentOrders.length === 0 && <p className="text-ink-soft">{t('dashboard_no_fulfillment_orders')}</p>}
                 <ul className="space-y-3">
                     {fulfillmentOrders.map((order) => {
-                        const nextStatus = NEXT_FULFILLMENT_STATUS[order.status];
-                        const requiresShippingDetails = nextStatus === 'shipped';
-                        const draft = shippingDrafts[order.id] ?? DEFAULT_SHIPPING_DRAFT;
+                        const requiresShippingDetails = NEXT_FULFILLMENT_STATUS[order.status] === 'shipped';
 
                         return (
                             <li key={order.id} className="rounded border border-line p-4">
@@ -248,77 +246,29 @@ export default function Dashboard() {
                                         <p className="text-sm text-ink-soft">{t(`orders_status_${order.status}`)}</p>
                                     </div>
                                     {!requiresShippingDetails && (
-                                        <button
-                                            type="button"
-                                            onClick={() => advanceOrderStatus(order.id, nextStatus)}
-                                            disabled={advancingOrderId === order.id}
-                                            className="rounded bg-ink px-3 py-1.5 text-sm text-white disabled:opacity-60"
-                                        >
-                                            {advancingOrderId === order.id
-                                                ? t('dashboard_fulfillment_advancing')
-                                                : t(`dashboard_fulfillment_mark_${nextStatus}`)}
-                                        </button>
+                                        <FulfillmentAdvanceControl
+                                            order={order}
+                                            advancingOrderId={advancingOrderId}
+                                            shippingDrafts={shippingDrafts}
+                                            updateShippingDraft={updateShippingDraft}
+                                            shippingErrors={shippingErrors}
+                                            onAdvance={advanceOrderStatus}
+                                            t={t}
+                                        />
                                     )}
                                 </div>
 
                                 {requiresShippingDetails && (
-                                    <div className="mt-3 flex flex-wrap items-end gap-3 border-t border-line pt-3">
-                                        <div>
-                                            <label htmlFor={`carrier-${order.id}`} className="block text-xs text-ink-soft">
-                                                {t('dashboard_fulfillment_carrier_label')}
-                                            </label>
-                                            <select
-                                                id={`carrier-${order.id}`}
-                                                value={draft.carrier}
-                                                onChange={(e) => updateShippingDraft(order.id, 'carrier', e.target.value)}
-                                                className="rounded border border-line px-2 py-1 text-sm"
-                                            >
-                                                {CARRIER_OPTIONS.map((option) => (
-                                                    <option key={option} value={option}>{option}</option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                        {draft.carrier === 'Other' && (
-                                            <div>
-                                                <label htmlFor={`carrier-other-${order.id}`} className="block text-xs text-ink-soft">
-                                                    {t('dashboard_fulfillment_carrier_other_label')}
-                                                </label>
-                                                <input
-                                                    id={`carrier-other-${order.id}`}
-                                                    type="text"
-                                                    value={draft.otherCarrier}
-                                                    onChange={(e) => updateShippingDraft(order.id, 'otherCarrier', e.target.value)}
-                                                    className="rounded border border-line px-2 py-1 text-sm"
-                                                />
-                                            </div>
-                                        )}
-                                        <div>
-                                            <label htmlFor={`tracking-${order.id}`} className="block text-xs text-ink-soft">
-                                                {t('dashboard_fulfillment_tracking_number_label')}
-                                            </label>
-                                            <input
-                                                id={`tracking-${order.id}`}
-                                                type="text"
-                                                value={draft.trackingNumber}
-                                                onChange={(e) => updateShippingDraft(order.id, 'trackingNumber', e.target.value)}
-                                                className="rounded border border-line px-2 py-1 text-sm"
-                                            />
-                                        </div>
-                                        <button
-                                            type="button"
-                                            onClick={() => advanceOrderStatus(order.id, nextStatus)}
-                                            disabled={advancingOrderId === order.id}
-                                            className="rounded bg-ink px-3 py-1.5 text-sm text-white disabled:opacity-60"
-                                        >
-                                            {advancingOrderId === order.id
-                                                ? t('dashboard_fulfillment_advancing')
-                                                : t('dashboard_fulfillment_mark_shipped')}
-                                        </button>
-                                        {shippingErrors[order.id] && (
-                                            <p role="alert" className="w-full text-sm text-red-700">
-                                                {shippingErrors[order.id]}
-                                            </p>
-                                        )}
+                                    <div className="mt-3 border-t border-line pt-3">
+                                        <FulfillmentAdvanceControl
+                                            order={order}
+                                            advancingOrderId={advancingOrderId}
+                                            shippingDrafts={shippingDrafts}
+                                            updateShippingDraft={updateShippingDraft}
+                                            shippingErrors={shippingErrors}
+                                            onAdvance={advanceOrderStatus}
+                                            t={t}
+                                        />
                                     </div>
                                 )}
                             </li>
@@ -340,20 +290,24 @@ export default function Dashboard() {
                                     {formatPrice(order.total_amount, order.currency, i18n.language)} — {t(`orders_status_${order.status}`)}
                                 </p>
                             </div>
-                            <button
-                                type="button"
-                                onClick={() => refundOrder(order.id)}
-                                disabled={refundingOrderId === order.id}
-                                className="rounded bg-red-700 px-3 py-1.5 text-sm text-white disabled:opacity-60"
-                            >
-                                {refundingOrderId === order.id ? t('dashboard_refund_processing') : t('dashboard_refund_action')}
-                            </button>
+                            <RefundControl order={order} refundingOrderId={refundingOrderId} onRefund={refundOrder} t={t} />
                         </li>
                     ))}
                 </ul>
             </section>
 
-            <OrderSearchSection t={t} i18n={i18n} />
+            <OrderSearchSection
+                t={t}
+                i18n={i18n}
+                onApprove={approveOrder}
+                onAdvance={advanceOrderStatus}
+                onRefund={refundOrder}
+                advancingOrderId={advancingOrderId}
+                shippingDrafts={shippingDrafts}
+                updateShippingDraft={updateShippingDraft}
+                shippingErrors={shippingErrors}
+                refundingOrderId={refundingOrderId}
+            />
 
             <section className="mb-10">
                 <h2 className="mb-3 font-serif text-lg">{t('dashboard_low_stock')}</h2>
@@ -479,8 +433,25 @@ function ProgressStat({ label, value, tone }) {
  * real server-side pagination (unlike fetchAllPages above) since a search
  * result set isn't bounded to a small admin queue — follows the same
  * search-box + prev/next pager shape as CouponManagement.jsx.
+ *
+ * Matches by order number as well as customer name/email (see
+ * OrderController::index()), and the Actions column reuses the exact same
+ * approve/advance/refund handlers (and shared state) as the fixed
+ * status-bucket sections above, so an admin who finds an order here never
+ * has to go re-find it in Fulfillment/Refunds to act on it.
  */
-function OrderSearchSection({ t, i18n }) {
+function OrderSearchSection({
+    t,
+    i18n,
+    onApprove,
+    onAdvance,
+    onRefund,
+    advancingOrderId,
+    shippingDrafts,
+    updateShippingDraft,
+    shippingErrors,
+    refundingOrderId,
+}) {
     const [searchInput, setSearchInput] = useState('');
     const [search, setSearch] = useState('');
     const [page, setPage] = useState(1);
@@ -489,27 +460,45 @@ function OrderSearchSection({ t, i18n }) {
     const [loading, setLoading] = useState(false);
     const [hasSearched, setHasSearched] = useState(false);
 
-    useEffect(() => {
+    function runSearch() {
         if (search === '') {
             setResults([]);
             setMeta({ current_page: 1, last_page: 1, total: 0 });
-            return;
+            return Promise.resolve();
         }
 
         setLoading(true);
-        api.get('/api/orders', { params: { search, page } })
+        return api.get('/api/orders', { params: { search, page } })
             .then((res) => {
                 setResults(res.data.data);
                 setMeta(res.data.meta);
             })
             .finally(() => setLoading(false));
-    }, [search, page]);
+    }
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    useEffect(() => { runSearch(); }, [search, page]);
 
     function handleSubmit(e) {
         e.preventDefault();
         setHasSearched(true);
         setPage(1);
         setSearch(searchInput.trim());
+    }
+
+    async function handleApprove(id) {
+        await onApprove(id);
+        runSearch();
+    }
+
+    async function handleAdvance(id, nextStatus) {
+        await onAdvance(id, nextStatus);
+        runSearch();
+    }
+
+    async function handleRefund(id) {
+        await onRefund(id);
+        runSearch();
     }
 
     return (
@@ -554,24 +543,66 @@ function OrderSearchSection({ t, i18n }) {
                                 <th className="px-4 py-2">{t('dashboard_order_search_col_customer')}</th>
                                 <th className="px-4 py-2">{t('dashboard_order_search_col_status')}</th>
                                 <th className="px-4 py-2">{t('dashboard_order_search_col_total')}</th>
+                                <th className="px-4 py-2">{t('dashboard_order_search_col_actions')}</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {results.map((order) => (
-                                <tr key={order.id} className="border-t border-line">
-                                    <td className="px-4 py-2 font-medium">{order.order_number}</td>
-                                    <td className="px-4 py-2 text-ink-soft">
-                                        <div>{order.user?.name}</div>
-                                        {order.user?.email && (
-                                            <div className="text-xs">{order.user.email}</div>
-                                        )}
-                                    </td>
-                                    <td className="px-4 py-2">{t(`orders_status_${order.status}`)}</td>
-                                    <td className="px-4 py-2">
-                                        {formatPrice(order.total_amount, order.currency, i18n.language)}
-                                    </td>
-                                </tr>
-                            ))}
+                            {results.map((order) => {
+                                const canAdvance = order.status in NEXT_FULFILLMENT_STATUS;
+                                const canRefund = order.payment_status === 'paid';
+                                const canApprove = order.status === 'pending_approval';
+
+                                return (
+                                    <tr key={order.id} className="border-t border-line">
+                                        <td className="px-4 py-2 font-medium">{order.order_number}</td>
+                                        <td className="px-4 py-2 text-ink-soft">
+                                            <div>{order.user?.name}</div>
+                                            {order.user?.email && (
+                                                <div className="text-xs">{order.user.email}</div>
+                                            )}
+                                        </td>
+                                        <td className="px-4 py-2">{t(`orders_status_${order.status}`)}</td>
+                                        <td className="px-4 py-2">
+                                            {formatPrice(order.total_amount, order.currency, i18n.language)}
+                                        </td>
+                                        <td className="px-4 py-2">
+                                            <div className="flex flex-wrap items-start gap-2">
+                                                {canApprove && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleApprove(order.id)}
+                                                        className="rounded bg-green-600 px-3 py-1.5 text-sm text-white"
+                                                    >
+                                                        {t('approve')}
+                                                    </button>
+                                                )}
+                                                {canAdvance && (
+                                                    <FulfillmentAdvanceControl
+                                                        order={order}
+                                                        advancingOrderId={advancingOrderId}
+                                                        shippingDrafts={shippingDrafts}
+                                                        updateShippingDraft={updateShippingDraft}
+                                                        shippingErrors={shippingErrors}
+                                                        onAdvance={handleAdvance}
+                                                        t={t}
+                                                    />
+                                                )}
+                                                {canRefund && (
+                                                    <RefundControl
+                                                        order={order}
+                                                        refundingOrderId={refundingOrderId}
+                                                        onRefund={handleRefund}
+                                                        t={t}
+                                                    />
+                                                )}
+                                                {!canApprove && !canAdvance && !canRefund && (
+                                                    <span className="text-ink-soft">—</span>
+                                                )}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
                         </tbody>
                     </table>
                 </div>
@@ -601,6 +632,113 @@ function OrderSearchSection({ t, i18n }) {
                 </div>
             )}
         </section>
+    );
+}
+
+/**
+ * The "advance fulfillment status" button (plus, when the next status is
+ * "shipped", the carrier/tracking-number fields it requires) — shared by the
+ * fixed Fulfillment queue above and by Order Search's per-row actions so
+ * there's exactly one implementation of this control, not two drifting
+ * copies.
+ */
+function FulfillmentAdvanceControl({ order, advancingOrderId, shippingDrafts, updateShippingDraft, shippingErrors, onAdvance, t }) {
+    const nextStatus = NEXT_FULFILLMENT_STATUS[order.status];
+    const requiresShippingDetails = nextStatus === 'shipped';
+    const draft = shippingDrafts[order.id] ?? DEFAULT_SHIPPING_DRAFT;
+
+    if (!requiresShippingDetails) {
+        return (
+            <button
+                type="button"
+                onClick={() => onAdvance(order.id, nextStatus)}
+                disabled={advancingOrderId === order.id}
+                className="rounded bg-ink px-3 py-1.5 text-sm text-white disabled:opacity-60"
+            >
+                {advancingOrderId === order.id
+                    ? t('dashboard_fulfillment_advancing')
+                    : t(`dashboard_fulfillment_mark_${nextStatus}`)}
+            </button>
+        );
+    }
+
+    return (
+        <div className="flex flex-wrap items-end gap-3">
+            <div>
+                <label htmlFor={`carrier-${order.id}`} className="block text-xs text-ink-soft">
+                    {t('dashboard_fulfillment_carrier_label')}
+                </label>
+                <select
+                    id={`carrier-${order.id}`}
+                    value={draft.carrier}
+                    onChange={(e) => updateShippingDraft(order.id, 'carrier', e.target.value)}
+                    className="rounded border border-line px-2 py-1 text-sm"
+                >
+                    {CARRIER_OPTIONS.map((option) => (
+                        <option key={option} value={option}>{option}</option>
+                    ))}
+                </select>
+            </div>
+            {draft.carrier === 'Other' && (
+                <div>
+                    <label htmlFor={`carrier-other-${order.id}`} className="block text-xs text-ink-soft">
+                        {t('dashboard_fulfillment_carrier_other_label')}
+                    </label>
+                    <input
+                        id={`carrier-other-${order.id}`}
+                        type="text"
+                        value={draft.otherCarrier}
+                        onChange={(e) => updateShippingDraft(order.id, 'otherCarrier', e.target.value)}
+                        className="rounded border border-line px-2 py-1 text-sm"
+                    />
+                </div>
+            )}
+            <div>
+                <label htmlFor={`tracking-${order.id}`} className="block text-xs text-ink-soft">
+                    {t('dashboard_fulfillment_tracking_number_label')}
+                </label>
+                <input
+                    id={`tracking-${order.id}`}
+                    type="text"
+                    value={draft.trackingNumber}
+                    onChange={(e) => updateShippingDraft(order.id, 'trackingNumber', e.target.value)}
+                    className="rounded border border-line px-2 py-1 text-sm"
+                />
+            </div>
+            <button
+                type="button"
+                onClick={() => onAdvance(order.id, nextStatus)}
+                disabled={advancingOrderId === order.id}
+                className="rounded bg-ink px-3 py-1.5 text-sm text-white disabled:opacity-60"
+            >
+                {advancingOrderId === order.id
+                    ? t('dashboard_fulfillment_advancing')
+                    : t('dashboard_fulfillment_mark_shipped')}
+            </button>
+            {shippingErrors[order.id] && (
+                <p role="alert" className="w-full text-sm text-red-700">
+                    {shippingErrors[order.id]}
+                </p>
+            )}
+        </div>
+    );
+}
+
+/**
+ * The "refund" button — shared by the fixed Refunds queue above and by Order
+ * Search's per-row actions (see FulfillmentAdvanceControl's doc comment for
+ * why this is split out rather than duplicated).
+ */
+function RefundControl({ order, refundingOrderId, onRefund, t }) {
+    return (
+        <button
+            type="button"
+            onClick={() => onRefund(order.id)}
+            disabled={refundingOrderId === order.id}
+            className="rounded bg-red-700 px-3 py-1.5 text-sm text-white disabled:opacity-60"
+        >
+            {refundingOrderId === order.id ? t('dashboard_refund_processing') : t('dashboard_refund_action')}
+        </button>
     );
 }
 

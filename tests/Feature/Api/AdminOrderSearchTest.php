@@ -58,6 +58,35 @@ class AdminOrderSearchTest extends TestCase
         $this->assertSame($sarahOrder->id, $response->json('data.0.id'));
     }
 
+    public function test_an_admin_can_search_orders_by_order_number_alone(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $sarah = User::factory()->create(['role' => 'customer', 'name' => 'Sarah Cohen', 'email' => 'sarah@example.com']);
+        $david = User::factory()->create(['role' => 'customer', 'name' => 'David Levi', 'email' => 'david@example.com']);
+        $targetOrder = $this->makeOrder($sarah, ['order_number' => 'ORD-1234']);
+        $this->makeOrder($david, ['order_number' => 'ORD-9999']);
+
+        // Search term matches neither the customer's name nor email at all —
+        // only the order_number itself.
+        $response = $this->actingAs($admin)->getJson('/api/orders?search=ORD-1234');
+
+        $response->assertOk()->assertJsonCount(1, 'data');
+        $this->assertSame($targetOrder->id, $response->json('data.0.id'));
+    }
+
+    public function test_order_number_search_is_case_insensitive_and_matches_partially(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $customer = User::factory()->create(['role' => 'customer', 'name' => 'Unrelated Name', 'email' => 'unrelated@example.com']);
+        $targetOrder = $this->makeOrder($customer, ['order_number' => 'ORD-ABC123']);
+        $this->makeOrder($customer, ['order_number' => 'ORD-XYZ999']);
+
+        $response = $this->actingAs($admin)->getJson('/api/orders?search=abc123');
+
+        $response->assertOk()->assertJsonCount(1, 'data');
+        $this->assertSame($targetOrder->id, $response->json('data.0.id'));
+    }
+
     public function test_search_results_still_paginate(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);

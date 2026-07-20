@@ -79,9 +79,11 @@ class OrderController extends Controller
             if ($search !== '') {
                 $like = '%'.strtolower($search).'%';
 
-                $query->whereHas('user', function ($userQuery) use ($like) {
-                    $userQuery->whereRaw('LOWER(name) LIKE ?', [$like])
-                        ->orWhereRaw('LOWER(email) LIKE ?', [$like]);
+                $query->where(function ($outer) use ($like) {
+                    $outer->whereHas('user', function ($userQuery) use ($like) {
+                        $userQuery->whereRaw('LOWER(name) LIKE ?', [$like])
+                            ->orWhereRaw('LOWER(email) LIKE ?', [$like]);
+                    })->orWhereRaw('LOWER(order_number) LIKE ?', [$like]);
                 });
             }
         }
