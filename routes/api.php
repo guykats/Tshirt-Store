@@ -126,6 +126,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/activity', [ActivityController::class, 'index']);
     Route::get('/project-tasks', [ProjectTaskController::class, 'index']);
+    Route::post('/project-tasks/{projectTask}/approve', [ProjectTaskController::class, 'approve']);
+    Route::post('/project-tasks/{projectTask}/unapprove', [ProjectTaskController::class, 'unapprove']);
 
     Route::patch('/site-settings', [SiteSettingController::class, 'update']);
 

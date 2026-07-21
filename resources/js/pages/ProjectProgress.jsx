@@ -31,6 +31,11 @@ export default function ProjectProgress() {
 
     useEffect(load, [statusFilter, agentFilter]);
 
+    async function toggleApproval(task) {
+        await api.post(`/api/project-tasks/${task.id}/${task.approved_for_dev ? 'unapprove' : 'approve'}`);
+        load();
+    }
+
     const agents = [...new Set(tasks.map((t) => t.agent_name))].sort();
 
     return (
@@ -81,6 +86,7 @@ export default function ProjectProgress() {
                             <th className="px-4 py-2">{t('progress_col_task')}</th>
                             <th className="px-4 py-2">{t('progress_col_agent')}</th>
                             <th className="px-4 py-2">{t('progress_col_status')}</th>
+                            <th className="px-4 py-2">{t('progress_col_approval')}</th>
                             <th className="px-4 py-2">{t('progress_col_evidence')}</th>
                             <th className="px-4 py-2">{t('progress_col_updated')}</th>
                         </tr>
@@ -88,7 +94,7 @@ export default function ProjectProgress() {
                     <tbody>
                         {tasks.length === 0 && (
                             <tr>
-                                <td colSpan={5} className="px-4 py-6 text-center text-ink-soft">
+                                <td colSpan={6} className="px-4 py-6 text-center text-ink-soft">
                                     {t('progress_no_tasks')}
                                 </td>
                             </tr>
@@ -107,6 +113,26 @@ export default function ProjectProgress() {
                                     <span className={`inline-block rounded-full px-2 py-0.5 text-xs whitespace-nowrap ${STATUS_STYLES[task.status]}`}>
                                         {t(`progress_status_${task.status}`)}
                                     </span>
+                                </td>
+                                <td className="px-4 py-3 whitespace-nowrap">
+                                    {task.status === 'todo' ? (
+                                        <button
+                                            onClick={() => toggleApproval(task)}
+                                            className={
+                                                task.approved_for_dev
+                                                    ? 'rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-800 hover:bg-green-200'
+                                                    : 'rounded-full border border-line px-2 py-0.5 text-xs text-ink-soft hover:bg-parchment-dim hover:text-ink'
+                                            }
+                                        >
+                                            {task.approved_for_dev ? t('progress_approved_badge') : t('progress_approve_for_dev')}
+                                        </button>
+                                    ) : (
+                                        task.approved_for_dev && (
+                                            <span className="inline-block rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-800">
+                                                {t('progress_approved_badge')}
+                                            </span>
+                                        )
+                                    )}
                                 </td>
                                 <td className="px-4 py-3">
                                     <div className="flex items-center gap-2">

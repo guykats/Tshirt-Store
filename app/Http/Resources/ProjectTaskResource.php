@@ -18,6 +18,7 @@ class ProjectTaskResource extends JsonResource
             'description' => $this->description,
             'agent_name' => $this->agent_name,
             'status' => $this->status,
+            'approved_for_dev' => (bool) $this->approved_for_dev,
             'task_type' => $this->task_type,
             'commit_sha' => $this->commit_sha,
             'screenshot_url' => $this->screenshot_path ? Storage::url($this->screenshot_path) : null,

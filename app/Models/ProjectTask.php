@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use InvalidArgumentException;
 
 #[Fillable([
-    'epic_id', 'title', 'description', 'agent_name', 'status', 'task_type',
+    'epic_id', 'title', 'description', 'agent_name', 'status', 'approved_for_dev', 'task_type',
     'commit_sha', 'screenshot_path', 'blocked_reason', 'completed_at',
 ])]
 class ProjectTask extends Model
@@ -16,6 +16,7 @@ class ProjectTask extends Model
     protected function casts(): array
     {
         return [
+            'approved_for_dev' => 'boolean',
             'completed_at' => 'datetime',
         ];
     }

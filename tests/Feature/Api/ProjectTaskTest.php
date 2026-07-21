@@ -73,4 +73,54 @@ class ProjectTaskTest extends TestCase
         $response->assertOk();
         $this->assertStringContainsString('task-screenshots/example.png', $response->json('data.0.screenshot_url'));
     }
+
+    public function test_todo_tasks_default_to_not_approved_for_dev(): void
+    {
+        ProjectTask::query()->delete();
+
+        $admin = User::factory()->create(['role' => 'admin']);
+        ProjectTask::create(['title' => 'Fresh task', 'agent_name' => 'Dev Agent', 'status' => 'todo']);
+
+        $response = $this->actingAs($admin)->getJson('/api/project-tasks');
+
+        $response->assertOk()->assertJsonPath('data.0.approved_for_dev', false);
+    }
+
+    public function test_admins_can_approve_a_task_for_development(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $task = ProjectTask::create(['title' => 'Approve me', 'agent_name' => 'Dev Agent', 'status' => 'todo']);
+
+        $response = $this->actingAs($admin)->postJson("/api/project-tasks/{$task->id}/approve");
+
+        $response->assertOk()->assertJsonPath('data.approved_for_dev', true);
+        $this->assertTrue($task->fresh()->approved_for_dev);
+    }
+
+    public function test_admins_can_revoke_approval(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $task = ProjectTask::create(['title' => 'Revoke me', 'agent_name' => 'Dev Agent', 'status' => 'todo', 'approved_for_dev' => true]);
+
+        $response = $this->actingAs($admin)->postJson("/api/project-tasks/{$task->id}/unapprove");
+
+        $response->assertOk()->assertJsonPath('data.approved_for_dev', false);
+        $this->assertFalse($task->fresh()->approved_for_dev);
+    }
+
+    public function test_customers_cannot_approve_a_task(): void
+    {
+        $customer = User::factory()->create(['role' => 'customer']);
+        $task = ProjectTask::create(['title' => 'Not for you', 'agent_name' => 'Dev Agent', 'status' => 'todo']);
+
+        $this->actingAs($customer)->postJson("/api/project-tasks/{$task->id}/approve")->assertForbidden();
+        $this->assertFalse($task->fresh()->approved_for_dev);
+    }
+
+    public function test_guests_cannot_approve_a_task(): void
+    {
+        $task = ProjectTask::create(['title' => 'Not for you either', 'agent_name' => 'Dev Agent', 'status' => 'todo']);
+
+        $this->postJson("/api/project-tasks/{$task->id}/approve")->assertUnauthorized();
+    }
 }

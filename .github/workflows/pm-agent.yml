@@ -82,16 +82,25 @@ jobs:
                `php artisan migrate:fresh --seed --force` against the local SQLite db,
                then query them, is the reliable way to see current state — the seeded/
                migrated history *is* the board).
-            2. Pick the single highest-value next action and actually ship it, following
+            2. Pick the single highest-value next action from `project_tasks` where
+               `status = 'todo' AND approved_for_dev = 1` and actually ship it, following
                the `ship-project-task` skill (or `propose-epics` if the proposed-epics
                queue is thin). Don't just report — do real work: code, tests, docs, or
                board bookkeeping, verified per CLAUDE.md's bar, committed and pushed
-               directly to `main`.
+               directly to `main`. The owner approves individual tasks for development
+               from the board UI (`/dashboard/progress`) — a `todo` task with
+               `approved_for_dev = 0` is NOT yet cleared to build; never start on one,
+               no matter how obviously good it looks.
             3. If an epic is `approved` with zero linked `project_tasks`, break it into
-               concrete tasks now (set `epic_id` on each) — that's the PM's job.
-            4. If the `todo` backlog or the `proposed` epics queue is empty or thin,
-               seed more real, concrete items rather than stopping — this project's
-               standing rule is a continuously non-empty backlog, never idle.
+               concrete tasks now (set `epic_id` on each) — that's the PM's job. Leave
+               those new tasks at the default `approved_for_dev = 0`; breaking an epic
+               into tasks is not the same as approving them for build.
+            4. If there is no approved `todo` task to work on, don't sit idle: seed more
+               real, concrete candidate items (also left unapproved, pending the owner's
+               review) so there's always something ready to be approved — but do not
+               start building any of them yourself this run. This project's standing
+               rule is a continuously non-empty backlog, never idle, while still
+               respecting the human approval gate on what actually gets built.
             5. PayPal and SMTP real credentials remain intentionally deferred — never
                block on them.
             6. If something genuinely needs a human decision (ambiguous priority,

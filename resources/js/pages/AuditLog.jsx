@@ -20,6 +20,8 @@ const EVENT_TYPES = [
     'epic.approved',
     'epic.rejected',
     'epic.delayed',
+    'project_task.approved',
+    'project_task.unapproved',
     'testimonial.created',
     'testimonial.updated',
     'testimonial.deleted',

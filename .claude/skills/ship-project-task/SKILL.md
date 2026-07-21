@@ -7,6 +7,15 @@ description: The Tshirt Store repo's procedure for picking up a task from the pr
 
 This repo has no separate task-runner or agent infrastructure — the Jira-style board at `/dashboard/progress` (the `project_tasks` and `epics` tables) is just application data, and the *only* way to change production data is a git-tracked Laravel migration, because `deploy.yml` does nothing but `git reset --hard` + `migrate --force`. That's why "updating the board" always means "writing and pushing a migration," not calling an API by hand.
 
+## 0. Only pick approved work
+
+`project_tasks` has an `approved_for_dev` boolean, toggled from the board UI (`/dashboard/progress`) via an "Approve for development" button on `todo` rows — this is a deliberate human gate the project owner controls. **Never start building a `todo` task where `approved_for_dev` is `false`.** Query for the next task with `status = 'todo' AND approved_for_dev = 1` (ordered however you'd normally prioritize) and pick from that set only.
+
+If there is no approved `todo` task available:
+- Don't fall back to an unapproved one — that defeats the gate's purpose.
+- It's still fine to do the *other* standing-backlog work that doesn't build product code: break an approved epic into concrete `project_tasks` rows, or seed a fresh batch of candidate tasks. Leave every task you create this way at the default `approved_for_dev = false` — creating a task is not the same as approving it, and newly seeded/broken-down tasks still need the owner's explicit approval before anyone builds them.
+- Otherwise, stop for this run rather than inventing work to fill time.
+
 ## 1. Signal the start
 
 Before writing any code, push a small migration that marks the task `in_progress`:
