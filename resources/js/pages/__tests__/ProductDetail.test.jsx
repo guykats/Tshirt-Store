@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
@@ -31,6 +31,11 @@ const PRODUCT = {
 // the base PRODUCT fixture below — reset in each describe block that uses it.
 let productOverrides = {};
 
+// When set, the product-fetch mock rejects instead of resolving — used by the
+// error-state tests below. Reset to false in each describe block that doesn't
+// care about it, so failures in one test can't leak into the next.
+let failProductFetch = false;
+
 vi.mock('../../lib/api', () => ({
     default: {
         get: vi.fn((url) => {
@@ -44,6 +49,9 @@ vi.mock('../../lib/api', () => ({
                 return Promise.resolve({ data: { data: [], meta: { average_rating: null, count: 0 } } });
             }
             if (url === `/api/products/${PRODUCT.slug}`) {
+                if (failProductFetch) {
+                    return Promise.reject({ response: { status: 404 } });
+                }
                 return Promise.resolve({ data: { data: { ...PRODUCT, ...productOverrides } } });
             }
             return Promise.reject(new Error(`unmocked GET ${url}`));
@@ -120,6 +128,43 @@ describe('ProductDetail size/color selector', () => {
         expect(enabledLink.className).not.toMatch(/pointer-events-none/);
         expect(enabledLink).toHaveAttribute('href', expect.stringContaining('variant=203'));
         expect(enabledLink).toHaveTextContent('Buy Now');
+    });
+});
+
+describe('ProductDetail failed fetch', () => {
+    beforeEach(async () => {
+        await i18n.changeLanguage('en');
+        failProductFetch = true;
+    });
+
+    afterEach(() => {
+        failProductFetch = false;
+    });
+
+    it('renders an accessible error state with a retry option and a link back to the catalog instead of an infinite skeleton', async () => {
+        renderProductDetail();
+
+        const alert = await screen.findByRole('alert');
+        expect(alert).toHaveTextContent(/couldn't load this product/i);
+
+        expect(screen.getByRole('button', { name: /try again/i })).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: /back to the catalog/i })).toHaveAttribute('href', '/');
+
+        // The skeleton/loading state must not still be showing once the error renders.
+        expect(screen.queryByRole('heading', { name: 'Line Art Tee' })).not.toBeInTheDocument();
+    });
+
+    it('retries the fetch and renders the product once it succeeds', async () => {
+        const user = userEvent.setup();
+        renderProductDetail();
+
+        await screen.findByRole('alert');
+
+        failProductFetch = false;
+        await user.click(screen.getByRole('button', { name: /try again/i }));
+
+        expect(await screen.findByRole('heading', { name: 'Line Art Tee' })).toBeInTheDocument();
+        expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     });
 });
 

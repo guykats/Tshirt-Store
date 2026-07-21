@@ -15,6 +15,8 @@ export default function ProductDetail() {
     const { t, i18n } = useTranslation();
     const { slug } = useParams();
     const [product, setProduct] = useState(null);
+    const [error, setError] = useState(false);
+    const [retryCount, setRetryCount] = useState(0);
     const [size, setSize] = useState('');
     const [color, setColor] = useState('');
 
@@ -78,15 +80,51 @@ export default function ProductDetail() {
     useJsonLd(productJsonLd);
 
     useEffect(() => {
-        api.get(`/api/products/${slug}`).then((res) => {
-            setProduct(res.data.data);
-            const first = res.data.data.variants.find((v) => v.stock_quantity > 0) || res.data.data.variants[0];
-            if (first) {
-                setSize(first.size);
-                setColor(first.color);
-            }
-        });
-    }, [slug]);
+        let cancelled = false;
+        setError(false);
+        setProduct(null);
+
+        api.get(`/api/products/${slug}`)
+            .then((res) => {
+                if (cancelled) return;
+                setProduct(res.data.data);
+                const first = res.data.data.variants.find((v) => v.stock_quantity > 0) || res.data.data.variants[0];
+                if (first) {
+                    setSize(first.size);
+                    setColor(first.color);
+                }
+            })
+            .catch(() => {
+                if (cancelled) return;
+                setError(true);
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [slug, retryCount]);
+
+    if (error) {
+        return (
+            <div className="mx-auto max-w-md px-6 py-24 text-center" role="alert">
+                <p className="mb-3 text-xs tracking-[0.3em] text-brass uppercase">{t('product_detail_error_eyebrow')}</p>
+                <h1 className="mb-4 font-serif text-2xl">{t('product_detail_error_title')}</h1>
+                <p className="mb-8 text-ink-soft">{t('product_detail_error_message')}</p>
+                <div className="flex items-center justify-center gap-4">
+                    <button
+                        type="button"
+                        onClick={() => setRetryCount((n) => n + 1)}
+                        className="rounded bg-ink px-5 py-2.5 text-sm text-white"
+                    >
+                        {t('product_detail_error_retry')}
+                    </button>
+                    <Link to="/" className="text-sm text-ink-soft underline hover:text-ink">
+                        {t('product_detail_error_catalog_link')}
+                    </Link>
+                </div>
+            </div>
+        );
+    }
 
     if (!product) {
         return (
