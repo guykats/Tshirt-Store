@@ -16,6 +16,7 @@ class CouponResource extends JsonResource
             'value' => (float) $this->value,
             'expires_at' => $this->expires_at?->toIso8601String(),
             'max_redemptions' => $this->max_redemptions,
+            'max_redemptions_per_user' => $this->max_redemptions_per_user,
             'redemptions_count' => $this->redemptions_count,
             'active' => (bool) $this->active,
             'created_at' => $this->created_at?->toIso8601String(),

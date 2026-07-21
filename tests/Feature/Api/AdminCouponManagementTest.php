@@ -153,6 +153,32 @@ class AdminCouponManagementTest extends TestCase
         $this->assertDatabaseHas('coupons', ['id' => $coupon->id, 'active' => false]);
     }
 
+    public function test_an_admin_can_set_a_per_customer_redemption_cap(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $response = $this->actingAs($admin)->postJson('/api/admin/coupons', $this->couponPayload([
+            'code' => 'ONEPERCUST',
+            'max_redemptions_per_user' => 1,
+        ]));
+
+        $response->assertCreated()->assertJsonPath('data.max_redemptions_per_user', 1);
+
+        $this->assertDatabaseHas('coupons', ['code' => 'ONEPERCUST', 'max_redemptions_per_user' => 1]);
+    }
+
+    public function test_a_per_customer_cap_must_be_a_positive_integer(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $response = $this->actingAs($admin)->postJson('/api/admin/coupons', $this->couponPayload([
+            'code' => 'BADCAP',
+            'max_redemptions_per_user' => 0,
+        ]));
+
+        $response->assertStatus(422)->assertJsonValidationErrors('max_redemptions_per_user');
+    }
+
     public function test_an_admin_can_view_a_single_coupon(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);

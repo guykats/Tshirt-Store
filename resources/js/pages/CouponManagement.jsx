@@ -10,6 +10,7 @@ const EMPTY_COUPON_FORM = {
     value: '',
     expires_at: '',
     max_redemptions: '',
+    max_redemptions_per_user: '',
     active: true,
 };
 
@@ -91,6 +92,7 @@ export default function CouponManagement() {
             value: coupon.value,
             expires_at: coupon.expires_at ? coupon.expires_at.slice(0, 10) : '',
             max_redemptions: coupon.max_redemptions ?? '',
+            max_redemptions_per_user: coupon.max_redemptions_per_user ?? '',
             active: coupon.active,
         });
     }
@@ -115,6 +117,9 @@ export default function CouponManagement() {
             max_redemptions: source.max_redemptions === '' || source.max_redemptions === null
                 ? null
                 : Number(source.max_redemptions),
+            max_redemptions_per_user: source.max_redemptions_per_user === '' || source.max_redemptions_per_user === null
+                ? null
+                : Number(source.max_redemptions_per_user),
             active: !!source.active,
         };
     }
@@ -153,6 +158,7 @@ export default function CouponManagement() {
                 value: coupon.value,
                 expires_at: coupon.expires_at ? coupon.expires_at.slice(0, 10) : '',
                 max_redemptions: coupon.max_redemptions,
+                max_redemptions_per_user: coupon.max_redemptions_per_user,
                 active: !coupon.active,
             }));
             await loadCoupons();
@@ -237,8 +243,17 @@ export default function CouponManagement() {
                                             : t('coupon_management_no_expiry')}
                                     </td>
                                     <td className="px-4 py-3 whitespace-nowrap text-xs text-ink-soft">
-                                        {coupon.redemptions_count}
-                                        {coupon.max_redemptions !== null ? ` / ${coupon.max_redemptions}` : ''}
+                                        <div>
+                                            {coupon.redemptions_count}
+                                            {coupon.max_redemptions !== null ? ` / ${coupon.max_redemptions}` : ''}
+                                        </div>
+                                        {coupon.max_redemptions_per_user !== null && (
+                                            <div>
+                                                {t('coupon_management_col_redemptions_per_user', {
+                                                    count: coupon.max_redemptions_per_user,
+                                                })}
+                                            </div>
+                                        )}
                                     </td>
                                     <td className="px-4 py-3">
                                         <span className={coupon.active ? 'font-medium text-green-700' : 'font-medium text-ink-soft'}>
@@ -397,6 +412,23 @@ export default function CouponManagement() {
                             />
                             <p className="mt-1 text-xs text-ink-soft">{t('coupon_management_max_redemptions_hint')}</p>
                         </div>
+                    </div>
+                    <div>
+                        <label htmlFor="coupon-max-redemptions-per-user" className="mb-1 block text-sm">
+                            {t('coupon_management_max_redemptions_per_user_label')}
+                        </label>
+                        <input
+                            id="coupon-max-redemptions-per-user"
+                            type="number"
+                            min="1"
+                            value={form.max_redemptions_per_user}
+                            onChange={(e) => updateField('max_redemptions_per_user', e.target.value)}
+                            className="w-full rounded border border-line bg-parchment px-3 py-2 sm:w-1/2"
+                        />
+                        {fieldErrors.max_redemptions_per_user && (
+                            <p role="alert" className="mt-1 text-xs text-red-700">{fieldErrors.max_redemptions_per_user[0]}</p>
+                        )}
+                        <p className="mt-1 text-xs text-ink-soft">{t('coupon_management_max_redemptions_per_user_hint')}</p>
                     </div>
                     <div>
                         <label htmlFor="coupon-active" className="flex items-center gap-2 text-sm">

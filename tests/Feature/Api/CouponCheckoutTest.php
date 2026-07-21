@@ -238,6 +238,145 @@ class CouponCheckoutTest extends TestCase
         ]);
     }
 
+    public function test_a_customer_is_blocked_by_a_per_customer_cap_once_reached_even_with_global_headroom(): void
+    {
+        $user = User::factory()->create();
+        $variant = $this->makeVariant();
+        Coupon::create([
+            'code' => 'ONECUST', 'type' => 'fixed', 'value' => 5, 'active' => true,
+            'max_redemptions' => 50, 'max_redemptions_per_user' => 1,
+        ]);
+
+        $this->mock(PayPalClient::class, function ($mock) {
+            $mock->shouldReceive('createOrder')->once()->andReturn(['id' => 'PAYPAL-ONECUST-1']);
+        });
+
+        $first = $this->actingAs($user)->postJson('/api/checkout', [
+            'code' => 'ONECUST',
+            'product_variant_id' => $variant->id,
+            'quantity' => 1,
+            'shipping_address' => $this->validAddress(),
+        ]);
+        $first->assertCreated();
+
+        $this->assertDatabaseHas('coupons', ['code' => 'ONECUST', 'redemptions_count' => 1]);
+
+        $second = $this->actingAs($user)->postJson('/api/checkout', [
+            'code' => 'ONECUST',
+            'product_variant_id' => $variant->id,
+            'quantity' => 1,
+            'shipping_address' => $this->validAddress(),
+        ]);
+
+        $second->assertStatus(422)
+            ->assertJsonPath('message', 'You have already used this coupon the maximum number of times allowed.');
+
+        // Global count is untouched by the rejected second attempt — the cap
+        // that fired was the per-customer one, not the global one.
+        $this->assertDatabaseHas('coupons', ['code' => 'ONECUST', 'redemptions_count' => 1]);
+        $this->assertDatabaseCount('orders', 1);
+    }
+
+    public function test_a_coupon_with_no_per_customer_cap_behaves_exactly_as_before(): void
+    {
+        $user = User::factory()->create();
+        $variant = $this->makeVariant();
+        Coupon::create([
+            'code' => 'NOCAP', 'type' => 'fixed', 'value' => 5, 'active' => true,
+            'max_redemptions' => 50,
+        ]);
+
+        $this->mock(PayPalClient::class, function ($mock) {
+            $mock->shouldReceive('createOrder')->twice()->andReturn(['id' => 'PAYPAL-NOCAP-1'], ['id' => 'PAYPAL-NOCAP-2']);
+        });
+
+        $this->actingAs($user)->postJson('/api/checkout', [
+            'code' => 'NOCAP',
+            'product_variant_id' => $variant->id,
+            'quantity' => 1,
+            'shipping_address' => $this->validAddress(),
+        ])->assertCreated();
+
+        $this->actingAs($user)->postJson('/api/checkout', [
+            'code' => 'NOCAP',
+            'product_variant_id' => $variant->id,
+            'quantity' => 1,
+            'shipping_address' => $this->validAddress(),
+        ])->assertCreated();
+
+        $this->assertDatabaseHas('coupons', ['code' => 'NOCAP', 'redemptions_count' => 2]);
+    }
+
+    public function test_a_different_customer_is_unaffected_by_another_customers_per_customer_cap(): void
+    {
+        $first = User::factory()->create();
+        $second = User::factory()->create();
+        $variant = $this->makeVariant();
+        Coupon::create([
+            'code' => 'SHARED1', 'type' => 'fixed', 'value' => 5, 'active' => true,
+            'max_redemptions_per_user' => 1,
+        ]);
+
+        $this->mock(PayPalClient::class, function ($mock) {
+            $mock->shouldReceive('createOrder')->twice()->andReturn(['id' => 'PAYPAL-SHARED-1'], ['id' => 'PAYPAL-SHARED-2']);
+        });
+
+        $this->actingAs($first)->postJson('/api/checkout', [
+            'code' => 'SHARED1',
+            'product_variant_id' => $variant->id,
+            'quantity' => 1,
+            'shipping_address' => $this->validAddress(),
+        ])->assertCreated();
+
+        $this->actingAs($second)->postJson('/api/checkout', [
+            'code' => 'SHARED1',
+            'product_variant_id' => $variant->id,
+            'quantity' => 1,
+            'shipping_address' => $this->validAddress(),
+        ])->assertCreated();
+
+        $this->assertDatabaseHas('coupons', ['code' => 'SHARED1', 'redemptions_count' => 2]);
+    }
+
+    public function test_a_cancelled_order_does_not_count_against_the_per_customer_cap(): void
+    {
+        $user = User::factory()->create();
+        $variant = $this->makeVariant();
+        $address = $user->addresses()->create(array_merge(['type' => 'shipping'], $this->validAddress()));
+        Coupon::create([
+            'code' => 'RELEASEME', 'type' => 'fixed', 'value' => 5, 'active' => true,
+            'max_redemptions_per_user' => 1,
+        ]);
+
+        // An order that already used the coupon but was cancelled — its
+        // redemption was released back to the coupon (see
+        // OrderStockService::releaseCoupon), so it shouldn't block this same
+        // customer from redeeming it again.
+        $user->orders()->create([
+            'order_number' => 'ORD-'.uniqid(),
+            'status' => 'cancelled',
+            'subtotal' => 30,
+            'discount_code' => 'RELEASEME',
+            'discount_amount' => 5,
+            'total_amount' => 25,
+            'shipping_address_id' => $address->id,
+            'billing_address_id' => $address->id,
+        ]);
+
+        $this->mock(PayPalClient::class, function ($mock) {
+            $mock->shouldReceive('createOrder')->once()->andReturn(['id' => 'PAYPAL-RELEASEME-1']);
+        });
+
+        $response = $this->actingAs($user)->postJson('/api/checkout', [
+            'code' => 'RELEASEME',
+            'product_variant_id' => $variant->id,
+            'quantity' => 1,
+            'shipping_address' => $this->validAddress(),
+        ]);
+
+        $response->assertCreated();
+    }
+
     public function test_an_orders_discount_amount_survives_refund(): void
     {
         Mail::fake();

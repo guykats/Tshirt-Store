@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 
 #[Fillable([
-    'code', 'type', 'value', 'expires_at', 'max_redemptions', 'redemptions_count', 'active',
+    'code', 'type', 'value', 'expires_at', 'max_redemptions', 'max_redemptions_per_user', 'redemptions_count', 'active',
 ])]
 class Coupon extends Model
 {
@@ -17,6 +17,7 @@ class Coupon extends Model
             'value' => 'decimal:2',
             'expires_at' => 'datetime',
             'max_redemptions' => 'integer',
+            'max_redemptions_per_user' => 'integer',
             'redemptions_count' => 'integer',
             'active' => 'boolean',
         ];

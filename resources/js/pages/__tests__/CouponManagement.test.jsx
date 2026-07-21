@@ -14,6 +14,7 @@ const PAGE_ONE = {
             value: 10,
             expires_at: null,
             max_redemptions: null,
+            max_redemptions_per_user: null,
             redemptions_count: 3,
             active: true,
         },
@@ -24,6 +25,7 @@ const PAGE_ONE = {
             value: 5,
             expires_at: '2026-01-01T00:00:00Z',
             max_redemptions: 100,
+            max_redemptions_per_user: 1,
             redemptions_count: 100,
             active: false,
         },
@@ -95,6 +97,29 @@ describe('CouponManagement page', () => {
                 code: 'NEWCODE',
                 type: 'percent',
                 value: 15,
+                max_redemptions_per_user: null,
+            }));
+        });
+    });
+
+    it('submits a per-customer redemption cap when one is set', async () => {
+        const user = userEvent.setup();
+        renderPage();
+
+        await screen.findByText('SAVE10');
+
+        await user.click(screen.getByRole('button', { name: 'Add coupon' }));
+
+        await user.type(screen.getByLabelText('Code'), 'onepercust');
+        await user.type(screen.getByLabelText('Percent off (%)'), '20');
+        await user.type(screen.getByLabelText('Max redemptions per customer'), '1');
+
+        await user.click(screen.getByRole('button', { name: 'Save' }));
+
+        await waitFor(() => {
+            expect(postMock).toHaveBeenCalledWith('/api/admin/coupons', expect.objectContaining({
+                code: 'ONEPERCUST',
+                max_redemptions_per_user: 1,
             }));
         });
     });

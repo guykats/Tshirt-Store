@@ -9,6 +9,21 @@ import useDocumentMeta from '../hooks/useDocumentMeta';
 import { formatPrice } from '../lib/formatPrice';
 import DesignArt from '../components/DesignArt';
 
+// CheckoutController returns a plain-English `message` for coupon
+// rejections (see CouponService::validate) — most of those already read
+// fine untranslated, but the per-customer-cap one is new and worth a real
+// Hebrew translation, so map that one known backend string to an i18n key
+// and fall back to the raw message for everything else, same as today.
+const KNOWN_BACKEND_ERROR_KEYS = {
+    'You have already used this coupon the maximum number of times allowed.': 'checkout_coupon_customer_limit_reached',
+};
+
+function translateCheckoutError(t, rawMessage, fallbackKey) {
+    const key = rawMessage ? KNOWN_BACKEND_ERROR_KEYS[rawMessage] : null;
+    if (key) return t(key);
+    return rawMessage || t(fallbackKey);
+}
+
 /**
  * The post-purchase confirmation screen. Split out from Checkout's render
  * body so it has a stable, directly-testable/previewable shape — everything
@@ -151,7 +166,7 @@ export default function Checkout() {
             setStatus('paying');
             return res.data.paypal_order_id;
         } catch (err) {
-            setError(err.response?.data?.message || t('checkout_error'));
+            setError(translateCheckoutError(t, err.response?.data?.message, 'checkout_error'));
             throw err;
         } finally {
             setSubmitting(false);

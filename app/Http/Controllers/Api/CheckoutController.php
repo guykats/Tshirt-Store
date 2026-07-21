@@ -169,7 +169,7 @@ class CheckoutController extends Controller
                 $discountAmount = 0.0;
 
                 if (! empty($data['code'])) {
-                    $coupon = $this->coupons->lockAndValidate($data['code']);
+                    $coupon = $this->coupons->lockAndValidate($data['code'], $buyer);
                     $discountAmount = $this->coupons->discountFor($coupon, $subtotal);
                     $discountCode = $coupon->code;
                     $coupon->increment('redemptions_count');

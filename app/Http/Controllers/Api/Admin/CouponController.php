@@ -93,6 +93,7 @@ class CouponController extends Controller
             'value' => ['required', 'numeric', 'min:0'],
             'expires_at' => ['nullable', 'date'],
             'max_redemptions' => ['nullable', 'integer', 'min:1'],
+            'max_redemptions_per_user' => ['nullable', 'integer', 'min:1'],
             'active' => ['sometimes', 'boolean'],
         ]);
     }
