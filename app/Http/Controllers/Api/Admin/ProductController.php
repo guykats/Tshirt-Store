@@ -17,13 +17,25 @@ class ProductController extends Controller
      * Admin management listing — every status (draft/active/archived), not just
      * the public catalog's "active" slice (see App\Http\Controllers\Api\ProductController::index),
      * so an admin can find and edit a product before it's published or after it's retired.
+     *
+     * Paginates 50-at-a-time (see Product::paginate below) and accepts an optional
+     * ?search= query param (mirroring Admin\CouponController::index's search pattern)
+     * matching name or SKU, so a catalog past 50 products stays fully reachable from
+     * ProductManagement.jsx's pager/search box instead of silently hiding anything past
+     * page 1.
      */
     public function index(Request $request)
     {
         abort_unless($request->user()->isAdmin(), 403);
 
+        $search = trim((string) $request->query('search', ''));
+
         $products = Product::query()
             ->with(['design', 'variants', 'images'])
+            ->when($search !== '', fn ($query) => $query->where(function ($query) use ($search) {
+                $query->where('name', 'like', '%'.$search.'%')
+                    ->orWhere('sku', 'like', '%'.$search.'%');
+            }))
             ->latest()
             ->paginate(50);
 

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import api from '../lib/api';
 import ColorSwatch from '../components/ColorSwatch';
 import DesignArt from '../components/DesignArt';
@@ -35,12 +36,18 @@ const EMPTY_IMAGE_FORM = {
 
 export default function ProductManagement() {
     const { t, i18n } = useTranslation();
+    const [searchParams, setSearchParams] = useSearchParams();
 
     useDocumentMeta(t('meta_products_management_title', { app: t('app_name') }));
 
     const [products, setProducts] = useState([]);
     const [productsLoading, setProductsLoading] = useState(true);
+    const [productsMeta, setProductsMeta] = useState({ current_page: 1, last_page: 1, total: 0 });
+    const [searchInput, setSearchInput] = useState(searchParams.get('search') || '');
     const [designs, setDesigns] = useState([]);
+
+    const page = Number(searchParams.get('page')) || 1;
+    const search = searchParams.get('search') || '';
 
     const [editingProductId, setEditingProductId] = useState(null); // id | 'new' | null
     const [productForm, setProductForm] = useState(EMPTY_PRODUCT_FORM);
@@ -64,15 +71,42 @@ export default function ProductManagement() {
 
     useEffect(() => {
         loadProducts();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [page, search]);
+
+    useEffect(() => {
         api.get('/api/designs', { params: { status: 'approved' } })
             .then((res) => setDesigns(res.data.data));
     }, []);
 
+    /**
+     * Mirrors CouponManagement.jsx's paginated-list shape: the admin index
+     * endpoint paginates 50-at-a-time (Admin\ProductController::index) so
+     * anything created/edited beyond page 1 stays reachable via the pager and
+     * search box below, instead of only ever fetching page 1.
+     */
     function loadProducts() {
         setProductsLoading(true);
-        return api.get('/api/admin/products')
-            .then((res) => setProducts(res.data.data))
+        return api.get('/api/admin/products', { params: { page, search: search || undefined } })
+            .then((res) => {
+                setProducts(res.data.data);
+                setProductsMeta(res.data.meta);
+            })
             .finally(() => setProductsLoading(false));
+    }
+
+    function goToPage(nextPage) {
+        const params = {};
+        if (search) params.search = search;
+        if (nextPage > 1) params.page = String(nextPage);
+        setSearchParams(params);
+    }
+
+    function handleSearchSubmit(e) {
+        e.preventDefault();
+        const params = {};
+        if (searchInput.trim()) params.search = searchInput.trim();
+        setSearchParams(params);
     }
 
     function startNewProduct() {
@@ -320,6 +354,28 @@ export default function ProductManagement() {
             {productStatus === 'error' && (
                 <p role="alert" className="mb-4 text-sm text-red-700">{t('products_management_error')}</p>
             )}
+
+            <form onSubmit={handleSearchSubmit} className="mb-6 flex items-end gap-3">
+                <div>
+                    <label htmlFor="product-search" className="mb-1 block text-sm">
+                        {t('products_management_search_label')}
+                    </label>
+                    <input
+                        id="product-search"
+                        type="text"
+                        value={searchInput}
+                        onChange={(e) => setSearchInput(e.target.value)}
+                        placeholder={t('products_management_search_placeholder')}
+                        className="w-64 rounded border border-line bg-parchment px-3 py-2"
+                    />
+                </div>
+                <button
+                    type="submit"
+                    className="rounded border border-ink px-4 py-2 text-sm tracking-wide uppercase hover:bg-parchment-dim"
+                >
+                    {t('products_management_search_button')}
+                </button>
+            </form>
 
             {productsLoading ? (
                 <p className="text-ink-soft">…</p>
@@ -743,6 +799,30 @@ export default function ProductManagement() {
                         </li>
                     ))}
                 </ul>
+            )}
+
+            {productsMeta.last_page > 1 && (
+                <div className="mb-8 flex items-center justify-center gap-4">
+                    <button
+                        type="button"
+                        onClick={() => goToPage(productsMeta.current_page - 1)}
+                        disabled={productsMeta.current_page <= 1}
+                        className="rounded border border-line px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-30"
+                    >
+                        {t('products_management_previous')}
+                    </button>
+                    <span className="text-sm text-ink-soft">
+                        {t('products_management_page_of', { current: productsMeta.current_page, last: productsMeta.last_page })}
+                    </span>
+                    <button
+                        type="button"
+                        onClick={() => goToPage(productsMeta.current_page + 1)}
+                        disabled={productsMeta.current_page >= productsMeta.last_page}
+                        className="rounded border border-line px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-30"
+                    >
+                        {t('products_management_next')}
+                    </button>
+                </div>
             )}
 
             {editingProductId === null && (

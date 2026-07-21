@@ -178,6 +178,65 @@ class AdminProductManagementTest extends TestCase
         $this->assertTrue($names->contains('Archived One'));
     }
 
+    /**
+     * Admin\ProductController::index paginates 50-at-a-time — a catalog with
+     * exactly 51 products must still make the 51st one reachable, either via
+     * page 2 or via ?search=, matching the "product #51 never disappears"
+     * regression this task exists to close.
+     */
+    public function test_the_51st_product_is_reachable_via_page_two(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        for ($i = 1; $i <= 50; $i++) {
+            $this->makeProduct(['name' => "Bulk Product {$i}"]);
+        }
+        $last = $this->makeProduct(['name' => 'Fifty First Product', 'sku' => 'TT-UNIQUE-51']);
+
+        $firstPage = $this->actingAs($admin)->getJson('/api/admin/products');
+        $firstPage->assertOk();
+        $this->assertCount(50, $firstPage->json('data'));
+        $this->assertFalse(collect($firstPage->json('data'))->pluck('id')->contains($last->id));
+        $this->assertSame(2, $firstPage->json('meta.last_page'));
+
+        $secondPage = $this->actingAs($admin)->getJson('/api/admin/products?page=2');
+        $secondPage->assertOk();
+        $this->assertTrue(collect($secondPage->json('data'))->pluck('id')->contains($last->id));
+    }
+
+    public function test_the_51st_product_is_reachable_via_search(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        for ($i = 1; $i <= 50; $i++) {
+            $this->makeProduct(['name' => "Bulk Product {$i}"]);
+        }
+        $last = $this->makeProduct(['name' => 'Fifty First Product', 'sku' => 'TT-UNIQUE-51']);
+
+        $bySku = $this->actingAs($admin)->getJson('/api/admin/products?search=TT-UNIQUE-51');
+        $bySku->assertOk();
+        $this->assertCount(1, $bySku->json('data'));
+        $this->assertSame($last->id, $bySku->json('data.0.id'));
+
+        $byName = $this->actingAs($admin)->getJson('/api/admin/products?search=Fifty First');
+        $byName->assertOk();
+        $this->assertCount(1, $byName->json('data'));
+        $this->assertSame($last->id, $byName->json('data.0.id'));
+    }
+
+    public function test_product_listing_behavior_for_50_or_fewer_products_is_unchanged(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $this->makeProduct(['name' => 'Only Active One', 'status' => 'active']);
+        $this->makeProduct(['name' => 'Only Draft One', 'status' => 'draft']);
+
+        $response = $this->actingAs($admin)->getJson('/api/admin/products');
+
+        $response->assertOk();
+        $this->assertCount(2, $response->json('data'));
+        $this->assertSame(1, $response->json('meta.last_page'));
+    }
+
     public function test_an_admin_can_create_update_and_delete_a_variant(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
