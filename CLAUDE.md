@@ -122,6 +122,16 @@ other command-execution path in production. Concretely this means:
   `SANCTUM_STATEFUL_DOMAINS`. Ad hoc `php artisan serve --port=<random>` will
   silently fail login with no session — use `--port=8000` or `5173`, both of
   which are already whitelisted, for any manual/Playwright verification.
+- **`git worktree remove` can silently no-op:** it sometimes reports success
+  (or hits the command timeout) without actually deleting the checkout —
+  `git worktree list` then just shows the entry as `prunable` while the full
+  directory (including its own independently-installed `node_modules`/
+  `vendor`) is still sitting on disk. This has bitten `npm test`/vitest,
+  which globbed in stray `.test.ts` files from an orphaned worktree's
+  `vendor/` tree. After removing a worktree, verify with `git worktree list`
+  and `du -sh <path>` (or just `rm -rf` the directory once `git worktree
+  list` no longer references it) rather than trusting the command's exit
+  code.
 - **Screenshots as evidence** live in `storage/app/public/task-screenshots/`,
   carved out of the default `storage/app/public/.gitignore` (`*` /
   `!.gitignore`) with explicit `!task-screenshots/` and `!task-screenshots/**`
