@@ -66,6 +66,26 @@ export default function Layout({ children }) {
                 </div>
             </nav>
             <main>{children}</main>
+            {user?.role === 'admin' && (
+                <Link
+                    to="/dashboard/progress"
+                    aria-label={t('floating_admin_link')}
+                    className="fixed right-5 bottom-5 z-40 flex items-center gap-2 rounded-full border border-brass bg-ink px-4 py-2.5 text-sm text-parchment shadow-lg transition-colors hover:bg-ink/90"
+                >
+                    <svg
+                        viewBox="0 0 24 24"
+                        className="h-4 w-4"
+                        aria-hidden="true"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                    >
+                        <rect x="3.5" y="4" width="17" height="16" rx="1.5" />
+                        <path strokeLinecap="round" d="M8 4v16M3.5 9h4.5" />
+                    </svg>
+                    <span>{t('floating_admin_link')}</span>
+                </Link>
+            )}
             <footer className="mt-24 border-t border-line px-6 py-10 text-center text-xs text-ink-soft">
                 <p>{t('footer_tagline')}</p>
                 <div className="mt-3 flex items-center justify-center gap-4">
