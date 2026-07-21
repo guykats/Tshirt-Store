@@ -1,0 +1,10 @@
+import TeamManagementSidebar from './TeamManagementSidebar';
+
+export default function TeamManagementLayout({ children }) {
+    return (
+        <div className="mx-auto flex max-w-7xl gap-8 px-6 py-10">
+            <TeamManagementSidebar />
+            <div className="min-w-0 flex-1">{children}</div>
+        </div>
+    );
+}

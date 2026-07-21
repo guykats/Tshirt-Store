@@ -7,6 +7,7 @@ import { WishlistProvider } from './lib/WishlistContext';
 import Layout from './Layout';
 import ErrorBoundary from './components/ErrorBoundary';
 import RouteLoading from './components/RouteLoading';
+import TeamManagementLayout from './components/TeamManagementLayout';
 // Catalog is the landing page for most visits (and the page Lighthouse mobile
 // audits run against), so it stays a static import — every other route is
 // lazy-loaded into its own chunk so catalog/product visitors don't pay for
@@ -23,6 +24,7 @@ const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 const Checkout = lazy(() => import('./pages/Checkout'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const ProjectProgress = lazy(() => import('./pages/ProjectProgress'));
+const Epics = lazy(() => import('./pages/Epics'));
 const VisionerChat = lazy(() => import('./pages/VisionerChat'));
 const StyleGuide = lazy(() => import('./pages/StyleGuide'));
 const DesignSettings = lazy(() => import('./pages/DesignSettings'));
@@ -133,7 +135,19 @@ export default function App() {
                                             path="/dashboard/progress"
                                             element={
                                                 <RequireAdmin>
-                                                    <ProjectProgress />
+                                                    <TeamManagementLayout>
+                                                        <ProjectProgress />
+                                                    </TeamManagementLayout>
+                                                </RequireAdmin>
+                                            }
+                                        />
+                                        <Route
+                                            path="/dashboard/epics"
+                                            element={
+                                                <RequireAdmin>
+                                                    <TeamManagementLayout>
+                                                        <Epics />
+                                                    </TeamManagementLayout>
                                                 </RequireAdmin>
                                             }
                                         />
@@ -141,7 +155,9 @@ export default function App() {
                                             path="/dashboard/chat"
                                             element={
                                                 <RequireAdmin>
-                                                    <VisionerChat />
+                                                    <TeamManagementLayout>
+                                                        <VisionerChat />
+                                                    </TeamManagementLayout>
                                                 </RequireAdmin>
                                             }
                                         />

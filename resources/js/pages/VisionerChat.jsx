@@ -45,7 +45,7 @@ export default function VisionerChat() {
     }
 
     return (
-        <div className="mx-auto flex h-[calc(100vh-6rem)] max-w-3xl flex-col px-6 py-10">
+        <div className="flex h-[calc(100vh-10rem)] max-w-3xl flex-col">
             <h1 className="mb-2 font-serif text-2xl">{t('chat_title')}</h1>
             <p className="mb-6 text-sm text-ink-soft">{t('chat_hint')}</p>
 
