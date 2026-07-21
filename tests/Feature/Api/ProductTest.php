@@ -4,6 +4,8 @@ namespace Tests\Feature\Api;
 
 use App\Models\Design;
 use App\Models\Product;
+use App\Models\Review;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -28,6 +30,41 @@ class ProductTest extends TestCase
             'sku' => 'TT-'.uniqid(),
             'status' => 'active',
         ], $overrides));
+    }
+
+    /**
+     * A review requires a real order_id (foreign-key constrained, not
+     * nullable) as proof of purchase — this builds the minimal address/order
+     * chain needed to attach a review to a product for aggregate-rating tests.
+     */
+    protected function makeReview(Product $product, int $rating): Review
+    {
+        $user = User::factory()->create();
+
+        $address = $user->addresses()->create([
+            'type' => 'shipping',
+            'full_name' => 'Test Buyer',
+            'line1' => '1 Test St',
+            'city' => 'New York',
+            'state' => 'NY',
+            'postal_code' => '10001',
+        ]);
+
+        $order = $user->orders()->create([
+            'order_number' => 'ORD-'.uniqid(),
+            'subtotal' => 30,
+            'total_amount' => 30,
+            'shipping_address_id' => $address->id,
+            'billing_address_id' => $address->id,
+            'payment_status' => 'paid',
+        ]);
+
+        return Review::create([
+            'product_id' => $product->id,
+            'user_id' => $user->id,
+            'order_id' => $order->id,
+            'rating' => $rating,
+        ]);
     }
 
     public function test_the_catalog_only_lists_active_products(): void
@@ -61,6 +98,44 @@ class ProductTest extends TestCase
             ->assertJsonPath('data.slug', $product->slug)
             ->assertJsonPath('data.design.title', 'Test Design')
             ->assertJsonCount(1, 'data.variants');
+    }
+
+    public function test_show_reports_no_average_rating_when_the_product_has_no_reviews(): void
+    {
+        $product = $this->makeProduct();
+
+        $response = $this->getJson("/api/products/{$product->slug}");
+
+        $response->assertOk()
+            ->assertJsonPath('data.average_rating', null)
+            ->assertJsonPath('data.reviews_count', 0);
+    }
+
+    public function test_show_reports_the_average_rating_and_count_from_reviews(): void
+    {
+        $product = $this->makeProduct();
+
+        $this->makeReview($product, 5);
+        $this->makeReview($product, 4);
+
+        $response = $this->getJson("/api/products/{$product->slug}");
+
+        $response->assertOk()
+            ->assertJsonPath('data.average_rating', 4.5)
+            ->assertJsonPath('data.reviews_count', 2);
+    }
+
+    public function test_the_catalog_also_reports_average_rating_and_count_per_product(): void
+    {
+        $product = $this->makeProduct();
+        $this->makeReview($product, 3);
+
+        $response = $this->getJson('/api/products');
+
+        $response->assertOk();
+        $data = collect($response->json('data'))->firstWhere('slug', $product->slug);
+        $this->assertEquals(3, $data['average_rating']);
+        $this->assertSame(1, $data['reviews_count']);
     }
 
     public function test_show_returns_404_for_an_unknown_slug(): void

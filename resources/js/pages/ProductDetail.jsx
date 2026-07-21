@@ -34,7 +34,7 @@ export default function ProductDetail() {
         const variants = product.variants || [];
         const anyInStock = variants.some((v) => v.stock_quantity > 0);
 
-        return {
+        const jsonLd = {
             '@context': 'https://schema.org',
             '@type': 'Product',
             name: product.name,
@@ -60,9 +60,19 @@ export default function ProductDetail() {
                 url: pageUrl,
             },
         };
-        // Structured data has no aggregateRating field: the Product model/API has no
-        // review or rating data to draw from, and fabricating one would violate
-        // Google's structured-data guidelines. Add it here if/when a Review model ships.
+
+        // Omit aggregateRating entirely when there are no reviews yet, rather than
+        // fabricate a rating — Google's structured-data guidelines require real
+        // review data behind any rating shown.
+        if (product.reviews_count > 0) {
+            jsonLd.aggregateRating = {
+                '@type': 'AggregateRating',
+                ratingValue: product.average_rating,
+                reviewCount: product.reviews_count,
+            };
+        }
+
+        return jsonLd;
     }, [product, t]);
 
     useJsonLd(productJsonLd);

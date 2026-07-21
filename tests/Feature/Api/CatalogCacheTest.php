@@ -4,6 +4,8 @@ namespace Tests\Feature\Api;
 
 use App\Models\Design;
 use App\Models\Product;
+use App\Models\Review;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -113,5 +115,44 @@ class CatalogCacheTest extends TestCase
         $this->getJson("/api/products/{$product->slug}")
             ->assertOk()
             ->assertJsonPath('data.variants.0.stock_quantity', 7);
+    }
+
+    public function test_a_new_review_invalidates_the_product_detail_cache(): void
+    {
+        $product = $this->makeProduct();
+
+        $this->getJson("/api/products/{$product->slug}")
+            ->assertOk()
+            ->assertJsonPath('data.average_rating', null)
+            ->assertJsonPath('data.reviews_count', 0);
+
+        $user = User::factory()->create();
+        $address = $user->addresses()->create([
+            'type' => 'shipping',
+            'full_name' => 'Test Buyer',
+            'line1' => '1 Test St',
+            'city' => 'New York',
+            'state' => 'NY',
+            'postal_code' => '10001',
+        ]);
+        $order = $user->orders()->create([
+            'order_number' => 'ORD-'.uniqid(),
+            'subtotal' => 30,
+            'total_amount' => 30,
+            'shipping_address_id' => $address->id,
+            'billing_address_id' => $address->id,
+            'payment_status' => 'paid',
+        ]);
+        Review::create([
+            'product_id' => $product->id,
+            'user_id' => $user->id,
+            'order_id' => $order->id,
+            'rating' => 5,
+        ]);
+
+        $this->getJson("/api/products/{$product->slug}")
+            ->assertOk()
+            ->assertJsonPath('data.average_rating', 5)
+            ->assertJsonPath('data.reviews_count', 1);
     }
 }

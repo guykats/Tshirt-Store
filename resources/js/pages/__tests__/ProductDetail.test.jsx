@@ -27,6 +27,10 @@ const PRODUCT = {
     ],
 };
 
+// Mutable per-test overrides (e.g. average_rating/reviews_count) merged onto
+// the base PRODUCT fixture below — reset in each describe block that uses it.
+let productOverrides = {};
+
 vi.mock('../../lib/api', () => ({
     default: {
         get: vi.fn((url) => {
@@ -40,7 +44,7 @@ vi.mock('../../lib/api', () => ({
                 return Promise.resolve({ data: { data: [], meta: { average_rating: null, count: 0 } } });
             }
             if (url === `/api/products/${PRODUCT.slug}`) {
-                return Promise.resolve({ data: { data: PRODUCT } });
+                return Promise.resolve({ data: { data: { ...PRODUCT, ...productOverrides } } });
             }
             return Promise.reject(new Error(`unmocked GET ${url}`));
         }),
@@ -50,7 +54,8 @@ vi.mock('../../lib/api', () => ({
     ensureCsrfCookie: vi.fn(() => Promise.resolve()),
 }));
 
-function renderProductDetail() {
+function renderProductDetail(overrides = {}) {
+    productOverrides = overrides;
     return render(
         <MemoryRouter initialEntries={[`/products/${PRODUCT.slug}`]}>
             <AuthProvider>
@@ -115,5 +120,39 @@ describe('ProductDetail size/color selector', () => {
         expect(enabledLink.className).not.toMatch(/pointer-events-none/);
         expect(enabledLink).toHaveAttribute('href', expect.stringContaining('variant=203'));
         expect(enabledLink).toHaveTextContent('Buy Now');
+    });
+});
+
+describe('ProductDetail JSON-LD aggregateRating', () => {
+    beforeEach(async () => {
+        await i18n.changeLanguage('en');
+    });
+
+    function jsonLd() {
+        return JSON.parse(document.getElementById('jsonld-structured-data').textContent);
+    }
+
+    it('includes aggregateRating built from the product resource when reviews exist', async () => {
+        renderProductDetail({ average_rating: 4.5, reviews_count: 2 });
+
+        await screen.findByRole('heading', { name: 'Line Art Tee' });
+
+        await waitFor(() => {
+            expect(jsonLd().aggregateRating).toEqual({
+                '@type': 'AggregateRating',
+                ratingValue: 4.5,
+                reviewCount: 2,
+            });
+        });
+    });
+
+    it('omits aggregateRating entirely rather than fabricate one when there are no reviews yet', async () => {
+        renderProductDetail({ average_rating: null, reviews_count: 0 });
+
+        await screen.findByRole('heading', { name: 'Line Art Tee' });
+
+        await waitFor(() => {
+            expect(jsonLd()).not.toHaveProperty('aggregateRating');
+        });
     });
 });
