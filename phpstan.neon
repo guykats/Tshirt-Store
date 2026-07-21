@@ -1,0 +1,21 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+    - phpstan-baseline.neon
+
+parameters:
+    paths:
+        - app
+        - database
+        - routes
+
+    # Level 4 is a reasonable starting point for a first pass at static
+    # analysis on an existing codebase — it catches real bugs (undefined
+    # methods/properties, always-true/false conditions, wrong argument
+    # counts) without the noise of levels 6+ (missing typehints everywhere,
+    # strict comparisons) that would require a much larger rewrite.
+    level: 4
+
+    excludePaths:
+        - database/migrations/*
+
+    tmpDir: storage/framework/phpstan

@@ -146,7 +146,7 @@ export default function Dashboard() {
             await api.post(`/api/orders/${id}/advance-status`, payload);
             loadFulfillmentOrders();
             loadEvents();
-        } catch (err) {
+        } catch {
             setShippingErrors((prev) => ({ ...prev, [id]: t('dashboard_fulfillment_shipping_error') }));
         } finally {
             setAdvancingOrderId(null);
