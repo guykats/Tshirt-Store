@@ -344,7 +344,7 @@ export default function ProductManagement() {
     }
 
     return (
-        <div className="mx-auto max-w-4xl px-6 py-10">
+        <div className="max-w-4xl">
             <h1 className="mb-2 font-serif text-2xl">{t('products_management_title')}</h1>
             <p className="mb-8 max-w-2xl text-sm text-ink-soft">{t('products_management_hint')}</p>
 

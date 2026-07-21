@@ -60,7 +60,7 @@ export default function AdminReviews() {
     }
 
     return (
-        <div className="mx-auto max-w-5xl px-6 py-10">
+        <div className="max-w-5xl">
             <h1 className="mb-2 font-serif text-2xl">{t('admin_reviews_title')}</h1>
             <p className="mb-6 text-sm text-ink-soft">{t('admin_reviews_hint')}</p>
 

@@ -172,7 +172,7 @@ export default function Dashboard() {
     }
 
     return (
-        <div className="mx-auto max-w-5xl px-6 py-10">
+        <div className="max-w-5xl">
             <h1 className="mb-6 font-serif text-2xl">{t('dashboard_title')}</h1>
 
             <section className="mb-10">

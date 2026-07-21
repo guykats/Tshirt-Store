@@ -47,16 +47,7 @@ export default function Layout({ children }) {
                         </>
                     )}
                     {user?.role === 'admin' && (
-                        <>
-                            <Link to="/dashboard" className="hover:text-ink">{t('nav_dashboard')}</Link>
-                            <Link to="/dashboard/progress" className="hover:text-ink">{t('nav_team_management')}</Link>
-                            <Link to="/dashboard/style-guide" className="hover:text-ink">{t('nav_style_guide')}</Link>
-                            <Link to="/dashboard/design" className="hover:text-ink">{t('nav_design')}</Link>
-                            <Link to="/dashboard/products" className="hover:text-ink">{t('nav_products')}</Link>
-                            <Link to="/dashboard/audit-log" className="hover:text-ink">{t('nav_audit_log')}</Link>
-                            <Link to="/dashboard/reviews" className="hover:text-ink">{t('nav_reviews')}</Link>
-                            <Link to="/dashboard/coupons" className="hover:text-ink">{t('nav_coupons')}</Link>
-                        </>
+                        <Link to="/dashboard" className="hover:text-ink">{t('nav_dashboard')}</Link>
                     )}
                     {user && (
                         <Link to="/account" className="hover:text-ink">{t('nav_account')}</Link>

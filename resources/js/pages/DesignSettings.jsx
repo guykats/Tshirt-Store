@@ -179,14 +179,14 @@ export default function DesignSettings() {
 
     if (loading) {
         return (
-            <div className="mx-auto max-w-3xl px-6 py-10">
+            <div className="max-w-3xl">
                 <p className="text-ink-soft">…</p>
             </div>
         );
     }
 
     return (
-        <div className="mx-auto max-w-3xl px-6 py-10">
+        <div className="max-w-3xl">
             <h1 className="mb-2 font-serif text-2xl">{t('design_settings_title')}</h1>
             <p className="mb-8 max-w-2xl text-sm text-ink-soft">{t('design_settings_hint')}</p>
 

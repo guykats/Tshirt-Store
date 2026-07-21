@@ -7,7 +7,7 @@ import { WishlistProvider } from './lib/WishlistContext';
 import Layout from './Layout';
 import ErrorBoundary from './components/ErrorBoundary';
 import RouteLoading from './components/RouteLoading';
-import TeamManagementLayout from './components/TeamManagementLayout';
+import AdminLayout from './components/AdminLayout';
 // Catalog is the landing page for most visits (and the page Lighthouse mobile
 // audits run against), so it stays a static import — every other route is
 // lazy-loaded into its own chunk so catalog/product visitors don't pay for
@@ -127,7 +127,9 @@ export default function App() {
                                             path="/dashboard"
                                             element={
                                                 <RequireAdmin>
-                                                    <Dashboard />
+                                                    <AdminLayout>
+                                                        <Dashboard />
+                                                    </AdminLayout>
                                                 </RequireAdmin>
                                             }
                                         />
@@ -135,9 +137,9 @@ export default function App() {
                                             path="/dashboard/progress"
                                             element={
                                                 <RequireAdmin>
-                                                    <TeamManagementLayout>
+                                                    <AdminLayout>
                                                         <ProjectProgress />
-                                                    </TeamManagementLayout>
+                                                    </AdminLayout>
                                                 </RequireAdmin>
                                             }
                                         />
@@ -145,9 +147,9 @@ export default function App() {
                                             path="/dashboard/epics"
                                             element={
                                                 <RequireAdmin>
-                                                    <TeamManagementLayout>
+                                                    <AdminLayout>
                                                         <Epics />
-                                                    </TeamManagementLayout>
+                                                    </AdminLayout>
                                                 </RequireAdmin>
                                             }
                                         />
@@ -155,9 +157,9 @@ export default function App() {
                                             path="/dashboard/chat"
                                             element={
                                                 <RequireAdmin>
-                                                    <TeamManagementLayout>
+                                                    <AdminLayout>
                                                         <VisionerChat />
-                                                    </TeamManagementLayout>
+                                                    </AdminLayout>
                                                 </RequireAdmin>
                                             }
                                         />
@@ -165,7 +167,9 @@ export default function App() {
                                             path="/dashboard/style-guide"
                                             element={
                                                 <RequireAdmin>
-                                                    <StyleGuide />
+                                                    <AdminLayout>
+                                                        <StyleGuide />
+                                                    </AdminLayout>
                                                 </RequireAdmin>
                                             }
                                         />
@@ -173,7 +177,9 @@ export default function App() {
                                             path="/dashboard/design"
                                             element={
                                                 <RequireAdmin>
-                                                    <DesignSettings />
+                                                    <AdminLayout>
+                                                        <DesignSettings />
+                                                    </AdminLayout>
                                                 </RequireAdmin>
                                             }
                                         />
@@ -181,7 +187,9 @@ export default function App() {
                                             path="/dashboard/products"
                                             element={
                                                 <RequireAdmin>
-                                                    <ProductManagement />
+                                                    <AdminLayout>
+                                                        <ProductManagement />
+                                                    </AdminLayout>
                                                 </RequireAdmin>
                                             }
                                         />
@@ -189,7 +197,9 @@ export default function App() {
                                             path="/dashboard/audit-log"
                                             element={
                                                 <RequireAdmin>
-                                                    <AuditLog />
+                                                    <AdminLayout>
+                                                        <AuditLog />
+                                                    </AdminLayout>
                                                 </RequireAdmin>
                                             }
                                         />
@@ -197,7 +207,9 @@ export default function App() {
                                             path="/dashboard/reviews"
                                             element={
                                                 <RequireAdmin>
-                                                    <AdminReviews />
+                                                    <AdminLayout>
+                                                        <AdminReviews />
+                                                    </AdminLayout>
                                                 </RequireAdmin>
                                             }
                                         />
@@ -205,7 +217,9 @@ export default function App() {
                                             path="/dashboard/coupons"
                                             element={
                                                 <RequireAdmin>
-                                                    <CouponManagement />
+                                                    <AdminLayout>
+                                                        <CouponManagement />
+                                                    </AdminLayout>
                                                 </RequireAdmin>
                                             }
                                         />

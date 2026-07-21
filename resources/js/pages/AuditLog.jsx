@@ -114,7 +114,7 @@ export default function AuditLog() {
     const hasFilters = Boolean(eventType || actorType || dateFrom || dateTo || search);
 
     return (
-        <div className="mx-auto max-w-5xl px-6 py-10">
+        <div className="max-w-5xl">
             <h1 className="mb-2 font-serif text-2xl">{t('audit_log_title')}</h1>
             <p className="mb-6 text-sm text-ink-soft">{t('audit_log_hint')}</p>
 

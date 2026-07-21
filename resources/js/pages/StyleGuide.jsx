@@ -41,7 +41,7 @@ export default function StyleGuide() {
     useDocumentMeta(t('meta_style_guide_title', { app: t('app_name') }));
 
     return (
-        <div className="mx-auto max-w-6xl px-6 py-10">
+        <div className="max-w-6xl">
             <h1 className="mb-2 font-serif text-2xl">{t('style_guide_title')}</h1>
             <p className="mb-10 max-w-2xl text-sm text-ink-soft">{t('style_guide_hint')}</p>
 
