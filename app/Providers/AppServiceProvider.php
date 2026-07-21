@@ -94,5 +94,14 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('health-check', function ($request) {
             return Limit::perMinute(120)->by($request->ip());
         });
+
+        // Change-password and self-service account-deletion (POST /change-password,
+        // DELETE /account) both re-check current_password server-side, which makes
+        // them a password-guessing oracle like 'login' if left unthrottled - behind
+        // auth:sanctum so a real user id is always available to key off, same as
+        // 'reviews'/'visioner-chat', rather than IP alone.
+        RateLimiter::for('account-security', function ($request) {
+            return Limit::perMinute(5)->by($request->user()?->id ?: $request->ip());
+        });
     }
 }

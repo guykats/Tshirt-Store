@@ -82,8 +82,8 @@ Route::post('/orders/lookup', [OrderController::class, 'lookup'])->middleware('t
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
-    Route::post('/change-password', [AuthController::class, 'changePassword']);
-    Route::delete('/account', [AuthController::class, 'deleteAccount']);
+    Route::post('/change-password', [AuthController::class, 'changePassword'])->middleware('throttle:account-security');
+    Route::delete('/account', [AuthController::class, 'deleteAccount'])->middleware('throttle:account-security');
 
     // Saved-address book, so checkout doesn't force a full re-entry of the
     // shipping address on every order — see CheckoutController::store's
