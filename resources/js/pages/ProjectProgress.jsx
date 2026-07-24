@@ -18,6 +18,9 @@ export default function ProjectProgress() {
     const [statusFilter, setStatusFilter] = useState('');
     const [agentFilter, setAgentFilter] = useState('');
     const [lightbox, setLightbox] = useState(null);
+    const [automation, setAutomation] = useState(null);
+    const [automationBusy, setAutomationBusy] = useState(false);
+    const [automationError, setAutomationError] = useState('');
 
     useDocumentMeta(t('meta_progress_title', { app: t('app_name') }));
 
@@ -29,11 +32,29 @@ export default function ProjectProgress() {
             });
     }
 
+    function loadAutomation() {
+        api.get('/api/pm-agent-automation').then((res) => setAutomation(res.data));
+    }
+
     useEffect(load, [statusFilter, agentFilter]);
+    useEffect(loadAutomation, []);
 
     async function toggleApproval(task) {
         await api.post(`/api/project-tasks/${task.id}/${task.approved_for_dev ? 'unapprove' : 'approve'}`);
         load();
+    }
+
+    async function toggleAutomation() {
+        setAutomationBusy(true);
+        setAutomationError('');
+        try {
+            const res = await api.post(`/api/pm-agent-automation/${automation.enabled ? 'disable' : 'enable'}`);
+            setAutomation(res.data);
+        } catch (err) {
+            setAutomationError(err.response?.data?.message || t('automation_error_generic'));
+        } finally {
+            setAutomationBusy(false);
+        }
     }
 
     const agents = [...new Set(tasks.map((t) => t.agent_name))].sort();
@@ -41,7 +62,42 @@ export default function ProjectProgress() {
     return (
         <div>
             <h1 className="mb-2 font-serif text-2xl">{t('progress_title')}</h1>
-            <p className="mb-6 text-sm text-ink-soft">{t('progress_hint')}</p>
+            <p className="mb-4 text-sm text-ink-soft">{t('progress_hint')}</p>
+
+            {automation && (
+                <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded border border-line p-4">
+                    <div>
+                        <p className="text-sm font-medium">{t('automation_title')}</p>
+                        {automation.configured ? (
+                            <p className="mt-0.5 text-xs text-ink-soft">
+                                {automation.enabled === null
+                                    ? (automation.message || t('automation_error_generic'))
+                                    : automation.enabled
+                                        ? t('automation_status_enabled')
+                                        : t('automation_status_disabled')}
+                            </p>
+                        ) : (
+                            <p className="mt-0.5 text-xs text-ink-soft">{t('automation_not_configured')}</p>
+                        )}
+                        {automationError && (
+                            <p role="alert" className="mt-0.5 text-xs text-red-700">{automationError}</p>
+                        )}
+                    </div>
+                    {automation.configured && automation.enabled !== null && (
+                        <button
+                            onClick={toggleAutomation}
+                            disabled={automationBusy}
+                            className={
+                                automation.enabled
+                                    ? 'rounded border border-line px-4 py-1.5 text-sm hover:bg-parchment-dim disabled:cursor-not-allowed disabled:opacity-50'
+                                    : 'rounded bg-ink px-4 py-1.5 text-sm text-parchment hover:bg-ink/90 disabled:cursor-not-allowed disabled:opacity-50'
+                            }
+                        >
+                            {automation.enabled ? t('automation_disable') : t('automation_enable')}
+                        </button>
+                    )}
+                </div>
+            )}
 
             <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
                 {STATUSES.map((s) => (

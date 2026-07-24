@@ -22,6 +22,8 @@ const EVENT_TYPES = [
     'epic.delayed',
     'project_task.approved',
     'project_task.unapproved',
+    'pm_agent.enabled',
+    'pm_agent.disabled',
     'testimonial.created',
     'testimonial.updated',
     'testimonial.deleted',

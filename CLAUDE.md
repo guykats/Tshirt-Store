@@ -89,6 +89,15 @@ unless the owner says otherwise:
   value, but setting one does not set the other — check both if either
   integration isn't working. Same rule as PayPal/SMTP: never ask the owner
   to paste the key into chat, only tell them where to add it.
+- **`GITHUB_ACTIONS_TOKEN` is another deferred credential**, same rule as the
+  above: needed for the "PM Agent automation" enable/disable control on
+  `/dashboard/progress` (`app/Services/GitHubActionsClient.php`,
+  `PmAgentAutomationController`) to actually call the GitHub Actions API and
+  flip `pm-agent.yml` on/off. Needs a GitHub personal access token (classic,
+  `workflow` scope, or a fine-grained token with "Actions: Read and write" on
+  this repo) added to production `.env` — the control shows a clear "not
+  configured" state and does nothing destructive until it's set. Same
+  `config:cache` gotcha as the other `services.php`-backed secrets.
 
 ## Production state changes through git — always
 

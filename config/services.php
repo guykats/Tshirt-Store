@@ -50,4 +50,15 @@ return [
         'model' => env('ANTHROPIC_CHAT_MODEL', 'claude-sonnet-5'),
     ],
 
+    // Same config:cache gotcha as anthropic.api_key above. Needs a GitHub
+    // personal access token (classic, `workflow` scope, or a fine-grained
+    // token with "Actions: Read and write" on this repo) so the admin
+    // enable/disable-automation control can call the Actions API.
+    'github_actions' => [
+        'token' => env('GITHUB_ACTIONS_TOKEN'),
+        'owner' => env('GITHUB_ACTIONS_OWNER', 'guykats'),
+        'repo' => env('GITHUB_ACTIONS_REPO', 'Tshirt-Store'),
+        'workflow_file' => env('GITHUB_ACTIONS_PM_WORKFLOW', 'pm-agent.yml'),
+    ],
+
 ];

@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\PasswordResetController;
 use App\Http\Controllers\Api\PayPalWebhookController;
 use App\Http\Controllers\Api\ProductController;
+use App\Http\Controllers\Api\PmAgentAutomationController;
 use App\Http\Controllers\Api\ProjectTaskController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\SiteSettingController;
@@ -128,6 +129,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/project-tasks', [ProjectTaskController::class, 'index']);
     Route::post('/project-tasks/{projectTask}/approve', [ProjectTaskController::class, 'approve']);
     Route::post('/project-tasks/{projectTask}/unapprove', [ProjectTaskController::class, 'unapprove']);
+
+    Route::get('/pm-agent-automation', [PmAgentAutomationController::class, 'show']);
+    Route::post('/pm-agent-automation/enable', [PmAgentAutomationController::class, 'enable']);
+    Route::post('/pm-agent-automation/disable', [PmAgentAutomationController::class, 'disable']);
 
     Route::patch('/site-settings', [SiteSettingController::class, 'update']);
 
