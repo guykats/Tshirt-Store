@@ -17,6 +17,25 @@ class PmAgentAutomationController extends Controller
     protected const UPSTREAM_ERROR_MESSAGE = 'GitHub rejected the request — check the token\'s permissions.';
 
     /**
+     * Read-only, token-gated export of exactly which todo tasks are really
+     * approved_for_dev right now. pm-agent.yml fetches this before Claude
+     * starts and reconciles its freshly-replayed local database to match —
+     * see app/Console/Commands/SyncApprovedTaskTitles.php — since a disposable
+     * CI-local SQLite has no other way to see a live "Approve for development"
+     * click on the real dashboard.
+     */
+    public function approvedTodoTitles(Request $request)
+    {
+        $unauthorized = $this->rejectUnlessTokenValid($request);
+
+        if ($unauthorized) {
+            return $unauthorized;
+        }
+
+        return response()->json(['configured' => true, 'titles' => $this->approvedTodoTaskTitles()]);
+    }
+
+    /**
      * Token-authenticated (not Sanctum — called by the pm-agent.yml CI job,
      * which has no browser session), not admin-session-authenticated. Checks
      * REAL production approval state (unlike the disposable-SQLite replay the
@@ -27,21 +46,13 @@ class PmAgentAutomationController extends Controller
      */
     public function disableIfIdle(Request $request, GitHubActionsClient $github)
     {
-        $configuredToken = config('services.pm_agent.board_token');
+        $unauthorized = $this->rejectUnlessTokenValid($request);
 
-        if (! $configuredToken) {
-            return response()->json(['message' => 'PM_AGENT_BOARD_TOKEN is not configured.'], 503);
+        if ($unauthorized) {
+            return $unauthorized;
         }
 
-        $providedToken = (string) $request->header('X-PM-Agent-Token', '');
-
-        if (! hash_equals($configuredToken, $providedToken)) {
-            abort(403);
-        }
-
-        $hasApprovedTodo = ProjectTask::query()->where('status', 'todo')->where('approved_for_dev', true)->exists();
-
-        if ($hasApprovedTodo) {
+        if ($this->approvedTodoTaskTitles()->isNotEmpty()) {
             return response()->json(['disabled' => false, 'reason' => 'approved_work_exists']);
         }
 
@@ -124,5 +135,32 @@ class PmAgentAutomationController extends Controller
             'enabled' => $enable,
             'state' => $enable ? 'active' : 'disabled_manually',
         ]);
+    }
+
+    /**
+     * Shared auth guard for the two CI-facing endpoints above — a JSON error
+     * response if the shared secret is missing/wrong, null if the request may
+     * proceed. Deliberately not Sanctum: the CI job has no browser session.
+     */
+    protected function rejectUnlessTokenValid(Request $request)
+    {
+        $configuredToken = config('services.pm_agent.board_token');
+
+        if (! $configuredToken) {
+            return response()->json(['message' => 'PM_AGENT_BOARD_TOKEN is not configured.'], 503);
+        }
+
+        $providedToken = (string) $request->header('X-PM-Agent-Token', '');
+
+        if (! hash_equals($configuredToken, $providedToken)) {
+            abort(403);
+        }
+
+        return null;
+    }
+
+    protected function approvedTodoTaskTitles()
+    {
+        return ProjectTask::query()->where('status', 'todo')->where('approved_for_dev', true)->pluck('title');
     }
 }

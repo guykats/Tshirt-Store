@@ -51,19 +51,37 @@ jobs:
           touch database/database.sqlite
           php artisan key:generate
 
+      # Builds this run's local board replica from git-tracked migration
+      # history alone — it has no connection to production's real database,
+      # so on its own it has no idea what the owner has approved via the live
+      # dashboard. The next step corrects exactly that before Claude looks at
+      # anything.
+      - name: Migrate and seed the local board replica
+        run: php artisan migrate:fresh --seed --force
+
+      # Fetches the real, live set of approved_for_dev todo task titles from
+      # production over HTTPS and overwrites this run's local replica to
+      # match, so the PM Agent's task-selection below reflects real owner
+      # approvals instead of only what migration history happens to encode.
+      # See PmAgentAutomationController::approvedTodoTitles and
+      # app/Console/Commands/SyncApprovedTaskTitles.php. Requires the
+      # PM_AGENT_BOARD_TOKEN repo secret (same value as production's .env) —
+      # harmless no-op, leaving migration-replayed approvals as-is, if it
+      # isn't set yet.
+      - name: Sync real approved-task titles from production
+        env:
+          PM_AGENT_BOARD_TOKEN: ${{ secrets.PM_AGENT_BOARD_TOKEN }}
+        run: php artisan pm-agent:sync-approved-titles
+
       - name: Configure git identity for autonomous commits
         run: |
           git config user.name "PM Agent"
           git config user.email "pm-agent@users.noreply.github.com"
 
-      # This CI job only ever sees a disposable local SQLite (rebuilt from
-      # migration history above) — it has no real connection to production's
-      # actual database, so it can't itself tell whether the owner has
-      # approved anything via the live dashboard. This step asks production
-      # directly, over HTTPS, and lets it disable itself server-side if
-      # nothing is approved to build; see PmAgentAutomationController::disableIfIdle.
-      # Requires the PM_AGENT_BOARD_TOKEN repo secret (same value as production's
-      # .env) — harmless no-op if it isn't set yet.
+      # Same production-visibility gap as above, but for the automation
+      # toggle itself: disables the pm-agent workflow server-side if nothing
+      # is approved to build; see PmAgentAutomationController::disableIfIdle.
+      # Same PM_AGENT_BOARD_TOKEN secret, same harmless no-op if unset.
       - name: Disable PM Agent automation if nothing is approved to build
         continue-on-error: true
         run: |
@@ -93,10 +111,22 @@ jobs:
 
             This run:
 
-            1. Check the live state of the `project_tasks` and `epics` tables (a fresh
-               `php artisan migrate:fresh --seed --force` against the local SQLite db,
-               then query them, is the reliable way to see current state — the seeded/
-               migrated history *is* the board).
+            1. Check the live state of the `project_tasks` and `epics` tables — this
+               run's local SQLite has already been migrated, seeded, AND (via the
+               "Sync real approved-task titles from production" step, before you
+               started) reconciled so its `approved_for_dev` flags match production's
+               REAL live state, not just migration history. Just query the tables
+               directly; don't re-run `php artisan migrate:fresh --seed --force`
+               for this purpose — that would wipe the real-approval sync you were just
+               given, since a fresh replay only ever reflects migration history, never
+               a live "Approve for development" click on the real dashboard. (Running
+               `migrate:fresh --seed --force` again LATER, as part of the standard
+               verification bar on the actual code you write, is still correct and
+               required — by then you've already decided what to build, so it no
+               longer matters that it discards the sync.) Note this same live/replay
+               gap still applies to `epics` — approve/reject/delay clicks on the live
+               Epics tab are not yet synced the way task approvals are; treat epic
+               status from the replay with appropriate caution.
             2. Pick the single highest-value next action from `project_tasks` where
                `status = 'todo' AND approved_for_dev = 1` and actually ship it, following
                the `ship-project-task` skill (or `propose-epics` if the proposed-epics

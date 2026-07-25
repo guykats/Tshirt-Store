@@ -176,4 +176,32 @@ class PmAgentAutomationTest extends TestCase
 
         $response->assertStatus(502)->assertJsonStructure(['message']);
     }
+
+    public function test_approved_todo_titles_rejects_requests_without_the_shared_token(): void
+    {
+        config(['services.pm_agent.board_token' => 'board-secret']);
+
+        $this->getJson('/api/pm-agent-automation/approved-todo-titles')->assertForbidden();
+        $this->get('/api/pm-agent-automation/approved-todo-titles', ['X-PM-Agent-Token' => 'wrong'])->assertForbidden();
+    }
+
+    public function test_approved_todo_titles_returns_not_configured_without_a_board_token(): void
+    {
+        config(['services.pm_agent.board_token' => null]);
+
+        $this->get('/api/pm-agent-automation/approved-todo-titles', ['X-PM-Agent-Token' => 'anything'])
+            ->assertStatus(503);
+    }
+
+    public function test_approved_todo_titles_exports_exactly_the_approved_todo_set(): void
+    {
+        config(['services.pm_agent.board_token' => 'board-secret']);
+        ProjectTask::create(['title' => 'Approved todo', 'agent_name' => 'Dev Agent', 'status' => 'todo', 'approved_for_dev' => true]);
+        ProjectTask::create(['title' => 'Unapproved todo', 'agent_name' => 'Dev Agent', 'status' => 'todo', 'approved_for_dev' => false]);
+        ProjectTask::create(['title' => 'Approved but done', 'agent_name' => 'Dev Agent', 'status' => 'done', 'approved_for_dev' => true]);
+
+        $response = $this->get('/api/pm-agent-automation/approved-todo-titles', ['X-PM-Agent-Token' => 'board-secret']);
+
+        $response->assertOk()->assertJson(['configured' => true, 'titles' => ['Approved todo']]);
+    }
 }

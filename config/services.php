@@ -61,13 +61,17 @@ return [
         'workflow_file' => env('GITHUB_ACTIONS_PM_WORKFLOW', 'pm-agent.yml'),
     ],
 
-    // Shared secret authenticating the pm-agent.yml CI job's call to
-    // /api/pm-agent-automation/disable-if-idle — the *same* value must be set
-    // here (production .env) and as the PM_AGENT_BOARD_TOKEN GitHub Actions
-    // repo secret, unlike the other services.* secrets which are independent
-    // per side.
+    // Shared secret authenticating the pm-agent.yml CI job's calls to
+    // /api/pm-agent-automation/{disable-if-idle,approved-todo-titles} — the
+    // *same* value must be set here (production .env) and as the
+    // PM_AGENT_BOARD_TOKEN GitHub Actions repo secret, unlike the other
+    // services.* secrets which are independent per side. base_url is only
+    // consumed by app/Console/Commands/SyncApprovedTaskTitles.php, which runs
+    // *inside* the CI job and therefore needs the real public URL, not a
+    // relative path.
     'pm_agent' => [
         'board_token' => env('PM_AGENT_BOARD_TOKEN'),
+        'base_url' => env('PM_AGENT_BASE_URL', 'https://store.guykats.com'),
     ],
 
 ];

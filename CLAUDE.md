@@ -101,23 +101,29 @@ unless the owner says otherwise:
 - **`PM_AGENT_BOARD_TOKEN` is a shared secret, not an independent credential**
   — unlike every other secret above, the *same* value must be set in two
   places: production `.env` and the `PM_AGENT_BOARD_TOKEN` GitHub Actions
-  repo secret. It authenticates `pm-agent.yml`'s own call (via `curl`, see the
-  "Disable PM Agent automation if nothing is approved to build" step) to
-  `POST /api/pm-agent-automation/disable-if-idle`, a token-gated (not Sanctum)
-  endpoint. Why this exists: the CI job never has real production DB access —
-  per the "Check the live state" step in `pm-agent.yml`'s own prompt, it only
-  ever sees a disposable local SQLite rebuilt from migration history, which
-  has no idea a human just clicked "Approve for development" on the live
-  dashboard (that click writes straight to production MySQL, nothing else
-  reads it). This endpoint is the one deliberate exception: it lets the CI job
-  ask production directly, over HTTPS, whether any `todo` task is really
-  `approved_for_dev` right now, and disables the workflow server-side (so the
-  `SystemEvent` it logs lands in the real audit log, not a throwaway CI
-  database) if not. **This only fixes the idle-check** — the cron's actual
-  *task-selection* logic (which task to build) still relies on the
-  migrate-fresh-and-replay view and does not yet independently confirm a
-  task's live `approved_for_dev` state before building it. That deeper gap is
-  a known, flagged limitation, not yet fixed.
+  repo secret. Why this exists: the CI job never has real production DB
+  access — it only ever sees a disposable local SQLite rebuilt from migration
+  history, which has no idea a human just clicked "Approve for development"
+  on the live dashboard (that click writes straight to production MySQL,
+  nothing else reads it). This token authenticates two token-gated (not
+  Sanctum) endpoints on `PmAgentAutomationController` that close that gap:
+  - `POST /api/pm-agent-automation/disable-if-idle` — asks production
+    whether any `todo` task is really `approved_for_dev` right now, and
+    disables the `pm-agent.yml` workflow server-side (so the `SystemEvent` it
+    logs lands in the real audit log, not a throwaway CI database) if not.
+  - `GET /api/pm-agent-automation/approved-todo-titles` — exports the real
+    set of approved todo task titles; `pm-agent.yml`'s "Sync real
+    approved-task titles from production" step fetches this and overwrites
+    the CI job's freshly-replayed local `project_tasks.approved_for_dev`
+    flags to match, via `app/Console/Commands/SyncApprovedTaskTitles.php`,
+    *before* the PM Agent starts deciding what to build. This is what fixes
+    the actual task-selection gap, not just the idle-check.
+
+  **Remaining known gap, not yet fixed:** `epics` has the exact same
+  live-click-invisible-to-CI problem (approve/reject/delay on the live Epics
+  tab writes straight to production, same as task approvals did before the
+  fix above) and has no equivalent sync step — a scheduled run's view of
+  epic status still only ever reflects migration history.
 
 ## Production state changes through git — always
 
