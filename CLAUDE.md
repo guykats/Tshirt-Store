@@ -98,6 +98,26 @@ unless the owner says otherwise:
   this repo) added to production `.env` — the control shows a clear "not
   configured" state and does nothing destructive until it's set. Same
   `config:cache` gotcha as the other `services.php`-backed secrets.
+- **`PM_AGENT_BOARD_TOKEN` is a shared secret, not an independent credential**
+  — unlike every other secret above, the *same* value must be set in two
+  places: production `.env` and the `PM_AGENT_BOARD_TOKEN` GitHub Actions
+  repo secret. It authenticates `pm-agent.yml`'s own call (via `curl`, see the
+  "Disable PM Agent automation if nothing is approved to build" step) to
+  `POST /api/pm-agent-automation/disable-if-idle`, a token-gated (not Sanctum)
+  endpoint. Why this exists: the CI job never has real production DB access —
+  per the "Check the live state" step in `pm-agent.yml`'s own prompt, it only
+  ever sees a disposable local SQLite rebuilt from migration history, which
+  has no idea a human just clicked "Approve for development" on the live
+  dashboard (that click writes straight to production MySQL, nothing else
+  reads it). This endpoint is the one deliberate exception: it lets the CI job
+  ask production directly, over HTTPS, whether any `todo` task is really
+  `approved_for_dev` right now, and disables the workflow server-side (so the
+  `SystemEvent` it logs lands in the real audit log, not a throwaway CI
+  database) if not. **This only fixes the idle-check** — the cron's actual
+  *task-selection* logic (which task to build) still relies on the
+  migrate-fresh-and-replay view and does not yet independently confirm a
+  task's live `approved_for_dev` state before building it. That deeper gap is
+  a known, flagged limitation, not yet fixed.
 
 ## Production state changes through git — always
 

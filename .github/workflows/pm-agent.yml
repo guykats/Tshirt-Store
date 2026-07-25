@@ -56,6 +56,21 @@ jobs:
           git config user.name "PM Agent"
           git config user.email "pm-agent@users.noreply.github.com"
 
+      # This CI job only ever sees a disposable local SQLite (rebuilt from
+      # migration history above) — it has no real connection to production's
+      # actual database, so it can't itself tell whether the owner has
+      # approved anything via the live dashboard. This step asks production
+      # directly, over HTTPS, and lets it disable itself server-side if
+      # nothing is approved to build; see PmAgentAutomationController::disableIfIdle.
+      # Requires the PM_AGENT_BOARD_TOKEN repo secret (same value as production's
+      # .env) — harmless no-op if it isn't set yet.
+      - name: Disable PM Agent automation if nothing is approved to build
+        continue-on-error: true
+        run: |
+          curl -s -X POST \
+            -H "X-PM-Agent-Token: ${{ secrets.PM_AGENT_BOARD_TOKEN }}" \
+            https://store.guykats.com/api/pm-agent-automation/disable-if-idle
+
       - name: Run PM Agent
         uses: anthropics/claude-code-action@v1
         with:

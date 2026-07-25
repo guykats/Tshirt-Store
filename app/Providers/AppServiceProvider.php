@@ -95,6 +95,12 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(120)->by($request->ip());
         });
 
+        // The pm-agent.yml CI job polls this once (or a handful of times) per
+        // 30-minute run — generous per-IP cap, same reasoning as health-check.
+        RateLimiter::for('pm-agent-read', function ($request) {
+            return Limit::perMinute(30)->by($request->ip());
+        });
+
         // Change-password and self-service account-deletion (POST /change-password,
         // DELETE /account) both re-check current_password server-side, which makes
         // them a password-guessing oracle like 'login' if left unthrottled - behind

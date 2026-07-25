@@ -24,6 +24,7 @@ const EVENT_TYPES = [
     'project_task.unapproved',
     'pm_agent.enabled',
     'pm_agent.disabled',
+    'pm_agent.auto_disabled',
     'testimonial.created',
     'testimonial.updated',
     'testimonial.deleted',

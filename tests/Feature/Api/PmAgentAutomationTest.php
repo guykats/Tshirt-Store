@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Api;
 
+use App\Models\ProjectTask;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -107,6 +108,71 @@ class PmAgentAutomationTest extends TestCase
         $admin = User::factory()->create(['role' => 'admin']);
 
         $response = $this->actingAs($admin)->postJson('/api/pm-agent-automation/enable');
+
+        $response->assertStatus(502)->assertJsonStructure(['message']);
+    }
+
+    public function test_disable_if_idle_rejects_requests_without_the_shared_token(): void
+    {
+        config(['services.pm_agent.board_token' => 'board-secret']);
+
+        $this->postJson('/api/pm-agent-automation/disable-if-idle')->assertForbidden();
+        $this->postJson('/api/pm-agent-automation/disable-if-idle', [], ['X-PM-Agent-Token' => 'wrong'])->assertForbidden();
+    }
+
+    public function test_disable_if_idle_returns_not_configured_without_a_board_token(): void
+    {
+        config(['services.pm_agent.board_token' => null]);
+
+        $this->postJson('/api/pm-agent-automation/disable-if-idle', [], ['X-PM-Agent-Token' => 'anything'])
+            ->assertStatus(503);
+    }
+
+    public function test_disable_if_idle_leaves_automation_alone_when_approved_work_exists(): void
+    {
+        config(['services.pm_agent.board_token' => 'board-secret']);
+        ProjectTask::create(['title' => 'Approved task', 'agent_name' => 'Dev Agent', 'status' => 'todo', 'approved_for_dev' => true]);
+
+        $response = $this->postJson('/api/pm-agent-automation/disable-if-idle', [], ['X-PM-Agent-Token' => 'board-secret']);
+
+        $response->assertOk()->assertJson(['disabled' => false, 'reason' => 'approved_work_exists']);
+        Http::assertNothingSent();
+    }
+
+    public function test_disable_if_idle_leaves_automation_alone_when_already_disabled(): void
+    {
+        config(['services.pm_agent.board_token' => 'board-secret', 'services.github_actions.token' => 'fake-token']);
+        Http::fake([$this->workflowUrl() => Http::response(['state' => 'disabled_manually'], 200)]);
+
+        $response = $this->postJson('/api/pm-agent-automation/disable-if-idle', [], ['X-PM-Agent-Token' => 'board-secret']);
+
+        $response->assertOk()->assertJson(['disabled' => false, 'reason' => 'already_disabled']);
+        Http::assertNotSent(fn ($request) => $request->method() === 'PUT');
+    }
+
+    public function test_disable_if_idle_disables_and_logs_when_nothing_is_approved(): void
+    {
+        config(['services.pm_agent.board_token' => 'board-secret', 'services.github_actions.token' => 'fake-token']);
+        Http::fake([
+            $this->workflowUrl() => Http::response(['state' => 'active'], 200),
+            $this->workflowUrl('/disable') => Http::response('', 204),
+        ]);
+        ProjectTask::create(['title' => 'Unapproved task', 'agent_name' => 'Dev Agent', 'status' => 'todo', 'approved_for_dev' => false]);
+        ProjectTask::create(['title' => 'Done task', 'agent_name' => 'Dev Agent', 'status' => 'done', 'approved_for_dev' => true]);
+
+        $response = $this->postJson('/api/pm-agent-automation/disable-if-idle', [], ['X-PM-Agent-Token' => 'board-secret']);
+
+        $response->assertOk()->assertJson(['disabled' => true, 'reason' => 'idle']);
+        Http::assertSent(fn ($request) => $request->url() === $this->workflowUrl('/disable') && $request->method() === 'PUT');
+        $this->assertDatabaseHas('system_events', ['event_type' => 'pm_agent.auto_disabled']);
+    }
+
+    public function test_disable_if_idle_returns_a_clean_error_when_github_state_check_fails(): void
+    {
+        config(['services.pm_agent.board_token' => 'board-secret', 'services.github_actions.token' => 'fake-token']);
+        Http::fake([$this->workflowUrl() => Http::response(['message' => 'Bad credentials'], 401)]);
+
+        $response = $this->postJson('/api/pm-agent-automation/disable-if-idle', [], ['X-PM-Agent-Token' => 'board-secret']);
 
         $response->assertStatus(502)->assertJsonStructure(['message']);
     }

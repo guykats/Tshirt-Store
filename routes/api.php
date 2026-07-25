@@ -63,6 +63,12 @@ Route::middleware('throttle:catalog-read')->group(function () {
 
 Route::post('/webhooks/paypal', [PayPalWebhookController::class, 'handle']);
 
+// Machine-to-machine endpoint for the pm-agent.yml CI job — authenticated via
+// a shared X-PM-Agent-Token header (see PmAgentAutomationController::disableIfIdle),
+// not Sanctum, since the CI job has no browser session to authenticate with.
+Route::post('/pm-agent-automation/disable-if-idle', [PmAgentAutomationController::class, 'disableIfIdle'])
+    ->middleware('throttle:pm-agent-read');
+
 // Guest checkout: intentionally reachable without an authenticated session so
 // a shopper isn't forced to register before buying. CheckoutController::store
 // silently creates and logs in an unusable-password "guest" User behind the
