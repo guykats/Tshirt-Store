@@ -5,6 +5,7 @@ import api from '../lib/api';
 import DesignArt from '../components/DesignArt';
 import useDocumentMeta from '../hooks/useDocumentMeta';
 import { formatPrice } from '../lib/formatPrice';
+import { formatDate, formatDateTime } from '../lib/formatDate';
 
 const NEXT_FULFILLMENT_STATUS = {
     approved: 'processing',
@@ -389,7 +390,7 @@ export default function Dashboard() {
                     {events.length === 0 && <p className="text-ink-soft">{t('dashboard_no_events')}</p>}
                     {events.map((event) => (
                         <li key={event.id} className="border-b border-line pb-2 text-sm last:border-0">
-                            <span className="text-ink-soft">{new Date(event.created_at).toLocaleString()}</span>
+                            <span className="text-ink-soft">{formatDateTime(event.created_at, i18n.language)}</span>
                             {' — '}
                             {event.description}
                         </li>
@@ -406,7 +407,7 @@ export default function Dashboard() {
                         <li key={commit.hash} className="border-b border-line pb-2 last:border-0">
                             <span className="text-brass">{commit.hash}</span>
                             {' '}
-                            <span className="text-ink-soft">{commit.author}, {commit.date && new Date(commit.date).toLocaleDateString()}</span>
+                            <span className="text-ink-soft">{commit.author}, {commit.date && formatDate(commit.date, i18n.language)}</span>
                             {' — '}
                             {commit.message}
                         </li>

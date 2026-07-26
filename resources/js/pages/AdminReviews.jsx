@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import api from '../lib/api';
 import useDocumentMeta from '../hooks/useDocumentMeta';
+import { formatDateTime } from '../lib/formatDate';
 
 // Admin-only review moderation panel — lists every review across every
 // product (unlike the public per-product listing on ProductDetail.jsx) so an
@@ -11,7 +12,7 @@ import useDocumentMeta from '../hooks/useDocumentMeta';
 // (which itself follows ProjectProgress.jsx) so this fits existing conventions
 // rather than inventing a new one.
 export default function AdminReviews() {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const [searchParams, setSearchParams] = useSearchParams();
     const [reviews, setReviews] = useState([]);
     const [meta, setMeta] = useState({ current_page: 1, last_page: 1, total: 0 });
@@ -106,7 +107,7 @@ export default function AdminReviews() {
                                     {review.body || <span className="text-ink-soft">—</span>}
                                 </td>
                                 <td className="px-4 py-3 whitespace-nowrap text-xs text-ink-soft">
-                                    {review.created_at ? new Date(review.created_at).toLocaleString() : '—'}
+                                    {review.created_at ? formatDateTime(review.created_at, i18n.language) : '—'}
                                 </td>
                                 <td className="px-4 py-3 whitespace-nowrap">
                                     {confirmDeleteId === review.id ? (

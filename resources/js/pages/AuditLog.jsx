@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import api from '../lib/api';
 import useDocumentMeta from '../hooks/useDocumentMeta';
+import { formatDateTime } from '../lib/formatDate';
 
 // The full set of event_type values SystemEvent::log() is called with across the
 // app (OrderController, DesignController, CheckoutController, EpicController,
@@ -48,7 +49,7 @@ const EVENT_TYPES = [
 const ACTOR_TYPES = ['user', 'system'];
 
 export default function AuditLog() {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const [searchParams, setSearchParams] = useSearchParams();
     const [events, setEvents] = useState([]);
     const [meta, setMeta] = useState({ current_page: 1, last_page: 1, total: 0 });
@@ -236,7 +237,7 @@ export default function AuditLog() {
                         {events.map((event) => (
                             <tr key={event.id} className="border-t border-line align-top">
                                 <td className="px-4 py-3 whitespace-nowrap text-xs text-ink-soft">
-                                    {new Date(event.created_at).toLocaleString()}
+                                    {formatDateTime(event.created_at, i18n.language)}
                                 </td>
                                 <td className="px-4 py-3 font-mono text-xs">{event.event_type}</td>
                                 <td className="px-4 py-3 whitespace-nowrap">

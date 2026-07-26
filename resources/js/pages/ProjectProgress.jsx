@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../lib/api';
 import useDocumentMeta from '../hooks/useDocumentMeta';
+import { formatDate } from '../lib/formatDate';
 
 const STATUSES = ['blocked', 'in_progress', 'todo', 'done'];
 // Dark-mode-appropriate tints of the same semantic palette the rest of the
@@ -21,7 +22,7 @@ const FOCUS_RING =
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tm-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--tm-surface-1)]';
 
 export default function ProjectProgress() {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const [tasks, setTasks] = useState([]);
     const [counts, setCounts] = useState({ todo: 0, in_progress: 0, blocked: 0, done: 0 });
     const [statusFilter, setStatusFilter] = useState('');
@@ -243,7 +244,7 @@ export default function ProjectProgress() {
                                     </div>
                                 </td>
                                 <td className="px-4 py-3 text-xs whitespace-nowrap text-[var(--tm-text-muted)]">
-                                    {new Date(task.updated_at).toLocaleDateString()}
+                                    {formatDate(task.updated_at, i18n.language)}
                                 </td>
                             </tr>
                         ))}
