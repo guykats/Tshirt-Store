@@ -4,6 +4,16 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import CouponManagement from '../CouponManagement';
 import i18n from '../../i18n';
+import { formatPrice } from '../../lib/formatPrice';
+
+// Testing Library's default text normalizer collapses whitespace runs (which
+// includes the non-breaking space Intl.NumberFormat uses, e.g. in "he"
+// locale output) into a single plain space before matching — apply the same
+// normalization to the expected formatPrice() output so bidi/NBSP
+// characters don't cause a spurious mismatch.
+function formattedPrice(amount, currency, locale) {
+    return formatPrice(amount, currency, locale).trim().replace(/\s+/g, ' ');
+}
 
 const PAGE_ONE = {
     data: [
@@ -72,9 +82,27 @@ describe('CouponManagement page', () => {
         expect(await screen.findByText('SAVE10')).toBeInTheDocument();
         expect(screen.getByText('OLDCODE')).toBeInTheDocument();
         expect(screen.getByText('10%')).toBeInTheDocument();
-        expect(screen.getByText('$5')).toBeInTheDocument();
+        expect(screen.getByText(formattedPrice(5, 'USD', 'en'))).toBeInTheDocument();
         expect(screen.getByText('Active')).toBeInTheDocument();
         expect(screen.getByText('Inactive')).toBeInTheDocument();
+    });
+
+    it('renders a fixed-value coupon through the locale-aware currency formatter, not a hardcoded "$"', async () => {
+        renderPage();
+
+        // English: formatPrice's Intl output for a fixed USD coupon, not a
+        // bare hand-concatenated "$5".
+        expect(await screen.findByText(formattedPrice(5, 'USD', 'en'))).toBeInTheDocument();
+        expect(screen.queryByText('$5')).not.toBeInTheDocument();
+    });
+
+    it('renders a fixed-value coupon in Hebrew-locale currency formatting', async () => {
+        await i18n.changeLanguage('he');
+        renderPage();
+
+        expect(await screen.findByText(formattedPrice(5, 'USD', 'he'))).toBeInTheDocument();
+
+        await i18n.changeLanguage('en');
     });
 
     it('creates a new coupon through the accessible form', async () => {

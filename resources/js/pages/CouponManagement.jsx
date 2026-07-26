@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import api from '../lib/api';
 import useDocumentMeta from '../hooks/useDocumentMeta';
+import { formatPrice } from '../lib/formatPrice';
 
 const EMPTY_COUPON_FORM = {
     code: '',
@@ -23,7 +24,7 @@ const EMPTY_COUPON_FORM = {
 // used it, so "deactivate" (active=false) is the supported way to retire one,
 // same as products use status=archived instead of hard deletion.
 export default function CouponManagement() {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const [searchParams, setSearchParams] = useSearchParams();
 
     useDocumentMeta(t('meta_coupon_management_title', { app: t('app_name') }));
@@ -235,7 +236,9 @@ export default function CouponManagement() {
                                     <td className="px-4 py-3 font-medium">{coupon.code}</td>
                                     <td className="px-4 py-3">{t(`coupon_management_type_${coupon.type}`)}</td>
                                     <td className="px-4 py-3">
-                                        {coupon.type === 'percent' ? `${coupon.value}%` : `$${coupon.value}`}
+                                        {coupon.type === 'percent'
+                                            ? `${coupon.value}%`
+                                            : formatPrice(coupon.value, coupon.currency ?? 'USD', i18n.language)}
                                     </td>
                                     <td className="px-4 py-3 whitespace-nowrap text-xs text-ink-soft">
                                         {coupon.expires_at
