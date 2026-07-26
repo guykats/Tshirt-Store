@@ -4,6 +4,11 @@ import { Link } from 'react-router-dom';
 import api from '../lib/api';
 import useDocumentMeta from '../hooks/useDocumentMeta';
 
+// Explicit keyboard-focus ring for this dark theme — see TeamManagementNav
+// for the same rationale (the UA default outline reads poorly on near-black).
+const FOCUS_RING =
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tm-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--tm-surface-1)]';
+
 export default function VisionerChat() {
     const { t } = useTranslation();
     const [messages, setMessages] = useState([]);
@@ -45,25 +50,27 @@ export default function VisionerChat() {
     }
 
     return (
-        <div className="flex h-[calc(100vh-10rem)] max-w-3xl flex-col">
-            <h1 className="mb-2 font-serif text-2xl">{t('chat_title')}</h1>
-            <p className="mb-6 text-sm text-ink-soft">{t('chat_hint')}</p>
+        <div className="flex h-[calc(100vh-12rem)] max-w-3xl flex-col">
+            <h1 className="mb-2 font-sans text-2xl font-semibold text-[var(--tm-text)]">{t('chat_title')}</h1>
+            <p className="mb-6 text-sm text-[var(--tm-text-muted)]">{t('chat_hint')}</p>
 
-            <div className="mb-4 flex-1 overflow-y-auto rounded border border-line p-4">
-                {messages.length === 0 && <p className="text-ink-soft">{t('chat_empty')}</p>}
+            <div className="mb-4 flex-1 overflow-y-auto rounded-lg border border-[var(--tm-border)] bg-[var(--tm-surface-1)] p-4">
+                {messages.length === 0 && <p className="text-[var(--tm-text-muted)]">{t('chat_empty')}</p>}
                 <div className="space-y-4">
                     {messages.map((m) => (
                         <div key={m.id} className={m.role === 'user' ? 'flex justify-end' : 'flex justify-start'}>
                             <div
                                 className={`max-w-[80%] rounded-lg px-4 py-2 text-sm ${
-                                    m.role === 'user' ? 'bg-ink text-parchment' : 'bg-parchment-dim text-ink'
+                                    m.role === 'user'
+                                        ? 'bg-[var(--tm-accent-strong)] text-white'
+                                        : 'bg-[var(--tm-surface-2)] text-[var(--tm-text)]'
                                 }`}
                             >
                                 <p className="whitespace-pre-wrap">{m.content}</p>
                                 {m.epic_id && (
                                     <Link
                                         to="/dashboard/progress"
-                                        className="mt-2 inline-block text-xs text-brass underline hover:no-underline"
+                                        className={`mt-2 inline-block rounded text-xs text-[var(--tm-accent)] underline hover:no-underline ${FOCUS_RING}`}
                                     >
                                         {t('chat_proposed_epic', { title: m.epic_title })}
                                     </Link>
@@ -73,7 +80,7 @@ export default function VisionerChat() {
                     ))}
                     {sending && (
                         <div className="flex justify-start">
-                            <div className="rounded-lg bg-parchment-dim px-4 py-2 text-sm text-ink-soft">
+                            <div className="rounded-lg bg-[var(--tm-surface-2)] px-4 py-2 text-sm text-[var(--tm-text-muted)]">
                                 {t('chat_thinking')}
                             </div>
                         </div>
@@ -83,7 +90,7 @@ export default function VisionerChat() {
             </div>
 
             {error && (
-                <p role="alert" className="mb-2 text-sm text-red-700">
+                <p role="alert" className="mb-2 text-sm text-red-400">
                     {error}
                 </p>
             )}
@@ -104,12 +111,12 @@ export default function VisionerChat() {
                     }}
                     rows={2}
                     placeholder={t('chat_input_placeholder')}
-                    className="flex-1 resize-none rounded border border-line bg-parchment px-3 py-2 text-sm"
+                    className={`flex-1 resize-none rounded-md border border-[var(--tm-border-strong)] bg-[var(--tm-surface-1)] px-3 py-2 text-sm text-[var(--tm-text)] placeholder:text-[var(--tm-text-muted)] ${FOCUS_RING}`}
                 />
                 <button
                     type="submit"
                     disabled={sending || !draft.trim()}
-                    className="rounded bg-ink px-4 py-2 text-sm text-white disabled:cursor-not-allowed disabled:opacity-30"
+                    className={`rounded-md bg-[var(--tm-accent-strong)] px-4 py-2 text-sm text-white hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-30 ${FOCUS_RING}`}
                 >
                     {t('chat_send')}
                 </button>

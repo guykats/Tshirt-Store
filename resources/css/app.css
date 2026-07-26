@@ -21,3 +21,36 @@ body {
     background-color: var(--color-parchment);
     color: var(--color-ink);
 }
+
+/*
+ * Team Management dark theme.
+ *
+ * Scoped entirely to a `.team-dark` class applied at TeamManagementLayout's
+ * root — deliberately NOT added to the @theme block above or :root, so
+ * nothing here can ever leak into the storefront or the (still-light)
+ * store-admin dashboard. Team Management components read these via Tailwind
+ * arbitrary-value utilities, e.g. `bg-[var(--tm-surface-1)]`.
+ *
+ * Structure follows a dark dev-tool "surface ladder" (bg -> surface-1 ->
+ * surface-2 -> surface-3, each a little lighter, for elevation without heavy
+ * shadows), thin hairline borders instead of dividers/shadows, and exactly
+ * one muted chromatic accent (indigo) used for links/focus/primary actions.
+ * All pairings below were checked against WCAG AA (4.5:1 body text, 3:1
+ * large text/UI components) — see task evidence for the numbers.
+ */
+.team-dark {
+    --tm-bg: #0b0c0f;
+    --tm-surface-1: #131418;
+    --tm-surface-2: #191b20;
+    --tm-surface-3: #202329;
+    --tm-border: #26282f;
+    --tm-border-strong: #3a3d47;
+    --tm-text: #e8e9ec;
+    --tm-text-muted: #9297a3;
+    /* Lighter tone: used for text/links/icons directly on dark surfaces (5.6-6.3:1). */
+    --tm-accent: #8587f7;
+    /* Darker tone of the same hue: used for filled buttons + focus rings, where it
+       sits behind white text (6.3:1) rather than in front of a dark surface. */
+    --tm-accent-strong: #4f46e5;
+    --tm-accent-soft: rgb(133 135 247 / 14%);
+}

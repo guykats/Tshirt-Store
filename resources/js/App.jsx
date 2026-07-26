@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { PayPalScriptProvider } from '@paypal/react-paypal-js';
 import { AuthProvider, useAuth } from './lib/AuthContext';
 import { SiteSettingsProvider } from './lib/SiteSettingsContext';
@@ -7,7 +7,8 @@ import { WishlistProvider } from './lib/WishlistContext';
 import Layout from './Layout';
 import ErrorBoundary from './components/ErrorBoundary';
 import RouteLoading from './components/RouteLoading';
-import AdminLayout from './components/AdminLayout';
+import StoreAdminLayout from './components/StoreAdminLayout';
+import TeamManagementLayout from './components/TeamManagementLayout';
 // Catalog is the landing page for most visits (and the page Lighthouse mobile
 // audits run against), so it stays a static import — every other route is
 // lazy-loaded into its own chunk so catalog/product visitors don't pay for
@@ -76,158 +77,189 @@ function CheckoutWithPayPal() {
     );
 }
 
+// Everything except Team Management renders inside the storefront's <Layout>
+// (header, footer, floating admin link) — that includes the public site and
+// the store-admin dashboard pages, which only changed navigation shape
+// (sidebar -> horizontal top bar via StoreAdminLayout), not their surrounding
+// chrome.
+function StorefrontShell() {
+    return (
+        <Layout>
+            <ErrorBoundary>
+                <Suspense fallback={<RouteLoading />}>
+                    <Outlet />
+                </Suspense>
+            </ErrorBoundary>
+        </Layout>
+    );
+}
+
+// Team Management (Board/Epics/Chat) intentionally renders *outside* the
+// storefront's <Layout> — no light-themed header/footer sandwiching a
+// permanently dark tool — so it reads as a genuinely distinct
+// sub-application rather than a dark page inside the storefront chrome.
+// TeamManagementLayout supplies its own header (brand, tabs, locale toggle,
+// logout, exit link) in its place.
+function TeamManagementShell() {
+    return (
+        <ErrorBoundary>
+            <Suspense fallback={<RouteLoading />}>
+                <Outlet />
+            </Suspense>
+        </ErrorBoundary>
+    );
+}
+
 export default function App() {
     return (
         <AuthProvider>
             <SiteSettingsProvider>
                 <WishlistProvider>
                     <BrowserRouter>
-                        <Layout>
-                            <ErrorBoundary>
-                                <Suspense fallback={<RouteLoading />}>
-                                    <Routes>
-                                        <Route path="/" element={<Catalog />} />
-                                        <Route path="/about" element={<About />} />
-                                        <Route path="/privacy" element={<Privacy />} />
-                                        <Route path="/terms" element={<Terms />} />
-                                        <Route path="/faq" element={<Faq />} />
-                                        <Route path="/size-guide" element={<SizeGuide />} />
-                                        <Route path="/track-order" element={<TrackOrder />} />
-                                        <Route path="/products/:slug" element={<ProductDetail />} />
-                                        <Route path="/login" element={<Login />} />
-                                        <Route path="/register" element={<Register />} />
-                                        <Route path="/forgot-password" element={<ForgotPassword />} />
-                                        <Route path="/reset-password" element={<ResetPassword />} />
-                                        <Route path="/checkout/:productId" element={<CheckoutWithPayPal />} />
-                                        <Route
-                                            path="/orders"
-                                            element={
-                                                <RequireAuth>
-                                                    <Orders />
-                                                </RequireAuth>
-                                            }
-                                        />
-                                        <Route
-                                            path="/wishlist"
-                                            element={
-                                                <RequireAuth>
-                                                    <Wishlist />
-                                                </RequireAuth>
-                                            }
-                                        />
-                                        <Route
-                                            path="/account"
-                                            element={
-                                                <RequireAuth>
-                                                    <AccountSettings />
-                                                </RequireAuth>
-                                            }
-                                        />
-                                        <Route
-                                            path="/dashboard"
-                                            element={
-                                                <RequireAdmin>
-                                                    <AdminLayout>
-                                                        <Dashboard />
-                                                    </AdminLayout>
-                                                </RequireAdmin>
-                                            }
-                                        />
-                                        <Route
-                                            path="/dashboard/progress"
-                                            element={
-                                                <RequireAdmin>
-                                                    <AdminLayout>
-                                                        <ProjectProgress />
-                                                    </AdminLayout>
-                                                </RequireAdmin>
-                                            }
-                                        />
-                                        <Route
-                                            path="/dashboard/epics"
-                                            element={
-                                                <RequireAdmin>
-                                                    <AdminLayout>
-                                                        <Epics />
-                                                    </AdminLayout>
-                                                </RequireAdmin>
-                                            }
-                                        />
-                                        <Route
-                                            path="/dashboard/chat"
-                                            element={
-                                                <RequireAdmin>
-                                                    <AdminLayout>
-                                                        <VisionerChat />
-                                                    </AdminLayout>
-                                                </RequireAdmin>
-                                            }
-                                        />
-                                        <Route
-                                            path="/dashboard/style-guide"
-                                            element={
-                                                <RequireAdmin>
-                                                    <AdminLayout>
-                                                        <StyleGuide />
-                                                    </AdminLayout>
-                                                </RequireAdmin>
-                                            }
-                                        />
-                                        <Route
-                                            path="/dashboard/design"
-                                            element={
-                                                <RequireAdmin>
-                                                    <AdminLayout>
-                                                        <DesignSettings />
-                                                    </AdminLayout>
-                                                </RequireAdmin>
-                                            }
-                                        />
-                                        <Route
-                                            path="/dashboard/products"
-                                            element={
-                                                <RequireAdmin>
-                                                    <AdminLayout>
-                                                        <ProductManagement />
-                                                    </AdminLayout>
-                                                </RequireAdmin>
-                                            }
-                                        />
-                                        <Route
-                                            path="/dashboard/audit-log"
-                                            element={
-                                                <RequireAdmin>
-                                                    <AdminLayout>
-                                                        <AuditLog />
-                                                    </AdminLayout>
-                                                </RequireAdmin>
-                                            }
-                                        />
-                                        <Route
-                                            path="/dashboard/reviews"
-                                            element={
-                                                <RequireAdmin>
-                                                    <AdminLayout>
-                                                        <AdminReviews />
-                                                    </AdminLayout>
-                                                </RequireAdmin>
-                                            }
-                                        />
-                                        <Route
-                                            path="/dashboard/coupons"
-                                            element={
-                                                <RequireAdmin>
-                                                    <AdminLayout>
-                                                        <CouponManagement />
-                                                    </AdminLayout>
-                                                </RequireAdmin>
-                                            }
-                                        />
-                                        <Route path="*" element={<NotFound />} />
-                                    </Routes>
-                                </Suspense>
-                            </ErrorBoundary>
-                        </Layout>
+                        <Routes>
+                            <Route element={<StorefrontShell />}>
+                                <Route path="/" element={<Catalog />} />
+                                <Route path="/about" element={<About />} />
+                                <Route path="/privacy" element={<Privacy />} />
+                                <Route path="/terms" element={<Terms />} />
+                                <Route path="/faq" element={<Faq />} />
+                                <Route path="/size-guide" element={<SizeGuide />} />
+                                <Route path="/track-order" element={<TrackOrder />} />
+                                <Route path="/products/:slug" element={<ProductDetail />} />
+                                <Route path="/login" element={<Login />} />
+                                <Route path="/register" element={<Register />} />
+                                <Route path="/forgot-password" element={<ForgotPassword />} />
+                                <Route path="/reset-password" element={<ResetPassword />} />
+                                <Route path="/checkout/:productId" element={<CheckoutWithPayPal />} />
+                                <Route
+                                    path="/orders"
+                                    element={
+                                        <RequireAuth>
+                                            <Orders />
+                                        </RequireAuth>
+                                    }
+                                />
+                                <Route
+                                    path="/wishlist"
+                                    element={
+                                        <RequireAuth>
+                                            <Wishlist />
+                                        </RequireAuth>
+                                    }
+                                />
+                                <Route
+                                    path="/account"
+                                    element={
+                                        <RequireAuth>
+                                            <AccountSettings />
+                                        </RequireAuth>
+                                    }
+                                />
+                                <Route
+                                    path="/dashboard"
+                                    element={
+                                        <RequireAdmin>
+                                            <StoreAdminLayout>
+                                                <Dashboard />
+                                            </StoreAdminLayout>
+                                        </RequireAdmin>
+                                    }
+                                />
+                                <Route
+                                    path="/dashboard/style-guide"
+                                    element={
+                                        <RequireAdmin>
+                                            <StoreAdminLayout>
+                                                <StyleGuide />
+                                            </StoreAdminLayout>
+                                        </RequireAdmin>
+                                    }
+                                />
+                                <Route
+                                    path="/dashboard/design"
+                                    element={
+                                        <RequireAdmin>
+                                            <StoreAdminLayout>
+                                                <DesignSettings />
+                                            </StoreAdminLayout>
+                                        </RequireAdmin>
+                                    }
+                                />
+                                <Route
+                                    path="/dashboard/products"
+                                    element={
+                                        <RequireAdmin>
+                                            <StoreAdminLayout>
+                                                <ProductManagement />
+                                            </StoreAdminLayout>
+                                        </RequireAdmin>
+                                    }
+                                />
+                                <Route
+                                    path="/dashboard/audit-log"
+                                    element={
+                                        <RequireAdmin>
+                                            <StoreAdminLayout>
+                                                <AuditLog />
+                                            </StoreAdminLayout>
+                                        </RequireAdmin>
+                                    }
+                                />
+                                <Route
+                                    path="/dashboard/reviews"
+                                    element={
+                                        <RequireAdmin>
+                                            <StoreAdminLayout>
+                                                <AdminReviews />
+                                            </StoreAdminLayout>
+                                        </RequireAdmin>
+                                    }
+                                />
+                                <Route
+                                    path="/dashboard/coupons"
+                                    element={
+                                        <RequireAdmin>
+                                            <StoreAdminLayout>
+                                                <CouponManagement />
+                                            </StoreAdminLayout>
+                                        </RequireAdmin>
+                                    }
+                                />
+                                <Route path="*" element={<NotFound />} />
+                            </Route>
+                            <Route element={<TeamManagementShell />}>
+                                <Route
+                                    path="/dashboard/progress"
+                                    element={
+                                        <RequireAdmin>
+                                            <TeamManagementLayout>
+                                                <ProjectProgress />
+                                            </TeamManagementLayout>
+                                        </RequireAdmin>
+                                    }
+                                />
+                                <Route
+                                    path="/dashboard/epics"
+                                    element={
+                                        <RequireAdmin>
+                                            <TeamManagementLayout>
+                                                <Epics />
+                                            </TeamManagementLayout>
+                                        </RequireAdmin>
+                                    }
+                                />
+                                <Route
+                                    path="/dashboard/chat"
+                                    element={
+                                        <RequireAdmin>
+                                            <TeamManagementLayout>
+                                                <VisionerChat />
+                                            </TeamManagementLayout>
+                                        </RequireAdmin>
+                                    }
+                                />
+                            </Route>
+                        </Routes>
                     </BrowserRouter>
                 </WishlistProvider>
             </SiteSettingsProvider>
