@@ -13,6 +13,7 @@ export default function Login() {
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [remember, setRemember] = useState(false);
     const [error, setError] = useState(null);
     const [submitting, setSubmitting] = useState(false);
 
@@ -21,7 +22,7 @@ export default function Login() {
         setError(null);
         setSubmitting(true);
         try {
-            await login(email, password);
+            await login(email, password, remember);
             navigate('/dashboard');
         } catch {
             setError(t('login_error'));
@@ -55,6 +56,18 @@ export default function Login() {
                         onChange={(e) => setPassword(e.target.value)}
                         className="w-full rounded border border-line bg-parchment px-3 py-2"
                     />
+                </div>
+                <div>
+                    <label htmlFor="login-remember" className="flex items-center gap-2 text-sm">
+                        <input
+                            id="login-remember"
+                            type="checkbox"
+                            checked={remember}
+                            onChange={(e) => setRemember(e.target.checked)}
+                            className="h-4 w-4 rounded border-line"
+                        />
+                        {t('login_remember_me')}
+                    </label>
                 </div>
                 {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
                 <button

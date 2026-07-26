@@ -14,9 +14,9 @@ export function AuthProvider({ children }) {
             .finally(() => setLoading(false));
     }, []);
 
-    async function login(email, password) {
+    async function login(email, password, remember = false) {
         await ensureCsrfCookie();
-        await api.post('/api/login', { email, password });
+        await api.post('/api/login', { email, password, remember });
         const res = await api.get('/api/me');
         setUser(res.data.data);
     }
