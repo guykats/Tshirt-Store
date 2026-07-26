@@ -73,6 +73,17 @@ jobs:
           PM_AGENT_BOARD_TOKEN: ${{ secrets.PM_AGENT_BOARD_TOKEN }}
         run: php artisan pm-agent:sync-approved-titles
 
+      # Same fix as above, for epics: approve/reject/delay on the live Epics
+      # tab writes straight to production, invisible to this replay - and
+      # epics can be created live too (VisionerChatController::proposeEpic),
+      # with no migration at all, so a replay can be missing rows entirely.
+      # See PmAgentAutomationController::epicDecisions and
+      # app/Console/Commands/SyncEpicDecisions.php.
+      - name: Sync real epic decisions from production
+        env:
+          PM_AGENT_BOARD_TOKEN: ${{ secrets.PM_AGENT_BOARD_TOKEN }}
+        run: php artisan pm-agent:sync-epic-decisions
+
       - name: Configure git identity for autonomous commits
         run: |
           git config user.name "PM Agent"
@@ -113,20 +124,21 @@ jobs:
 
             1. Check the live state of the `project_tasks` and `epics` tables — this
                run's local SQLite has already been migrated, seeded, AND (via the
-               "Sync real approved-task titles from production" step, before you
-               started) reconciled so its `approved_for_dev` flags match production's
-               REAL live state, not just migration history. Just query the tables
-               directly; don't re-run `php artisan migrate:fresh --seed --force`
-               for this purpose — that would wipe the real-approval sync you were just
-               given, since a fresh replay only ever reflects migration history, never
-               a live "Approve for development" click on the real dashboard. (Running
+               "Sync real approved-task titles from production" and "Sync real epic
+               decisions from production" steps, before you started) reconciled so
+               both tables match production's REAL live state, not just migration
+               history: `project_tasks.approved_for_dev` reflects real "Approve for
+               development" clicks, and `epics` reflects real approve/reject/delay
+               decisions (including epics that only exist live, proposed via the
+               `/dashboard/chat` Visioner conversation, which have no migration at
+               all). Just query the tables directly; don't re-run
+               `php artisan migrate:fresh --seed --force` for this purpose — that
+               would wipe both syncs you were just given, since a fresh replay only
+               ever reflects migration history, never a live dashboard click. (Running
                `migrate:fresh --seed --force` again LATER, as part of the standard
                verification bar on the actual code you write, is still correct and
                required — by then you've already decided what to build, so it no
-               longer matters that it discards the sync.) Note this same live/replay
-               gap still applies to `epics` — approve/reject/delay clicks on the live
-               Epics tab are not yet synced the way task approvals are; treat epic
-               status from the replay with appropriate caution.
+               longer matters that it discards the sync.)
             2. Pick the single highest-value next action from `project_tasks` where
                `status = 'todo' AND approved_for_dev = 1` and actually ship it, following
                the `ship-project-task` skill (or `propose-epics` if the proposed-epics
@@ -139,7 +151,17 @@ jobs:
             3. If an epic is `approved` with zero linked `project_tasks`, break it into
                concrete tasks now (set `epic_id` on each) — that's the PM's job. Leave
                those new tasks at the default `approved_for_dev = 0`; breaking an epic
-               into tasks is not the same as approving them for build.
+               into tasks is not the same as approving them for build. IMPORTANT: if
+               that epic's id is only in this run's local database because the sync
+               step inserted it (i.e. `grep -r "insert.*epics" database/migrations`
+               finds no migration for its exact title — it was proposed live via chat,
+               never migration-seeded), you must FIRST write and push a migration that
+               inserts the epic itself (mirroring its real title/description/status
+               from the synced local row) so it has a real, git-tracked id, THEN write
+               the `project_tasks` migrations referencing that same migration-created
+               epic's id. Never reference this run's local sync-only id in a pushed
+               migration — it only exists for this one CI run and won't exist on the
+               next fresh replay, which would leave a dangling `epic_id` reference.
             4. If there is no approved `todo` task to work on, don't sit idle: seed more
                real, concrete candidate items (also left unapproved, pending the owner's
                review) so there's always something ready to be approved — but do not

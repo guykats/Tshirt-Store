@@ -118,12 +118,19 @@ unless the owner says otherwise:
     flags to match, via `app/Console/Commands/SyncApprovedTaskTitles.php`,
     *before* the PM Agent starts deciding what to build. This is what fixes
     the actual task-selection gap, not just the idle-check.
-
-  **Remaining known gap, not yet fixed:** `epics` has the exact same
-  live-click-invisible-to-CI problem (approve/reject/delay on the live Epics
-  tab writes straight to production, same as task approvals did before the
-  fix above) and has no equivalent sync step — a scheduled run's view of
-  epic status still only ever reflects migration history.
+  - `GET /api/pm-agent-automation/epic-decisions` — the same fix for `epics`:
+    approve/reject/delay on the live Epics tab has the identical
+    live-click-invisible-to-CI problem, *plus* epics can be created live too
+    with no migration at all (`VisionerChatController::proposeEpic`, the
+    `/dashboard/chat` Visioner conversation), so a replay can be missing rows
+    entirely, not just have their status wrong. `pm-agent.yml`'s "Sync real
+    epic decisions from production" step (`app/Console/Commands/SyncEpicDecisions.php`)
+    updates locally-known epics and inserts live-only ones. If the PM Agent
+    then acts on a synced-in epic that has no real migration yet (breaking it
+    into `project_tasks`), it must first push a migration inserting the epic
+    itself before referencing its id anywhere — the workflow prompt spells
+    this out (step 3) — otherwise the reference would dangle on the next
+    fresh replay, since that local sync-only id only exists for one CI run.
 
 ## Production state changes through git — always
 

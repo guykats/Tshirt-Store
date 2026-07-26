@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Api;
 
+use App\Models\Epic;
 use App\Models\ProjectTask;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -203,5 +204,35 @@ class PmAgentAutomationTest extends TestCase
         $response = $this->get('/api/pm-agent-automation/approved-todo-titles', ['X-PM-Agent-Token' => 'board-secret']);
 
         $response->assertOk()->assertJson(['configured' => true, 'titles' => ['Approved todo']]);
+    }
+
+    public function test_epic_decisions_rejects_requests_without_the_shared_token(): void
+    {
+        config(['services.pm_agent.board_token' => 'board-secret']);
+
+        $this->getJson('/api/pm-agent-automation/epic-decisions')->assertForbidden();
+        $this->get('/api/pm-agent-automation/epic-decisions', ['X-PM-Agent-Token' => 'wrong'])->assertForbidden();
+    }
+
+    public function test_epic_decisions_returns_not_configured_without_a_board_token(): void
+    {
+        config(['services.pm_agent.board_token' => null]);
+
+        $this->get('/api/pm-agent-automation/epic-decisions', ['X-PM-Agent-Token' => 'anything'])
+            ->assertStatus(503);
+    }
+
+    public function test_epic_decisions_exports_the_real_epics_table(): void
+    {
+        Epic::query()->delete();
+        config(['services.pm_agent.board_token' => 'board-secret']);
+        Epic::create(['title' => 'Approved live', 'description' => 'Decided on the live dashboard', 'agent_name' => 'Visioner Agent', 'status' => 'approved', 'priority' => 0]);
+
+        $response = $this->get('/api/pm-agent-automation/epic-decisions', ['X-PM-Agent-Token' => 'board-secret']);
+
+        $response->assertOk()
+            ->assertJsonPath('configured', true)
+            ->assertJsonPath('epics.0.title', 'Approved live')
+            ->assertJsonPath('epics.0.status', 'approved');
     }
 }

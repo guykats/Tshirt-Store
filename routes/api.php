@@ -70,6 +70,8 @@ Route::post('/pm-agent-automation/disable-if-idle', [PmAgentAutomationController
     ->middleware('throttle:pm-agent-read');
 Route::get('/pm-agent-automation/approved-todo-titles', [PmAgentAutomationController::class, 'approvedTodoTitles'])
     ->middleware('throttle:pm-agent-read');
+Route::get('/pm-agent-automation/epic-decisions', [PmAgentAutomationController::class, 'epicDecisions'])
+    ->middleware('throttle:pm-agent-read');
 
 // Guest checkout: intentionally reachable without an authenticated session so
 // a shopper isn't forced to register before buying. CheckoutController::store

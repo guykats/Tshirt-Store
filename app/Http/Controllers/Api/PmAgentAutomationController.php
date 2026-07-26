@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Epic;
 use App\Models\ProjectTask;
 use App\Models\SystemEvent;
 use App\Services\GitHubActionsClient;
@@ -33,6 +34,29 @@ class PmAgentAutomationController extends Controller
         }
 
         return response()->json(['configured' => true, 'titles' => $this->approvedTodoTaskTitles()]);
+    }
+
+    /**
+     * Read-only, token-gated export of the real epics table — title,
+     * description, agent_name, status, priority for every row. Epics have the
+     * same live-click-invisible-to-CI problem as project_tasks approvals
+     * (approve/reject/delay on the live Epics tab writes straight to
+     * production), plus a second one project_tasks doesn't have: epics can be
+     * created live too, with no migration at all, via VisionerChatController's
+     * propose_epic tool — so a CI replay may be missing rows entirely, not
+     * just have their status wrong. SyncEpicDecisions handles both.
+     */
+    public function epicDecisions(Request $request)
+    {
+        $unauthorized = $this->rejectUnlessTokenValid($request);
+
+        if ($unauthorized) {
+            return $unauthorized;
+        }
+
+        $epics = Epic::query()->get(['title', 'description', 'agent_name', 'status', 'priority']);
+
+        return response()->json(['configured' => true, 'epics' => $epics]);
     }
 
     /**

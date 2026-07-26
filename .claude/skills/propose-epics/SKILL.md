@@ -31,7 +31,7 @@ Propose several at once (4-6 is a good batch size) so the board always has a rea
 
 ## 4. Seed via migration
 
-Same rule as everywhere else in this repo: production state only changes through a git-tracked migration.
+Same rule as everywhere else in this repo: production state only changes through a git-tracked migration. (The one standing exception is `/dashboard/chat`'s live Visioner conversation, which can create an epic directly via `VisionerChatController::proposeEpic` with no migration at all — `pm-agent.yml`'s "Sync real epic decisions from production" step exists specifically to give the PM Agent visibility into those. When *this* skill proposes an epic, always do it the normal way, via a migration.)
 
 ```php
 $now = now();
