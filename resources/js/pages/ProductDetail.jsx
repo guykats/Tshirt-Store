@@ -165,7 +165,9 @@ export default function ProductDetail() {
                             {colors.map((c) => (
                                 <button
                                     key={c}
+                                    type="button"
                                     onClick={() => setColor(c)}
+                                    aria-pressed={color === c}
                                     className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-1.5 text-sm ${
                                         color === c ? 'border-ink bg-ink text-parchment' : 'border-line text-ink-soft'
                                     }`}
@@ -190,8 +192,10 @@ export default function ProductDetail() {
                                 return (
                                     <button
                                         key={s}
+                                        type="button"
                                         disabled={!inStock}
                                         onClick={() => setSize(s)}
+                                        aria-pressed={size === s}
                                         className={`h-10 w-10 rounded-full border text-sm disabled:cursor-not-allowed disabled:opacity-30 ${
                                             size === s ? 'border-ink bg-ink text-parchment' : 'border-line text-ink-soft'
                                         }`}

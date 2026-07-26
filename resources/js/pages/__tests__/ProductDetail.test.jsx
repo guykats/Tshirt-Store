@@ -104,6 +104,31 @@ describe('ProductDetail size/color selector', () => {
         expect(link.className).not.toMatch(/pointer-events-none/);
     });
 
+    it('marks the selected color and size buttons with aria-pressed="true" and the rest "false", updating on selection change', async () => {
+        const user = userEvent.setup();
+        renderProductDetail();
+
+        await screen.findByRole('heading', { name: 'Line Art Tee' });
+
+        // Default selection is S / Black.
+        expect(screen.getByRole('button', { name: 'Black' })).toHaveAttribute('aria-pressed', 'true');
+        expect(screen.getByRole('button', { name: 'Sand' })).toHaveAttribute('aria-pressed', 'false');
+        expect(screen.getByRole('button', { name: 'S' })).toHaveAttribute('aria-pressed', 'true');
+
+        // M/Black (the current color) is a real but out-of-stock variant: it
+        // must stay disabled while still correctly reporting its (unselected)
+        // aria-pressed state, since aria-pressed communicates toggle state
+        // independently of disabled-ness.
+        const disabledSizeM = screen.getByRole('button', { name: 'M' });
+        expect(disabledSizeM).toBeDisabled();
+        expect(disabledSizeM).toHaveAttribute('aria-pressed', 'false');
+
+        await user.click(screen.getByRole('button', { name: 'Sand' }));
+
+        expect(screen.getByRole('button', { name: 'Black' })).toHaveAttribute('aria-pressed', 'false');
+        expect(screen.getByRole('button', { name: 'Sand' })).toHaveAttribute('aria-pressed', 'true');
+    });
+
     it('disables the buy button once the selected size/color combination no longer exists, and re-enables it once a valid combination is chosen', async () => {
         const user = userEvent.setup();
         renderProductDetail();
