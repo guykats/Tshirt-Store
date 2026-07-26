@@ -4,13 +4,14 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import useDocumentMeta from '../hooks/useDocumentMeta';
 import api from '../lib/api';
+import { shippingCountryOptions } from '../lib/countryNames';
 
 const EMPTY_ADDRESS_FORM = {
     full_name: '', line1: '', line2: '', city: '', state: '', postal_code: '', country: 'US', phone: '',
 };
 
 export default function AccountSettings() {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const { changePassword, deleteAccount } = useAuth();
     const navigate = useNavigate();
 
@@ -239,6 +240,7 @@ export default function AccountSettings() {
                                     </p>
                                     <p className="text-ink-soft">{a.line1}{a.line2 ? `, ${a.line2}` : ''}</p>
                                     <p className="text-ink-soft">{a.city}, {a.state} {a.postal_code}</p>
+                                    <p className="text-ink-soft">{shippingCountryOptions(i18n.language).find((c) => c.code === a.country)?.label || a.country}</p>
                                 </div>
                             </div>
                             <div className="mt-2 flex flex-wrap items-center gap-3">
@@ -295,18 +297,40 @@ export default function AccountSettings() {
                         <h3 className="text-sm font-medium">
                             {editingAddressId ? t('account_addresses_form_title_edit') : t('account_addresses_form_title_add')}
                         </h3>
-                        {['full_name', 'line1', 'line2', 'city', 'state', 'postal_code', 'phone'].map((field) => (
-                            <div key={field}>
-                                <label htmlFor={`account-address-${field}`} className="mb-1 block text-sm">{t(`address_${field}`)}</label>
-                                <input
-                                    id={`account-address-${field}`}
-                                    required={field !== 'line2' && field !== 'phone'}
-                                    value={addressForm[field]}
-                                    onChange={updateAddressField(field)}
-                                    className="w-full rounded border border-line bg-parchment px-3 py-2"
-                                />
-                            </div>
-                        ))}
+                        {['full_name', 'line1', 'line2', 'city', 'country', 'state', 'postal_code', 'phone'].map((field) => {
+                            if (field === 'country') {
+                                return (
+                                    <div key={field}>
+                                        <label htmlFor="account-address-country" className="mb-1 block text-sm">{t('address_country')}</label>
+                                        <select
+                                            id="account-address-country"
+                                            required
+                                            autoComplete="country"
+                                            value={addressForm.country}
+                                            onChange={updateAddressField('country')}
+                                            className="w-full rounded border border-line bg-parchment px-3 py-2"
+                                        >
+                                            {shippingCountryOptions(i18n.language).map((c) => (
+                                                <option key={c.code} value={c.code}>{c.label}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                );
+                            }
+                            const labelKey = field === 'state' && addressForm.country !== 'US' ? 'address_state_region' : `address_${field}`;
+                            return (
+                                <div key={field}>
+                                    <label htmlFor={`account-address-${field}`} className="mb-1 block text-sm">{t(labelKey)}</label>
+                                    <input
+                                        id={`account-address-${field}`}
+                                        required={field !== 'line2' && field !== 'phone'}
+                                        value={addressForm[field]}
+                                        onChange={updateAddressField(field)}
+                                        className="w-full rounded border border-line bg-parchment px-3 py-2"
+                                    />
+                                </div>
+                            );
+                        })}
                         {addressError && <p role="alert" className="text-sm text-red-700">{addressError}</p>}
                         <div className="flex items-center gap-3">
                             <button

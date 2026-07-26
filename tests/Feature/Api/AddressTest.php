@@ -110,6 +110,25 @@ class AddressTest extends TestCase
         $this->assertDatabaseHas('addresses', ['id' => $address->id, 'is_default' => false]);
     }
 
+    public function test_a_customer_can_save_and_round_trip_a_non_us_country_address(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->postJson('/api/account/addresses', $this->validAddress([
+            'city' => 'Tel Aviv',
+            'state' => 'Tel Aviv',
+            'postal_code' => '6100000',
+            'country' => 'IL',
+        ]));
+
+        $response->assertCreated()->assertJsonPath('data.country', 'IL');
+        $this->assertDatabaseHas('addresses', ['user_id' => $user->id, 'country' => 'IL']);
+
+        $addressId = $response->json('data.id');
+        $getResponse = $this->actingAs($user)->getJson('/api/account/addresses');
+        $getResponse->assertOk()->assertJsonFragment(['id' => $addressId, 'country' => 'IL']);
+    }
+
     public function test_a_customer_can_update_their_own_address(): void
     {
         $user = User::factory()->create();

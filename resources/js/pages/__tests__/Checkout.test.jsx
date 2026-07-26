@@ -86,6 +86,22 @@ describe('Checkout form (address/coupon fields wrapped in a real <form>)', () =>
         expect(checkoutPost).toHaveBeenCalledWith('/api/checkout', expect.objectContaining({
             email: 'shopper@example.com',
             product_variant_id: 201,
+            shipping_address: expect.objectContaining({ country: 'US' }),
+        }));
+    });
+
+    it('lets a shopper pick a non-US country, adapts the state field label, and sends the chosen country to the API', async () => {
+        renderCheckoutForm();
+        const user = userEvent.setup();
+        await fillRequiredFields(user);
+
+        await user.selectOptions(screen.getByLabelText('Country'), 'IL');
+        expect(screen.getByLabelText('State / Province')).toBeInTheDocument();
+
+        await user.click(screen.getByRole('button', { name: 'Continue to Payment' }));
+
+        expect(checkoutPost).toHaveBeenCalledWith('/api/checkout', expect.objectContaining({
+            shipping_address: expect.objectContaining({ country: 'IL' }),
         }));
     });
 

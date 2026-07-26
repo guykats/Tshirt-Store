@@ -7,6 +7,7 @@ import api from '../lib/api';
 import { useAuth } from '../lib/AuthContext';
 import useDocumentMeta from '../hooks/useDocumentMeta';
 import { formatPrice } from '../lib/formatPrice';
+import { shippingCountryOptions } from '../lib/countryNames';
 import DesignArt from '../components/DesignArt';
 
 // CheckoutController returns a plain-English `message` for coupon
@@ -277,18 +278,40 @@ export default function Checkout() {
                     )}
 
                     {(!user || savedAddresses.length === 0 || selectedAddressOption === 'new') &&
-                        ['full_name', 'line1', 'line2', 'city', 'state', 'postal_code', 'phone'].map((field) => (
-                            <div key={field}>
-                                <label htmlFor={`checkout-${field}`} className="mb-1 block text-sm">{t(`address_${field}`)}</label>
-                                <input
-                                    id={`checkout-${field}`}
-                                    required={field !== 'line2' && field !== 'phone'}
-                                    value={address[field]}
-                                    onChange={(e) => setAddress((a) => ({ ...a, [field]: e.target.value }))}
-                                    className="w-full rounded border border-line bg-parchment px-3 py-2"
-                                />
-                            </div>
-                        ))}
+                        ['full_name', 'line1', 'line2', 'city', 'country', 'state', 'postal_code', 'phone'].map((field) => {
+                            if (field === 'country') {
+                                return (
+                                    <div key={field}>
+                                        <label htmlFor="checkout-country" className="mb-1 block text-sm">{t('address_country')}</label>
+                                        <select
+                                            id="checkout-country"
+                                            required
+                                            autoComplete="country"
+                                            value={address.country}
+                                            onChange={(e) => setAddress((a) => ({ ...a, country: e.target.value }))}
+                                            className="w-full rounded border border-line bg-parchment px-3 py-2"
+                                        >
+                                            {shippingCountryOptions(i18n.language).map((c) => (
+                                                <option key={c.code} value={c.code}>{c.label}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                );
+                            }
+                            const labelKey = field === 'state' && address.country !== 'US' ? 'address_state_region' : `address_${field}`;
+                            return (
+                                <div key={field}>
+                                    <label htmlFor={`checkout-${field}`} className="mb-1 block text-sm">{t(labelKey)}</label>
+                                    <input
+                                        id={`checkout-${field}`}
+                                        required={field !== 'line2' && field !== 'phone'}
+                                        value={address[field]}
+                                        onChange={(e) => setAddress((a) => ({ ...a, [field]: e.target.value }))}
+                                        className="w-full rounded border border-line bg-parchment px-3 py-2"
+                                    />
+                                </div>
+                            );
+                        })}
 
                     <div>
                         <label htmlFor="checkout-coupon" className="mb-1 block text-sm">{t('checkout_coupon_label')}</label>
