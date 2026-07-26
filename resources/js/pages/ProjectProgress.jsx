@@ -45,8 +45,26 @@ export default function ProjectProgress() {
         api.get('/api/pm-agent-automation').then((res) => setAutomation(res.data));
     }
 
-    useEffect(load, [statusFilter, agentFilter]);
-    useEffect(loadAutomation, []);
+    // Automation status itself is always polled - it's the only way to know
+    // when the toggle flips (e.g. the auto-disable-if-idle server-side logic
+    // turning it off on its own).
+    useEffect(() => {
+        loadAutomation();
+        const interval = setInterval(loadAutomation, 10000);
+        return () => clearInterval(interval);
+    }, []);
+
+    // The task list only auto-refreshes while automation is enabled - if it's
+    // off, nothing is going to change on the board from the PM Agent, so
+    // there's nothing worth polling for. Otherwise the API was only ever
+    // fetched once on mount/filter-change, so a task moving to
+    // in_progress/done on the server was invisible until a manual reload.
+    useEffect(() => {
+        load();
+        if (!automation?.enabled) return;
+        const interval = setInterval(load, 10000);
+        return () => clearInterval(interval);
+    }, [statusFilter, agentFilter, automation?.enabled]);
 
     async function toggleApproval(task) {
         await api.post(`/api/project-tasks/${task.id}/${task.approved_for_dev ? 'unapprove' : 'approve'}`);
