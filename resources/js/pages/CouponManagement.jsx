@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import api from '../lib/api';
 import useDocumentMeta from '../hooks/useDocumentMeta';
 import { formatPrice } from '../lib/formatPrice';
+import { formatDate } from '../lib/formatDate';
 
 const EMPTY_COUPON_FORM = {
     code: '',
@@ -242,7 +243,7 @@ export default function CouponManagement() {
                                     </td>
                                     <td className="px-4 py-3 whitespace-nowrap text-xs text-ink-soft">
                                         {coupon.expires_at
-                                            ? new Date(coupon.expires_at).toLocaleDateString()
+                                            ? formatDate(coupon.expires_at, i18n.language)
                                             : t('coupon_management_no_expiry')}
                                     </td>
                                     <td className="px-4 py-3 whitespace-nowrap text-xs text-ink-soft">
