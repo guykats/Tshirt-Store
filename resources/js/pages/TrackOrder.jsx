@@ -67,6 +67,7 @@ export default function TrackOrder() {
                         id="track-order-email"
                         type="email"
                         required
+                        autoComplete="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         className="w-full rounded border border-line bg-parchment px-3 py-2"

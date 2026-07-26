@@ -42,6 +42,7 @@ export default function Register() {
                     <input
                         id="register-name"
                         required
+                        autoComplete="name"
                         value={form.name}
                         onChange={update('name')}
                         className="w-full rounded border border-line bg-parchment px-3 py-2"
@@ -53,6 +54,7 @@ export default function Register() {
                         id="register-email"
                         type="email"
                         required
+                        autoComplete="email"
                         value={form.email}
                         onChange={update('email')}
                         className="w-full rounded border border-line bg-parchment px-3 py-2"
@@ -65,6 +67,7 @@ export default function Register() {
                         type="password"
                         required
                         minLength={8}
+                        autoComplete="new-password"
                         value={form.password}
                         onChange={update('password')}
                         className="w-full rounded border border-line bg-parchment px-3 py-2"
@@ -77,6 +80,7 @@ export default function Register() {
                         type="password"
                         required
                         minLength={8}
+                        autoComplete="new-password"
                         value={form.password_confirmation}
                         onChange={update('password_confirmation')}
                         className="w-full rounded border border-line bg-parchment px-3 py-2"

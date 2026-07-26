@@ -10,6 +10,16 @@ const EMPTY_ADDRESS_FORM = {
     full_name: '', line1: '', line2: '', city: '', state: '', postal_code: '', country: 'US', phone: '',
 };
 
+const ADDRESS_FIELD_AUTOCOMPLETE = {
+    full_name: 'name',
+    line1: 'address-line1',
+    line2: 'address-line2',
+    city: 'address-level2',
+    state: 'address-level1',
+    postal_code: 'postal-code',
+    phone: 'tel',
+};
+
 export default function AccountSettings() {
     const { t, i18n } = useTranslation();
     const { changePassword, deleteAccount } = useAuth();
@@ -176,6 +186,7 @@ export default function AccountSettings() {
                         id="account-current-password"
                         type="password"
                         required
+                        autoComplete="current-password"
                         value={form.current_password}
                         onChange={update('current_password')}
                         className="w-full rounded border border-line bg-parchment px-3 py-2"
@@ -188,6 +199,7 @@ export default function AccountSettings() {
                         type="password"
                         required
                         minLength={8}
+                        autoComplete="new-password"
                         value={form.password}
                         onChange={update('password')}
                         className="w-full rounded border border-line bg-parchment px-3 py-2"
@@ -200,6 +212,7 @@ export default function AccountSettings() {
                         type="password"
                         required
                         minLength={8}
+                        autoComplete="new-password"
                         value={form.password_confirmation}
                         onChange={update('password_confirmation')}
                         className="w-full rounded border border-line bg-parchment px-3 py-2"
@@ -324,6 +337,7 @@ export default function AccountSettings() {
                                     <input
                                         id={`account-address-${field}`}
                                         required={field !== 'line2' && field !== 'phone'}
+                                        autoComplete={ADDRESS_FIELD_AUTOCOMPLETE[field]}
                                         value={addressForm[field]}
                                         onChange={updateAddressField(field)}
                                         className="w-full rounded border border-line bg-parchment px-3 py-2"
@@ -371,6 +385,7 @@ export default function AccountSettings() {
                             id="account-delete-password"
                             type="password"
                             required
+                            autoComplete="current-password"
                             value={deletePassword}
                             onChange={(e) => setDeletePassword(e.target.value)}
                             className="w-full rounded border border-line bg-parchment px-3 py-2"

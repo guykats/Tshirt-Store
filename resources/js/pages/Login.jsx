@@ -41,6 +41,7 @@ export default function Login() {
                         id="login-email"
                         type="email"
                         required
+                        autoComplete="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         className="w-full rounded border border-line bg-parchment px-3 py-2"
@@ -52,6 +53,7 @@ export default function Login() {
                         id="login-password"
                         type="password"
                         required
+                        autoComplete="current-password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         className="w-full rounded border border-line bg-parchment px-3 py-2"

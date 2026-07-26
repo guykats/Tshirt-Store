@@ -19,6 +19,16 @@ const KNOWN_BACKEND_ERROR_KEYS = {
     'You have already used this coupon the maximum number of times allowed.': 'checkout_coupon_customer_limit_reached',
 };
 
+const ADDRESS_FIELD_AUTOCOMPLETE = {
+    full_name: 'name',
+    line1: 'address-line1',
+    line2: 'address-line2',
+    city: 'address-level2',
+    state: 'address-level1',
+    postal_code: 'postal-code',
+    phone: 'tel',
+};
+
 function translateCheckoutError(t, rawMessage, fallbackKey) {
     const key = rawMessage ? KNOWN_BACKEND_ERROR_KEYS[rawMessage] : null;
     if (key) return t(key);
@@ -222,6 +232,7 @@ export default function Checkout() {
                                 id="checkout-email"
                                 type="email"
                                 required
+                                autoComplete="email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 className="w-full rounded border border-line bg-parchment px-3 py-2"
@@ -305,6 +316,7 @@ export default function Checkout() {
                                     <input
                                         id={`checkout-${field}`}
                                         required={field !== 'line2' && field !== 'phone'}
+                                        autoComplete={ADDRESS_FIELD_AUTOCOMPLETE[field]}
                                         value={address[field]}
                                         onChange={(e) => setAddress((a) => ({ ...a, [field]: e.target.value }))}
                                         className="w-full rounded border border-line bg-parchment px-3 py-2"
