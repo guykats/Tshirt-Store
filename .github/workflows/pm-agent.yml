@@ -109,6 +109,11 @@ jobs:
           # fails - see https://github.com/anthropics/claude-code-action/issues/676.
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          # TEMPORARY DIAGNOSTIC - run #129 hit error_max_turns (100 turns, ~13
+          # min, $3.83) without a clean completion, and full output is hidden
+          # by default so there's no way to see what it was doing. Un-redacting
+          # for one run to find out, then revert this flag.
+          show_full_output: true
           claude_args: >-
             --permission-mode acceptEdits
             --max-turns 100
