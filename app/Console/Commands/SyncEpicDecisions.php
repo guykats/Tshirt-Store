@@ -6,6 +6,7 @@ use App\Models\Epic;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
 
@@ -26,10 +27,14 @@ class SyncEpicDecisions extends Command
         $baseUrl = config('services.pm_agent.base_url');
 
         try {
-            $response = Http::withHeaders(['X-PM-Agent-Token' => $token])
+            $response = Http::timeout(10)->withHeaders(['X-PM-Agent-Token' => $token])
                 ->get("{$baseUrl}/api/pm-agent-automation/epic-decisions")
                 ->throw();
-        } catch (RequestException $e) {
+        } catch (ConnectionException|RequestException $e) {
+            // ConnectionException (DNS/timeout/network) is a real, transient
+            // failure mode, not just RequestException (4xx/5xx) - a run
+            // already crashed the whole workflow over exactly this (cURL
+            // error 28 talking to production) before this fix.
             $this->warn('Could not reach production for real epic state — leaving migration-replayed epics as-is.');
 
             return self::SUCCESS;

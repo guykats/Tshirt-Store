@@ -6,6 +6,7 @@ use App\Models\ProjectTask;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
 
@@ -26,10 +27,14 @@ class SyncApprovedTaskTitles extends Command
         $baseUrl = config('services.pm_agent.base_url');
 
         try {
-            $response = Http::withHeaders(['X-PM-Agent-Token' => $token])
+            $response = Http::timeout(10)->withHeaders(['X-PM-Agent-Token' => $token])
                 ->get("{$baseUrl}/api/pm-agent-automation/approved-todo-titles")
                 ->throw();
-        } catch (RequestException $e) {
+        } catch (ConnectionException|RequestException $e) {
+            // ConnectionException (DNS/timeout/network) is a real, transient
+            // failure mode this run already hit once (cURL error 28 talking to
+            // production) - must never crash the whole workflow over a hiccup
+            // reaching an external host, same as the RequestException case.
             $this->warn('Could not reach production for real approval state — leaving migration-replayed approvals as-is.');
 
             return self::SUCCESS;

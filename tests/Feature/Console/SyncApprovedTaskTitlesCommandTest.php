@@ -4,6 +4,7 @@ namespace Tests\Feature\Console;
 
 use App\Models\ProjectTask;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
@@ -38,6 +39,27 @@ class SyncApprovedTaskTitlesCommandTest extends TestCase
     {
         putenv('PM_AGENT_BOARD_TOKEN=board-secret');
         Http::fake([$this->endpointUrl() => Http::response(['message' => 'Server error'], 500)]);
+        ProjectTask::create(['title' => 'Migration-approved task', 'agent_name' => 'Dev Agent', 'status' => 'todo', 'approved_for_dev' => true]);
+
+        $this->artisan('pm-agent:sync-approved-titles')->assertExitCode(0);
+
+        $this->assertTrue(ProjectTask::where('title', 'Migration-approved task')->value('approved_for_dev'));
+
+        putenv('PM_AGENT_BOARD_TOKEN');
+    }
+
+    public function test_leaves_approvals_untouched_when_production_is_unreachable_over_the_network(): void
+    {
+        // Distinct from the 500-response case above: a run (#132) actually
+        // crashed the whole pm-agent.yml job over exactly this - a
+        // ConnectionException (DNS/timeout/network failure) is a different
+        // exception type than RequestException (a real HTTP 4xx/5xx) and
+        // must be caught too, or php artisan exits non-zero and the CI step
+        // aborts the run before the PM Agent ever starts.
+        putenv('PM_AGENT_BOARD_TOKEN=board-secret');
+        Http::fake([$this->endpointUrl() => function () {
+            throw new ConnectionException('cURL error 28: Failed to connect to store.guykats.com port 443 after 10001 ms: Timeout was reached');
+        }]);
         ProjectTask::create(['title' => 'Migration-approved task', 'agent_name' => 'Dev Agent', 'status' => 'todo', 'approved_for_dev' => true]);
 
         $this->artisan('pm-agent:sync-approved-titles')->assertExitCode(0);

@@ -4,6 +4,7 @@ namespace Tests\Feature\Console;
 
 use App\Models\Epic;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
@@ -47,6 +48,26 @@ class SyncEpicDecisionsCommandTest extends TestCase
     {
         putenv('PM_AGENT_BOARD_TOKEN=board-secret');
         Http::fake([$this->endpointUrl() => Http::response(['message' => 'Server error'], 500)]);
+        Epic::create(['title' => 'Migration-seeded epic', 'agent_name' => 'Visioner Agent', 'status' => 'proposed']);
+
+        $this->artisan('pm-agent:sync-epic-decisions')->assertExitCode(0);
+
+        $this->assertSame('proposed', Epic::where('title', 'Migration-seeded epic')->value('status'));
+
+        putenv('PM_AGENT_BOARD_TOKEN');
+    }
+
+    public function test_leaves_epics_untouched_when_production_is_unreachable_over_the_network(): void
+    {
+        // Same real crash SyncApprovedTaskTitlesCommandTest covers: a
+        // ConnectionException (DNS/timeout/network) is a different exception
+        // type than RequestException (a real HTTP 4xx/5xx) and must be
+        // caught too, or the whole pm-agent.yml job aborts before the PM
+        // Agent starts.
+        putenv('PM_AGENT_BOARD_TOKEN=board-secret');
+        Http::fake([$this->endpointUrl() => function () {
+            throw new ConnectionException('cURL error 28: Failed to connect to store.guykats.com port 443 after 10001 ms: Timeout was reached');
+        }]);
         Epic::create(['title' => 'Migration-seeded epic', 'agent_name' => 'Visioner Agent', 'status' => 'proposed']);
 
         $this->artisan('pm-agent:sync-epic-decisions')->assertExitCode(0);

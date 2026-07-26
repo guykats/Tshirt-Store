@@ -67,8 +67,13 @@ jobs:
       # app/Console/Commands/SyncApprovedTaskTitles.php. Requires the
       # PM_AGENT_BOARD_TOKEN repo secret (same value as production's .env) —
       # harmless no-op, leaving migration-replayed approvals as-is, if it
-      # isn't set yet.
+      # isn't set yet. continue-on-error because a transient network failure
+      # reaching production (already hit once: cURL error 28, connect
+      # timeout) must never abort the whole run before Claude even starts -
+      # the command itself already catches this and exits 0, but this is
+      # defense in depth against anything it doesn't.
       - name: Sync real approved-task titles from production
+        continue-on-error: true
         env:
           PM_AGENT_BOARD_TOKEN: ${{ secrets.PM_AGENT_BOARD_TOKEN }}
         run: php artisan pm-agent:sync-approved-titles
@@ -78,8 +83,10 @@ jobs:
       # epics can be created live too (VisionerChatController::proposeEpic),
       # with no migration at all, so a replay can be missing rows entirely.
       # See PmAgentAutomationController::epicDecisions and
-      # app/Console/Commands/SyncEpicDecisions.php.
+      # app/Console/Commands/SyncEpicDecisions.php. Same continue-on-error
+      # reasoning as the step above.
       - name: Sync real epic decisions from production
+        continue-on-error: true
         env:
           PM_AGENT_BOARD_TOKEN: ${{ secrets.PM_AGENT_BOARD_TOKEN }}
         run: php artisan pm-agent:sync-epic-decisions
