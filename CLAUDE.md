@@ -56,10 +56,22 @@ interactive session, `git log` / the board may already reflect work you
 didn't do — that's expected, not a conflict to resolve. It authenticates
 via `CLAUDE_CODE_OAUTH_TOKEN` (the owner's Claude subscription, generated
 with `claude setup-token` — not the metered `ANTHROPIC_API_KEY`, which is
-kept as a secret only as a fallback) and is capped at `--max-turns 100` /
+kept as a secret only as a fallback) and is capped at `--max-turns 150` /
 `timeout-minutes: 90` per run as a blast-radius bound, not a cost one now
 that it's subscription-authenticated; adjust that (or disable the workflow
 entirely) rather than removing the cap if it needs tuning.
+- **Turn-budget discipline is explicit in the prompt on purpose.** Runs #129
+  and #130 both hit `error_max_turns` at exactly 101 turns with nothing
+  shippable to show for it — root-caused via a one-off `show_full_output:
+  true` diagnostic run (reverted immediately after) to an earlier version of
+  this prompt that said "use as much of your turn budget as there is work
+  available — don't stop after one small change," which pushed the agent to
+  start a second/third approved task without checking whether it could
+  actually finish it. The prompt now says the opposite: shipping exactly one
+  task cleanly is a full success, and starting work you're not confident you
+  can finish (implement + full verification bar + commit + push + mark done)
+  is the failure mode to avoid, not idling. If stuck runs recur, that
+  discipline — not just the numeric cap — is the first thing to revisit.
 
 ## Standing operating agreement with the project owner
 

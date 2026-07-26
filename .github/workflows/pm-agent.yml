@@ -109,14 +109,16 @@ jobs:
           # fails - see https://github.com/anthropics/claude-code-action/issues/676.
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          # TEMPORARY DIAGNOSTIC - run #129 hit error_max_turns (100 turns, ~13
-          # min, $3.83) without a clean completion, and full output is hidden
-          # by default so there's no way to see what it was doing. Un-redacting
-          # for one run to find out, then revert this flag.
-          show_full_output: true
+          # Raised from 100 - runs #129 and #130 both hit error_max_turns at
+          # exactly 101 turns without a clean completion (verified via
+          # show_full_output: true on a diagnostic run). Cost isn't the
+          # constraint on a subscription-authenticated run; a stuck run
+          # burning its full budget without shipping anything is the actual
+          # waste. More headroom, paired with the turn-budget discipline added
+          # to the prompt below, is the fix.
           claude_args: >-
             --permission-mode acceptEdits
-            --max-turns 100
+            --max-turns 150
             --allowedTools "Read,Write,Edit,Bash,Grep,Glob,WebSearch"
           prompt: |
             You are running unattended as this project's PM, triggered on a 30-minute
@@ -152,7 +154,13 @@ jobs:
                directly to `main`. The owner approves individual tasks for development
                from the board UI (`/dashboard/progress`) — a `todo` task with
                `approved_for_dev = 0` is NOT yet cleared to build; never start on one,
-               no matter how obviously good it looks.
+               no matter how obviously good it looks. Only move on to a SECOND approved
+               task after the first is fully shipped (verified, committed, pushed,
+               marked `done`) AND you're confident you have enough turns left to finish
+               the next one just as completely — a full cycle (implement, run the whole
+               verification bar, screenshot if there's a UI, commit, write and push the
+               completion migration) reliably costs several dozen turns. If you're not
+               sure you can finish a next task cleanly, stop here instead of starting it.
             3. If an epic is `approved` with zero linked `project_tasks`, break it into
                concrete tasks now (set `epic_id` on each) — that's the PM's job. Leave
                those new tasks at the default `approved_for_dev = 0`; breaking an epic
@@ -179,7 +187,13 @@ jobs:
                unusually risky, or a task with no safe path forward), mark it `blocked`
                with a clear `blocked_reason` on the board instead of guessing.
 
-            Use as much of your turn budget as there is real, safe, well-scoped work to
-            do this run — don't stop after one small change if more is clearly available.
-            Every change must pass the full verification bar in CLAUDE.md before you
-            call it done.
+            Turn-budget discipline matters more than throughput: a run that ships ONE
+            task completely (implemented, fully verified, committed, pushed, marked
+            `done` with a real commit sha) is a full success — it does not need to
+            squeeze in a second or third task to be worthwhile. A run that instead
+            starts a second or third task and then hits the turn cap mid-implementation,
+            mid-verification, or mid-push is a failure: it wastes the entire run's cost
+            and can leave a task stuck half-built with nothing shippable to show for it.
+            When genuinely unsure whether you have enough turns left to finish something
+            else cleanly, stop the run rather than gamble. Every change must still pass
+            the full verification bar in CLAUDE.md before you call it done.
