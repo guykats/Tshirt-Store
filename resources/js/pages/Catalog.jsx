@@ -18,6 +18,8 @@ export default function Catalog() {
     const { settings } = useSiteSettings();
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(false);
+    const [retryCount, setRetryCount] = useState(0);
     const [meta, setMeta] = useState({ current_page: 1, last_page: 1 });
     const [homeStats, setHomeStats] = useState(null);
     const [testimonials, setTestimonials] = useState([]);
@@ -31,15 +33,32 @@ export default function Catalog() {
     useDocumentMeta(t('app_name'), t('meta_catalog_description'));
 
     useEffect(() => {
+        let cancelled = false;
         setLoading(true);
+        setError(false);
         api.get('/api/products', { params: { page, search: search || undefined, sort } })
             .then((res) => {
+                if (cancelled) return;
                 setProducts(res.data.data);
                 setMeta(res.data.meta);
             })
-            .finally(() => setLoading(false));
+            .catch(() => {
+                if (cancelled) return;
+                // Distinguish a genuinely empty catalog (a successful response with zero
+                // results, handled below via the EmptyState branch) from a fetch that
+                // failed outright (network error, 500, timeout) — the latter gets its
+                // own accessible error state with a retry option, not a message implying
+                // the store has no products at all.
+                setError(true);
+            })
+            .finally(() => {
+                if (!cancelled) setLoading(false);
+            });
         window.scrollTo({ top: 0 });
-    }, [page, search, sort]);
+        return () => {
+            cancelled = true;
+        };
+    }, [page, search, sort, retryCount]);
 
     // Keep the local input in sync when navigating back/forward.
     useEffect(() => {
@@ -254,7 +273,22 @@ export default function Catalog() {
 
                 {loading && <CatalogSkeleton />}
 
-                {!loading && products.length === 0 && (
+                {!loading && error && (
+                    <div role="alert" className="mx-auto max-w-md px-6 py-12 text-center">
+                        <p className="mb-3 text-xs tracking-[0.3em] text-brass uppercase">{t('catalog_error_eyebrow')}</p>
+                        <h2 className="mb-4 font-serif text-2xl">{t('catalog_error_title')}</h2>
+                        <p className="mb-8 text-ink-soft">{t('catalog_error_message')}</p>
+                        <button
+                            type="button"
+                            onClick={() => setRetryCount((n) => n + 1)}
+                            className="rounded bg-ink px-5 py-2.5 text-sm text-white"
+                        >
+                            {t('catalog_error_retry')}
+                        </button>
+                    </div>
+                )}
+
+                {!loading && !error && products.length === 0 && (
                     isSearching ? (
                         <EmptyState
                             motif="olive-branch"
@@ -272,7 +306,7 @@ export default function Catalog() {
                     )
                 )}
 
-                {!loading && products.length > 0 && (
+                {!loading && !error && products.length > 0 && (
                     <div className="grid grid-cols-1 gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
                         {products.map((product) => (
                             <div key={product.id} className="group relative">
@@ -293,7 +327,7 @@ export default function Catalog() {
                     </div>
                 )}
 
-                {!loading && meta.last_page > 1 && (
+                {!loading && !error && meta.last_page > 1 && (
                     <div className="mt-14 flex items-center justify-center gap-4">
                         <button
                             onClick={() => goToPage(meta.current_page - 1)}
