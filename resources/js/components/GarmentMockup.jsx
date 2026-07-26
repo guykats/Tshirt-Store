@@ -1,5 +1,6 @@
 import { useId } from 'react';
 import DesignArt from './DesignArt';
+import { normalizeColorKey, SWATCH_HEX } from './ColorSwatch';
 
 // Flat-lay garment mockups, built entirely as SVG + CSS gradients/filters — no external
 // photography or image-generation tooling was available for this task (see the
@@ -29,8 +30,63 @@ const PALETTES = {
     },
 };
 
+function clampChannel(value) {
+    return Math.max(0, Math.min(255, Math.round(value)));
+}
+
+function hexToRgb(hex) {
+    const normalized = hex.replace('#', '');
+    const full = normalized.length === 3 ? normalized.split('').map((c) => c + c).join('') : normalized;
+    const int = parseInt(full, 16);
+    return { r: (int >> 16) & 255, g: (int >> 8) & 255, b: int & 255 };
+}
+
+function rgbToHex({ r, g, b }) {
+    return `#${[r, g, b].map((v) => clampChannel(v).toString(16).padStart(2, '0')).join('')}`;
+}
+
+// Blends `hex` toward `targetHex` by `amount` (0-1) — used to derive a garment's
+// highlight/shadow/trim tones from a single swatch color instead of hand-picking each.
+function mix(hex, targetHex, amount) {
+    const from = hexToRgb(hex);
+    const to = hexToRgb(targetHex);
+    return rgbToHex({
+        r: from.r + (to.r - from.r) * amount,
+        g: from.g + (to.g - from.g) * amount,
+        b: from.b + (to.b - from.b) * amount,
+    });
+}
+
+function relativeLuminance(hex) {
+    const { r, g, b } = hexToRgb(hex);
+    return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+}
+
+// Generates a full garment palette from a single base hex, mirroring the shape of the
+// hand-tuned PALETTES.Black/Sand entries above, so any color from ColorSwatch's
+// SWATCH_HEX dictionary renders a plausible, correctly-hued mockup instead of only the
+// two names that had a hand-authored palette.
+function paletteFromHex(hex) {
+    const tone = relativeLuminance(hex) < 0.45 ? 'dark' : 'light';
+    return {
+        highlight: mix(hex, '#ffffff', 0.22),
+        base: hex,
+        shadow: mix(hex, '#000000', 0.3),
+        trim: mix(hex, '#000000', 0.16),
+        hood: mix(hex, tone === 'dark' ? '#ffffff' : '#000000', 0.08),
+        tone,
+    };
+}
+
 function paletteFor(color) {
-    return PALETTES[color] || PALETTES.Sand;
+    const key = normalizeColorKey(color);
+    if (key === 'black') return PALETTES.Black;
+    if (key === 'sand') return PALETTES.Sand;
+
+    const hex = SWATCH_HEX[key];
+    if (hex) return paletteFromHex(hex);
+
+    return PALETTES.Sand;
 }
 
 // Garment silhouette (tee vs. hoodie) isn't a stored column today — the demo seeder

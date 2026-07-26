@@ -8,7 +8,7 @@
 //
 // Keys are normalized (lowercased, letters only) so "Heather Grey", "heather-grey" and
 // "heathergrey" all resolve to the same entry.
-const SWATCH_HEX = {
+export const SWATCH_HEX = {
     black: '#0a0a0a',
     white: '#f6f3ea',
     ivory: '#f0e9d8',
