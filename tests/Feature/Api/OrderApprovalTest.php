@@ -204,4 +204,44 @@ class OrderApprovalTest extends TestCase
 
         $this->assertStringNotContainsString(__('invoice.tracking_number'), $html);
     }
+
+    public function test_the_invoice_translates_payment_status_for_a_hebrew_locale_order(): void
+    {
+        $customer = User::factory()->create(['role' => 'customer']);
+        $order = $this->makeOrder($customer, ['payment_status' => 'paid']);
+        $order->load(['billingAddress', 'shippingAddress', 'items.productVariant.product', 'user']);
+
+        $previousLocale = app()->getLocale();
+        app()->setLocale('he');
+
+        try {
+            $html = view('invoices.order', ['order' => $order])->render();
+        } finally {
+            app()->setLocale($previousLocale);
+        }
+
+        // The Hebrew word for "paid" (matches lang/he/invoice.php's
+        // payment_status_paid), never the raw English enum value.
+        $this->assertStringContainsString('שולם', $html);
+        $this->assertStringNotContainsString('>Paid<', $html);
+        $this->assertStringNotContainsString('>paid<', $html);
+    }
+
+    public function test_the_invoice_renders_the_english_payment_status_label_for_an_english_locale_order(): void
+    {
+        $customer = User::factory()->create(['role' => 'customer']);
+        $order = $this->makeOrder($customer, ['payment_status' => 'failed']);
+        $order->load(['billingAddress', 'shippingAddress', 'items.productVariant.product', 'user']);
+
+        $previousLocale = app()->getLocale();
+        app()->setLocale('en');
+
+        try {
+            $html = view('invoices.order', ['order' => $order])->render();
+        } finally {
+            app()->setLocale($previousLocale);
+        }
+
+        $this->assertStringContainsString(__('invoice.payment_status_failed'), $html);
+    }
 }

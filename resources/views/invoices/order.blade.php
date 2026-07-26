@@ -12,6 +12,14 @@ use Illuminate\Support\Number;
     $isRtl = app()->getLocale() === 'he';
     $startAlign = $isRtl ? 'right' : 'left';
     $endAlign = $isRtl ? 'left' : 'right';
+    // payment_status is a raw DB enum ('unpaid'/'paid'/'failed'/'refunded'),
+    // not a display string — translate it the same way every other invoice
+    // label goes through lang/{en,he}/invoice.php, falling back to the raw
+    // value (title-cased) only if an unrecognized status ever slips through.
+    $paymentStatusKey = 'invoice.payment_status_'.$order->payment_status;
+    $paymentStatusLabel = \Illuminate\Support\Facades\Lang::has($paymentStatusKey)
+        ? __($paymentStatusKey)
+        : ucfirst($order->payment_status);
 @endphp
 <!DOCTYPE html>
 <html lang="{{ app()->getLocale() }}" dir="{{ $isRtl ? 'rtl' : 'ltr' }}">
@@ -133,7 +141,7 @@ use Illuminate\Support\Number;
             </tr>
             <tr>
                 <td class="meta-label">{{ __('invoice.payment_status') }}</td>
-                <td class="meta-value">{{ ucfirst($order->payment_status) }}</td>
+                <td class="meta-value">{{ $paymentStatusLabel }}</td>
             </tr>
             @if($order->tracking_number)
                 <tr>
