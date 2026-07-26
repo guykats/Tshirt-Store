@@ -201,3 +201,46 @@ describe('ProductDetail JSON-LD aggregateRating', () => {
         });
     });
 });
+
+describe('ProductDetail JSON-LD offer price', () => {
+    beforeEach(async () => {
+        await i18n.changeLanguage('en');
+    });
+
+    function jsonLd() {
+        return JSON.parse(document.getElementById('jsonld-structured-data').textContent);
+    }
+
+    it('prices the offer at base_price when the auto-selected variant has no price_override', async () => {
+        renderProductDetail({
+            variants: [{ id: 301, size: 'S', color: 'Black', stock_quantity: 5, price_override: null }],
+        });
+
+        await screen.findByRole('heading', { name: 'Line Art Tee' });
+
+        await waitFor(() => {
+            expect(jsonLd().offers.price).toBe('29.99');
+        });
+    });
+
+    it('prices the offer at the selected variant price_override instead of base_price', async () => {
+        const user = userEvent.setup();
+        renderProductDetail({
+            variants: [
+                { id: 301, size: 'S', color: 'Black', stock_quantity: 5, price_override: null },
+                { id: 302, size: 'M', color: 'Black', stock_quantity: 5, price_override: 39.5 },
+            ],
+        });
+
+        await screen.findByRole('heading', { name: 'Line Art Tee' });
+        await waitFor(() => {
+            expect(jsonLd().offers.price).toBe('29.99');
+        });
+
+        await user.click(screen.getByRole('button', { name: 'M' }));
+
+        await waitFor(() => {
+            expect(jsonLd().offers.price).toBe('39.50');
+        });
+    });
+});

@@ -35,6 +35,8 @@ export default function ProductDetail() {
         const imageUrl = `${window.location.origin}/og-image.png`;
         const variants = product.variants || [];
         const anyInStock = variants.some((v) => v.stock_quantity > 0);
+        const selectedVariant = variants.find((v) => v.size === size && v.color === color);
+        const offerPrice = selectedVariant?.price_override ?? product.base_price;
 
         const jsonLd = {
             '@context': 'https://schema.org',
@@ -56,7 +58,7 @@ export default function ProductDetail() {
             offers: {
                 '@type': 'Offer',
                 priceCurrency: product.currency,
-                price: Number(product.base_price).toFixed(2),
+                price: Number(offerPrice).toFixed(2),
                 availability: anyInStock ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
                 itemCondition: 'https://schema.org/NewCondition',
                 url: pageUrl,
@@ -75,7 +77,7 @@ export default function ProductDetail() {
         }
 
         return jsonLd;
-    }, [product, t]);
+    }, [product, t, size, color]);
 
     useJsonLd(productJsonLd);
 
