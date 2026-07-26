@@ -756,9 +756,9 @@ function AgentRow({ agent, onUpdate, t }) {
                         onChange={(e) => setStatus(e.target.value)}
                         className="rounded border border-line px-2 py-1"
                     >
-                        <option value="idle">IDLE</option>
-                        <option value="pending_approval">PENDING_APPROVAL</option>
-                        <option value="executing">EXECUTING</option>
+                        <option value="idle">{t('agent_status_idle')}</option>
+                        <option value="pending_approval">{t('agent_status_pending_approval')}</option>
+                        <option value="executing">{t('agent_status_executing')}</option>
                     </select>
                     <button
                         onClick={() => onUpdate(agent.id, status)}
