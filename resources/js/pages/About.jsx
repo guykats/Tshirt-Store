@@ -13,7 +13,7 @@ export default function About() {
             <h1 className="mb-8 font-serif text-3xl">{t('about_title')}</h1>
 
             <div className="mb-10 flex justify-center">
-                <DesignArt motif="star-of-david" className="h-40 w-40 rounded" />
+                <DesignArt motif="star-of-david" className="h-40 w-40 rounded" label={t('about_art_label')} />
             </div>
 
             <div className="space-y-6 leading-relaxed text-ink-soft">
