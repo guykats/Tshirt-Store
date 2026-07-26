@@ -295,7 +295,11 @@ export default function DesignSettings() {
                             </select>
                         </div>
                         <div className="mx-auto h-24 w-24 sm:mx-0">
-                            <DesignArt motif={form.hero_motif} className="rounded" />
+                            <DesignArt
+                                motif={form.hero_motif}
+                                className="rounded"
+                                label={t(`design_settings_motif_${form.hero_motif.replace(/-/g, '_')}`)}
+                            />
                         </div>
                     </div>
                 </section>
