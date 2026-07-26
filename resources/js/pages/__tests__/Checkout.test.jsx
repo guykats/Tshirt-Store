@@ -1,8 +1,10 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import userEvent from '@testing-library/user-event';
+import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { OrderConfirmation } from '../Checkout';
+import Checkout, { OrderConfirmation } from '../Checkout';
+import { AuthProvider } from '../../lib/AuthContext';
 import i18n from '../../i18n';
 
 const order = {
@@ -23,6 +25,83 @@ const order = {
         },
     ],
 };
+
+const PRODUCT = {
+    id: 77,
+    name: 'Line Art Tee',
+    base_price: 29.99,
+    currency: 'USD',
+    variants: [{ id: 201, size: 'M', color: 'Black', stock_quantity: 5 }],
+};
+
+const checkoutPost = vi.fn(() => Promise.resolve({ data: { order: { id: 1 }, paypal_order_id: 'PAYPAL-1' } }));
+
+vi.mock('../../lib/api', () => ({
+    default: {
+        get: vi.fn((url) => {
+            if (url === '/api/me') return Promise.reject({ response: { status: 401 } });
+            if (url === '/api/products/77') return Promise.resolve({ data: { data: PRODUCT } });
+            return Promise.reject(new Error(`unmocked GET ${url}`));
+        }),
+        post: (...args) => checkoutPost(...args),
+    },
+    ensureCsrfCookie: vi.fn(() => Promise.resolve()),
+}));
+
+function renderCheckoutForm() {
+    return render(
+        <MemoryRouter initialEntries={['/checkout/77']}>
+            <AuthProvider>
+                <Routes>
+                    <Route path="/checkout/:productId" element={<Checkout />} />
+                </Routes>
+            </AuthProvider>
+        </MemoryRouter>,
+    );
+}
+
+async function fillRequiredFields(user) {
+    await screen.findByLabelText('Email');
+    await user.type(screen.getByLabelText('Email'), 'shopper@example.com');
+    await user.type(screen.getByLabelText('Full Name'), 'Dana Cohen');
+    await user.type(screen.getByLabelText('Address Line 1'), '1 Herzl St');
+    await user.type(screen.getByLabelText('City'), 'Tel Aviv');
+    await user.type(screen.getByLabelText('State'), 'Tel Aviv');
+    await user.type(screen.getByLabelText('Postal Code'), '6100000');
+}
+
+describe('Checkout form (address/coupon fields wrapped in a real <form>)', () => {
+    beforeEach(async () => {
+        await i18n.changeLanguage('en');
+        checkoutPost.mockClear();
+    });
+
+    it('submits via clicking the Continue to Payment button', async () => {
+        renderCheckoutForm();
+        const user = userEvent.setup();
+        await fillRequiredFields(user);
+
+        await user.click(screen.getByRole('button', { name: 'Continue to Payment' }));
+
+        expect(checkoutPost).toHaveBeenCalledWith('/api/checkout', expect.objectContaining({
+            email: 'shopper@example.com',
+            product_variant_id: 201,
+        }));
+    });
+
+    it('also submits when pressing Enter inside a field, since the fields sit inside a real <form>', async () => {
+        renderCheckoutForm();
+        const user = userEvent.setup();
+        await fillRequiredFields(user);
+
+        await user.type(screen.getByLabelText('Postal Code'), '{Enter}');
+
+        expect(checkoutPost).toHaveBeenCalledWith('/api/checkout', expect.objectContaining({
+            email: 'shopper@example.com',
+            product_variant_id: 201,
+        }));
+    });
+});
 
 function Harness({ orderData, user }) {
     const { t, i18n: instance } = useTranslation();

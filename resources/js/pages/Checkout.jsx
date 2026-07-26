@@ -199,7 +199,13 @@ export default function Checkout() {
             </div>
 
             {status === 'form' && (
-                <div className="space-y-4">
+                <form
+                    className="space-y-4"
+                    onSubmit={(e) => {
+                        e.preventDefault();
+                        createOrder().catch(() => {});
+                    }}
+                >
                     {!user && (
                         <p className="rounded border border-line bg-parchment-dim p-3 text-sm text-ink-soft">
                             {t('checkout_guest_notice')}{' '}
@@ -299,13 +305,13 @@ export default function Checkout() {
                     {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
 
                     <button
-                        onClick={() => createOrder().catch(() => {})}
+                        type="submit"
                         disabled={submitting}
                         className="w-full rounded bg-ink px-4 py-3 text-sm tracking-wide text-parchment uppercase hover:bg-ink-soft disabled:opacity-50"
                     >
                         {t('checkout_continue_to_payment')}
                     </button>
-                </div>
+                </form>
             )}
 
             {status === 'paying' && paypalOrderId && (
