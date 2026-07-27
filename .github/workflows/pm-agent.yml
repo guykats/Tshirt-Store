@@ -171,9 +171,10 @@ jobs:
                queue is thin). Don't just report — do real work: code, tests, docs, or
                board bookkeeping, verified per CLAUDE.md's bar, committed and pushed
                directly to `main`. The owner approves individual tasks for development
-               from the board UI (`/dashboard/progress`) — a `todo` task with
-               `approved_for_dev = 0` is NOT yet cleared to build; never start on one,
-               no matter how obviously good it looks. Only move on to a SECOND approved
+               from the board UI (`/dashboard/progress`), except tasks broken out of an
+               approved epic, which are pre-approved per step 3 below — a `todo` task
+               with `approved_for_dev = 0` is NOT yet cleared to build; never start on
+               one, no matter how obviously good it looks. Only move on to a SECOND approved
                task after the first is fully shipped (verified, committed, pushed,
                marked `done`) AND you're confident you have enough turns left to finish
                the next one just as completely — a full cycle (implement, run the whole
@@ -181,9 +182,13 @@ jobs:
                completion migration) reliably costs several dozen turns. If you're not
                sure you can finish a next task cleanly, stop here instead of starting it.
             3. If an epic is `approved` with zero linked `project_tasks`, break it into
-               concrete tasks now (set `epic_id` on each) — that's the PM's job. Leave
-               those new tasks at the default `approved_for_dev = 0`; breaking an epic
-               into tasks is not the same as approving them for build. IMPORTANT: if
+               concrete tasks now (set `epic_id` on each) — that's the PM's job. Set
+               `approved_for_dev = 1` on each of these tasks — by explicit owner
+               request, approving the epic itself already is the decision to build it
+               out, so epic-derived tasks are pre-approved and will be picked up by
+               step 2 on a later run like any other approved task. This is the one
+               exception to the approval gate; ad hoc backlog tasks seeded in step 4
+               below still default to unapproved. IMPORTANT: if
                that epic's id is only in this run's local database because the sync
                step inserted it (i.e. `grep -r "insert.*epics" database/migrations`
                finds no migration for its exact title — it was proposed live via chat,

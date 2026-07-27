@@ -20,13 +20,16 @@ Work on this project is organized as a small Jira-style board, not ad hoc:
   a `status` (`todo` → `in_progress` → `done`, or `blocked`), and — once done —
   a real `commit_sha` and optionally a `screenshot_path` as evidence. Nothing
   is marked done on self-report; it's tied to a verifiable commit.
-  `todo` tasks also carry an `approved_for_dev` boolean, off by default, that
-  the owner flips on from an "Approve for development" button on each `todo`
-  row in the board UI. This is a hard human gate: nobody — not the autonomous
-  cron, not an interactive session, not a subagent — should start building a
-  `todo` task whose `approved_for_dev` is still `false`. Newly seeded tasks
-  and tasks freshly broken out of an approved epic start unapproved by
-  design; being created is not the same as being cleared to build.
+  `todo` tasks also carry an `approved_for_dev` boolean that the owner flips
+  on from an "Approve for development" button on each `todo` row in the
+  board UI. This is a hard human gate: nobody — not the autonomous cron, not
+  an interactive session, not a subagent — should start building a `todo`
+  task whose `approved_for_dev` is still `false`. Ad hoc backlog tasks
+  seeded outside of an epic breakdown start unapproved by design; being
+  created is not the same as being cleared to build. Tasks freshly broken
+  out of an **approved** epic are the one exception and default to
+  `approved_for_dev = true` — the owner's decision to approve the epic
+  itself already is the build decision, by explicit owner request.
 - **`epics` table** (Epics section, same page) — bigger strategic initiatives
   proposed by the Visioner Agent. A human explicitly **chooses** (approves),
   **rejects**, or **delays to the end** each one from the UI. Only once

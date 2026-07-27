@@ -15,7 +15,7 @@ This repo has no separate task-runner or agent infrastructure — the Jira-style
 
 If there is no approved `todo` task available:
 - Don't fall back to an unapproved one — that defeats the gate's purpose.
-- It's still fine to do the *other* standing-backlog work that doesn't build product code: break an approved epic into concrete `project_tasks` rows, or seed a fresh batch of candidate tasks. Leave every task you create this way at the default `approved_for_dev = false` — creating a task is not the same as approving it, and newly seeded/broken-down tasks still need the owner's explicit approval before anyone builds them.
+- It's still fine to do the *other* standing-backlog work that doesn't build product code: break an approved epic into concrete `project_tasks` rows, or seed a fresh batch of candidate tasks. Ad hoc seeded candidate tasks default to `approved_for_dev = false` — creating a task is not the same as approving it, and they still need the owner's explicit approval before anyone builds them. Tasks broken out of an **approved** epic are the one exception, by explicit owner request: set `approved_for_dev = true` on them, since approving the epic itself already is the decision to build it out.
 - Otherwise, stop for this run rather than inventing work to fill time.
 
 ## 1. Signal the start
