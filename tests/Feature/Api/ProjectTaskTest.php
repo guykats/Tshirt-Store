@@ -58,6 +58,28 @@ class ProjectTaskTest extends TestCase
             ->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.title', 'Done Dev task');
     }
 
+    public function test_project_tasks_can_be_filtered_by_the_approved_pseudo_status(): void
+    {
+        // "approved" isn't a real status column value - it's a filter-only
+        // alias for todo tasks with approved_for_dev=1, the same set the PM
+        // Agent itself builds from. In_progress tasks that happen to still
+        // carry approved_for_dev=1 from before they were picked up must NOT
+        // match, since they're no longer todo.
+        ProjectTask::query()->delete();
+
+        $admin = User::factory()->create(['role' => 'admin']);
+        ProjectTask::create(['title' => 'Approved todo task', 'agent_name' => 'Dev Agent', 'status' => 'todo', 'approved_for_dev' => true]);
+        ProjectTask::create(['title' => 'Unapproved todo task', 'agent_name' => 'Dev Agent', 'status' => 'todo', 'approved_for_dev' => false]);
+        ProjectTask::create(['title' => 'In progress task', 'agent_name' => 'Dev Agent', 'status' => 'in_progress', 'approved_for_dev' => true]);
+
+        $response = $this->actingAs($admin)->getJson('/api/project-tasks?status=approved');
+
+        $response->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.title', 'Approved todo task')
+            ->assertJsonPath('counts.approved', 1);
+    }
+
     public function test_a_task_with_a_screenshot_exposes_a_screenshot_url(): void
     {
         ProjectTask::query()->delete();

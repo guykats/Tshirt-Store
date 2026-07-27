@@ -15,7 +15,17 @@ class ProjectTaskController extends Controller
         abort_unless($request->user()->isAdmin(), 403);
 
         $tasks = ProjectTask::query()
-            ->when($request->query('status'), fn ($q, $status) => $q->where('status', $status))
+            // "approved" isn't a real status value - it's todo tasks with
+            // approved_for_dev=1, i.e. the human-approval gate the PM Agent
+            // reads before building anything. Every other status value maps
+            // straight to the column.
+            ->when($request->query('status'), function ($q, $status) {
+                if ($status === 'approved') {
+                    return $q->where('status', 'todo')->where('approved_for_dev', true);
+                }
+
+                return $q->where('status', $status);
+            })
             ->when($request->query('agent'), fn ($q, $agent) => $q->where('agent_name', $agent))
             ->when($request->query('epic_id'), fn ($q, $epicId) => $q->where('epic_id', $epicId))
             ->orderByRaw("CASE status WHEN 'blocked' THEN 0 WHEN 'in_progress' THEN 1 WHEN 'todo' THEN 2 WHEN 'done' THEN 3 ELSE 4 END")
@@ -35,6 +45,7 @@ class ProjectTaskController extends Controller
                 'in_progress' => (int) $tally->get('in_progress', 0),
                 'blocked' => (int) $tally->get('blocked', 0),
                 'done' => (int) $tally->get('done', 0),
+                'approved' => ProjectTask::query()->where('status', 'todo')->where('approved_for_dev', true)->count(),
             ],
         ]);
     }

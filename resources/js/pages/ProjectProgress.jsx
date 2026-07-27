@@ -4,7 +4,10 @@ import api from '../lib/api';
 import useDocumentMeta from '../hooks/useDocumentMeta';
 import { formatDate } from '../lib/formatDate';
 
-const STATUSES = ['blocked', 'in_progress', 'todo', 'done'];
+// 'approved' isn't a real status column value - it's a filter-only pseudo
+// status (todo tasks with approved_for_dev=1) that ProjectTaskController
+// special-cases, so it can sit in this same tile/filter row.
+const STATUSES = ['blocked', 'in_progress', 'todo', 'approved', 'done'];
 // Dark-mode-appropriate tints of the same semantic palette the rest of the
 // app uses (bg-*-100/text-*-800 on parchment) — desaturated-on-dark tokens
 // per the research cited in the task: a colored tint over a near-black
@@ -14,6 +17,7 @@ const STATUS_STYLES = {
     in_progress: 'bg-blue-900/40 text-blue-300',
     blocked: 'bg-red-900/40 text-red-300',
     done: 'bg-green-900/40 text-green-300',
+    approved: 'bg-amber-900/40 text-amber-300',
 };
 
 // Explicit keyboard-focus ring for this dark theme — see TeamManagementNav
@@ -24,7 +28,7 @@ const FOCUS_RING =
 export default function ProjectProgress() {
     const { t, i18n } = useTranslation();
     const [tasks, setTasks] = useState([]);
-    const [counts, setCounts] = useState({ todo: 0, in_progress: 0, blocked: 0, done: 0 });
+    const [counts, setCounts] = useState({ todo: 0, in_progress: 0, blocked: 0, done: 0, approved: 0 });
     const [statusFilter, setStatusFilter] = useState('');
     const [agentFilter, setAgentFilter] = useState('');
     const [lightbox, setLightbox] = useState(null);
@@ -127,7 +131,7 @@ export default function ProjectProgress() {
                 </div>
             )}
 
-            <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
                 {STATUSES.map((s) => (
                     <button
                         key={s}
