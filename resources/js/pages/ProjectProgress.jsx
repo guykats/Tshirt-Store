@@ -31,6 +31,8 @@ export default function ProjectProgress() {
     const [counts, setCounts] = useState({ todo: 0, in_progress: 0, blocked: 0, done: 0, approved: 0 });
     const [statusFilter, setStatusFilter] = useState('');
     const [agentFilter, setAgentFilter] = useState('');
+    const [epicFilter, setEpicFilter] = useState('');
+    const [expandedIds, setExpandedIds] = useState(() => new Set());
     const [lightbox, setLightbox] = useState(null);
     const [automation, setAutomation] = useState(null);
     const [automationBusy, setAutomationBusy] = useState(false);
@@ -39,11 +41,29 @@ export default function ProjectProgress() {
     useDocumentMeta(t('meta_progress_title', { app: t('app_name') }));
 
     function load() {
-        api.get('/api/project-tasks', { params: { status: statusFilter || undefined, agent: agentFilter || undefined } })
+        api.get('/api/project-tasks', {
+            params: {
+                status: statusFilter || undefined,
+                agent: agentFilter || undefined,
+                epic_id: epicFilter || undefined,
+            },
+        })
             .then((res) => {
                 setTasks(res.data.data);
                 setCounts(res.data.counts);
             });
+    }
+
+    function toggleExpanded(id) {
+        setExpandedIds((prev) => {
+            const next = new Set(prev);
+            if (next.has(id)) {
+                next.delete(id);
+            } else {
+                next.add(id);
+            }
+            return next;
+        });
     }
 
     function loadAutomation() {
@@ -69,7 +89,7 @@ export default function ProjectProgress() {
         if (!automation?.enabled) return;
         const interval = setInterval(load, 10000);
         return () => clearInterval(interval);
-    }, [statusFilter, agentFilter, automation?.enabled]);
+    }, [statusFilter, agentFilter, epicFilter, automation?.enabled]);
 
     async function toggleApproval(task) {
         await api.post(`/api/project-tasks/${task.id}/${task.approved_for_dev ? 'unapprove' : 'approve'}`);
@@ -90,6 +110,14 @@ export default function ProjectProgress() {
     }
 
     const agents = [...new Set(tasks.map((t) => t.agent_name))].sort();
+    // Only epics actually present among the currently loaded tasks - not
+    // every epic that exists - so the filter never offers an option that
+    // would immediately return an empty table.
+    const epicsInTable = [...new Map(
+        tasks.filter((t) => t.epic_id).map((t) => [t.epic_id, t.epic_title]),
+    ).entries()]
+        .map(([id, title]) => ({ id, title }))
+        .sort((a, b) => (a.title || '').localeCompare(b.title || ''));
 
     return (
         <div>
@@ -150,6 +178,16 @@ export default function ProjectProgress() {
 
             <div className="mb-4 flex flex-wrap items-center gap-3">
                 <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className={`rounded-md border border-[var(--tm-border-strong)] bg-[var(--tm-surface-1)] px-3 py-1.5 text-sm text-[var(--tm-text)] ${FOCUS_RING}`}
+                >
+                    <option value="">{t('progress_all_statuses')}</option>
+                    {STATUSES.map((s) => (
+                        <option key={s} value={s}>{t(`progress_status_${s}`)}</option>
+                    ))}
+                </select>
+                <select
                     value={agentFilter}
                     onChange={(e) => setAgentFilter(e.target.value)}
                     className={`rounded-md border border-[var(--tm-border-strong)] bg-[var(--tm-surface-1)] px-3 py-1.5 text-sm text-[var(--tm-text)] ${FOCUS_RING}`}
@@ -159,9 +197,19 @@ export default function ProjectProgress() {
                         <option key={a} value={a}>{a}</option>
                     ))}
                 </select>
-                {(statusFilter || agentFilter) && (
+                <select
+                    value={epicFilter}
+                    onChange={(e) => setEpicFilter(e.target.value)}
+                    className={`rounded-md border border-[var(--tm-border-strong)] bg-[var(--tm-surface-1)] px-3 py-1.5 text-sm text-[var(--tm-text)] ${FOCUS_RING}`}
+                >
+                    <option value="">{t('progress_all_epics')}</option>
+                    {epicsInTable.map((e) => (
+                        <option key={e.id} value={e.id}>{e.title}</option>
+                    ))}
+                </select>
+                {(statusFilter || agentFilter || epicFilter) && (
                     <button
-                        onClick={() => { setStatusFilter(''); setAgentFilter(''); }}
+                        onClick={() => { setStatusFilter(''); setAgentFilter(''); setEpicFilter(''); }}
                         className={`rounded text-sm text-[var(--tm-accent)] underline hover:no-underline ${FOCUS_RING}`}
                     >
                         {t('progress_clear_filters')}
@@ -175,6 +223,7 @@ export default function ProjectProgress() {
                         <tr>
                             <th className="px-4 py-2">{t('progress_col_task')}</th>
                             <th className="px-4 py-2">{t('progress_col_agent')}</th>
+                            <th className="px-4 py-2">{t('progress_col_epic')}</th>
                             <th className="px-4 py-2">{t('progress_col_status')}</th>
                             <th className="px-4 py-2">{t('progress_col_approval')}</th>
                             <th className="px-4 py-2">{t('progress_col_evidence')}</th>
@@ -184,21 +233,54 @@ export default function ProjectProgress() {
                     <tbody>
                         {tasks.length === 0 && (
                             <tr>
-                                <td colSpan={6} className="px-4 py-6 text-center text-[var(--tm-text-muted)]">
+                                <td colSpan={7} className="px-4 py-6 text-center text-[var(--tm-text-muted)]">
                                     {t('progress_no_tasks')}
                                 </td>
                             </tr>
                         )}
-                        {tasks.map((task) => (
+                        {tasks.map((task) => {
+                            const expanded = expandedIds.has(task.id);
+                            return (
                             <tr key={task.id} className="border-t border-[var(--tm-border)] align-top hover:bg-[var(--tm-surface-2)]/60">
                                 <td className="max-w-sm px-4 py-3">
-                                    <p className="font-medium text-[var(--tm-text)]">{task.title}</p>
-                                    {task.description && <p className="mt-1 text-xs text-[var(--tm-text-muted)]">{task.description}</p>}
-                                    {task.status === 'blocked' && task.blocked_reason && (
-                                        <p className="mt-1 text-xs text-red-400">{task.blocked_reason}</p>
+                                    <button
+                                        onClick={() => toggleExpanded(task.id)}
+                                        aria-expanded={expanded}
+                                        title={task.title}
+                                        className={`flex w-full min-w-0 items-center gap-1.5 text-left ${FOCUS_RING} rounded`}
+                                    >
+                                        <span
+                                            aria-hidden="true"
+                                            className={`inline-block shrink-0 text-[var(--tm-text-muted)] transition-transform ${expanded ? 'rotate-90' : ''}`}
+                                        >
+                                            &#9656;
+                                        </span>
+                                        <span className="min-w-0 flex-1 truncate font-medium text-[var(--tm-text)]">{task.title}</span>
+                                    </button>
+                                    {expanded && (
+                                        <div className="mt-1 ps-5">
+                                            {task.description && <p className="text-xs text-[var(--tm-text-muted)]">{task.description}</p>}
+                                            {task.status === 'blocked' && task.blocked_reason && (
+                                                <p className="mt-1 text-xs text-red-400">{task.blocked_reason}</p>
+                                            )}
+                                        </div>
                                     )}
                                 </td>
                                 <td className="px-4 py-3 whitespace-nowrap text-[var(--tm-text)]">{task.agent_name}</td>
+                                <td className="px-4 py-3 whitespace-nowrap">
+                                    {task.epic_id ? (
+                                        <span
+                                            title={task.epic_title || ''}
+                                            className="inline-block rounded-full bg-white/[0.07] px-2 py-0.5 text-xs text-[var(--tm-text-muted)]"
+                                        >
+                                            #{task.epic_id}
+                                        </span>
+                                    ) : task.requested_by ? (
+                                        <span className="text-xs text-[var(--tm-text-muted)]">{task.requested_by}</span>
+                                    ) : (
+                                        <span className="text-xs text-[var(--tm-text-muted)]">&mdash;</span>
+                                    )}
+                                </td>
                                 <td className="px-4 py-3">
                                     <span className={`inline-block rounded-full px-2 py-0.5 text-xs whitespace-nowrap ${STATUS_STYLES[task.status]}`}>
                                         {t(`progress_status_${task.status}`)}
@@ -251,7 +333,8 @@ export default function ProjectProgress() {
                                     {formatDate(task.updated_at, i18n.language)}
                                 </td>
                             </tr>
-                        ))}
+                            );
+                        })}
                     </tbody>
                 </table>
             </div>

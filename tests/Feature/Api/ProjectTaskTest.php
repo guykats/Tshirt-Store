@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Api;
 
+use App\Models\Epic;
 use App\Models\ProjectTask;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -78,6 +79,37 @@ class ProjectTaskTest extends TestCase
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.title', 'Approved todo task')
             ->assertJsonPath('counts.approved', 1);
+    }
+
+    public function test_a_task_linked_to_an_epic_exposes_the_epic_title(): void
+    {
+        // ProjectTaskController::index must eager-load the epic relation -
+        // ProjectTaskResource's epic_title uses whenLoaded, so without it
+        // this silently stayed null for every task regardless of epic_id.
+        ProjectTask::query()->delete();
+        Epic::query()->delete();
+
+        $admin = User::factory()->create(['role' => 'admin']);
+        $epic = Epic::create(['title' => 'Loyalty Program', 'agent_name' => 'Visioner Agent', 'status' => 'approved']);
+        ProjectTask::create(['epic_id' => $epic->id, 'title' => 'Epic-derived task', 'agent_name' => 'Dev Agent', 'status' => 'todo']);
+
+        $response = $this->actingAs($admin)->getJson('/api/project-tasks');
+
+        $response->assertOk()
+            ->assertJsonPath('data.0.epic_id', $epic->id)
+            ->assertJsonPath('data.0.epic_title', 'Loyalty Program');
+    }
+
+    public function test_a_task_exposes_requested_by_when_set(): void
+    {
+        ProjectTask::query()->delete();
+
+        $admin = User::factory()->create(['role' => 'admin']);
+        ProjectTask::create(['title' => 'Ad hoc task from chat', 'agent_name' => 'Dev Agent', 'status' => 'done', 'requested_by' => 'Guy']);
+
+        $response = $this->actingAs($admin)->getJson('/api/project-tasks');
+
+        $response->assertOk()->assertJsonPath('data.0.requested_by', 'Guy');
     }
 
     public function test_a_task_with_a_screenshot_exposes_a_screenshot_url(): void

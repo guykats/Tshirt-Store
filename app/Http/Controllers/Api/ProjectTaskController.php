@@ -15,6 +15,10 @@ class ProjectTaskController extends Controller
         abort_unless($request->user()->isAdmin(), 403);
 
         $tasks = ProjectTask::query()
+            // Needed for ProjectTaskResource's epic_title (whenLoaded) - without
+            // this it silently stayed null for every task, since nothing here
+            // previously eager-loaded the relation.
+            ->with('epic:id,title')
             // "approved" isn't a real status value - it's todo tasks with
             // approved_for_dev=1, i.e. the human-approval gate the PM Agent
             // reads before building anything. Every other status value maps
