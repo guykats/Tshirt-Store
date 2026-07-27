@@ -100,10 +100,17 @@ jobs:
       # toggle itself: disables the pm-agent workflow server-side if nothing
       # is approved to build; see PmAgentAutomationController::disableIfIdle.
       # Same PM_AGENT_BOARD_TOKEN secret, same harmless no-op if unset.
+      # --max-time/--retry mirror the Http::timeout(10) + catch pattern
+      # already used in the sync commands above - run #148 hit the exact
+      # same transient cURL error 28 (connect timeout) here, but this bare
+      # curl call had no timeout of its own and hung for 4m31s before
+      # failing, silently skipping the idle check for that entire run
+      # instead of failing fast and letting the next scheduled run retry.
       - name: Disable PM Agent automation if nothing is approved to build
         continue-on-error: true
         run: |
           curl -s -X POST \
+            --max-time 15 --retry 2 --retry-delay 2 --retry-connrefused \
             -H "X-PM-Agent-Token: ${{ secrets.PM_AGENT_BOARD_TOKEN }}" \
             https://store.guykats.com/api/pm-agent-automation/disable-if-idle
 
