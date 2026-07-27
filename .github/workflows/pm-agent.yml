@@ -7,7 +7,12 @@ name: PM Agent (autonomous)
 
 on:
   schedule:
-    - cron: '*/30 * * * *'
+    # Runs finish in ~3-13 min, well under the old 30-min cadence, so most of
+    # each window was idle wait rather than work. concurrency below already
+    # serializes runs (cancel-in-progress: false), so a shorter interval just
+    # means the next run starts sooner after the previous one finishes -
+    # never two running at once, never wasted work.
+    - cron: '*/15 * * * *'
   workflow_dispatch:
 
 concurrency:
