@@ -142,6 +142,10 @@ class PmAgentAutomationTest extends TestCase
 
     public function test_disable_if_idle_leaves_automation_alone_when_already_disabled(): void
     {
+        // Migration-seeded approved todo tasks (e.g. real epic breakdowns)
+        // would otherwise short-circuit this on the approved_work_exists
+        // branch before ever reaching the github-state check under test.
+        ProjectTask::query()->delete();
         config(['services.pm_agent.board_token' => 'board-secret', 'services.github_actions.token' => 'fake-token']);
         Http::fake([$this->workflowUrl() => Http::response(['state' => 'disabled_manually'], 200)]);
 
@@ -153,6 +157,9 @@ class PmAgentAutomationTest extends TestCase
 
     public function test_disable_if_idle_disables_and_logs_when_nothing_is_approved(): void
     {
+        // See the comment in the "already disabled" test above — this test's
+        // whole premise is that no approved todo task exists.
+        ProjectTask::query()->delete();
         config(['services.pm_agent.board_token' => 'board-secret', 'services.github_actions.token' => 'fake-token']);
         Http::fake([
             $this->workflowUrl() => Http::response(['state' => 'active'], 200),
@@ -170,6 +177,10 @@ class PmAgentAutomationTest extends TestCase
 
     public function test_disable_if_idle_returns_a_clean_error_when_github_state_check_fails(): void
     {
+        // See the comment in the "already disabled" test above — this test's
+        // whole premise is that no approved todo task exists, so the code
+        // actually reaches the github-state check being tested.
+        ProjectTask::query()->delete();
         config(['services.pm_agent.board_token' => 'board-secret', 'services.github_actions.token' => 'fake-token']);
         Http::fake([$this->workflowUrl() => Http::response(['message' => 'Bad credentials'], 401)]);
 
@@ -196,6 +207,10 @@ class PmAgentAutomationTest extends TestCase
 
     public function test_approved_todo_titles_exports_exactly_the_approved_todo_set(): void
     {
+        // Asserts an exact title set, so migration-seeded approved todo
+        // tasks (e.g. real epic breakdowns) must be cleared first — see
+        // CLAUDE.md's RefreshDatabase/exact-row-count gotcha.
+        ProjectTask::query()->delete();
         config(['services.pm_agent.board_token' => 'board-secret']);
         ProjectTask::create(['title' => 'Approved todo', 'agent_name' => 'Dev Agent', 'status' => 'todo', 'approved_for_dev' => true]);
         ProjectTask::create(['title' => 'Unapproved todo', 'agent_name' => 'Dev Agent', 'status' => 'todo', 'approved_for_dev' => false]);
