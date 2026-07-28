@@ -67,6 +67,15 @@ class PmAgentAutomationController extends Controller
      * server-side, if nothing is approved to build. Runs as a normal
      * production request so the SystemEvent it logs actually lands in the
      * real audit log, unlike anything logged from inside the CI job itself.
+     *
+     * "Nothing to build" means both approvedTodoTaskTitles() is empty AND no
+     * approved epic is still awaiting breakdown - this endpoint runs BEFORE
+     * the PM Agent step each run, so an approved epic with zero linked
+     * project_tasks yet is real pending work (the PM Agent is about to turn
+     * it into approved tasks in this very run), not idleness. Without this
+     * second check, approving an epic and then enabling the toggle would
+     * disable it again on the very next run, every time, before the epic
+     * ever got a chance to be broken down.
      */
     public function disableIfIdle(Request $request, GitHubActionsClient $github)
     {
@@ -78,6 +87,10 @@ class PmAgentAutomationController extends Controller
 
         if ($this->approvedTodoTaskTitles()->isNotEmpty()) {
             return response()->json(['disabled' => false, 'reason' => 'approved_work_exists']);
+        }
+
+        if ($this->hasApprovedEpicAwaitingBreakdown()) {
+            return response()->json(['disabled' => false, 'reason' => 'epic_awaiting_breakdown']);
         }
 
         try {
@@ -100,7 +113,7 @@ class PmAgentAutomationController extends Controller
 
         SystemEvent::log(
             'pm_agent.auto_disabled',
-            'The PM Agent workflow disabled itself: no approved_for_dev todo task remained.',
+            'The PM Agent workflow disabled itself: no approved_for_dev todo task remained and no approved epic is awaiting breakdown.',
             'pm-agent.yml',
             'system',
         );
@@ -186,5 +199,10 @@ class PmAgentAutomationController extends Controller
     protected function approvedTodoTaskTitles()
     {
         return ProjectTask::query()->where('status', 'todo')->where('approved_for_dev', true)->pluck('title');
+    }
+
+    protected function hasApprovedEpicAwaitingBreakdown(): bool
+    {
+        return Epic::query()->where('status', 'approved')->whereDoesntHave('tasks')->exists();
     }
 }

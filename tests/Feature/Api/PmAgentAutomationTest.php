@@ -140,6 +140,38 @@ class PmAgentAutomationTest extends TestCase
         Http::assertNothingSent();
     }
 
+    public function test_disable_if_idle_leaves_automation_alone_when_an_approved_epic_awaits_breakdown(): void
+    {
+        // Real bug: this endpoint runs BEFORE the PM Agent step each run. An
+        // approved epic with zero linked project_tasks yet is about to become
+        // approved tasks in this very run - without this check, enabling the
+        // toggle right after approving an epic would get disabled again on
+        // the very next run, every time, before the epic ever got a chance
+        // to be broken down.
+        config(['services.pm_agent.board_token' => 'board-secret']);
+        Epic::create(['title' => 'Approved but not yet broken down', 'agent_name' => 'Visioner Agent', 'status' => 'approved']);
+
+        $response = $this->postJson('/api/pm-agent-automation/disable-if-idle', [], ['X-PM-Agent-Token' => 'board-secret']);
+
+        $response->assertOk()->assertJson(['disabled' => false, 'reason' => 'epic_awaiting_breakdown']);
+        Http::assertNothingSent();
+    }
+
+    public function test_disable_if_idle_disables_when_an_approved_epic_already_has_tasks(): void
+    {
+        config(['services.pm_agent.board_token' => 'board-secret', 'services.github_actions.token' => 'fake-token']);
+        Http::fake([
+            $this->workflowUrl() => Http::response(['state' => 'active'], 200),
+            $this->workflowUrl('/disable') => Http::response('', 204),
+        ]);
+        $epic = Epic::create(['title' => 'Already broken down', 'agent_name' => 'Visioner Agent', 'status' => 'approved']);
+        ProjectTask::create(['epic_id' => $epic->id, 'title' => 'Not approved yet', 'agent_name' => 'Dev Agent', 'status' => 'todo', 'approved_for_dev' => false]);
+
+        $response = $this->postJson('/api/pm-agent-automation/disable-if-idle', [], ['X-PM-Agent-Token' => 'board-secret']);
+
+        $response->assertOk()->assertJson(['disabled' => true, 'reason' => 'idle']);
+    }
+
     public function test_disable_if_idle_leaves_automation_alone_when_already_disabled(): void
     {
         // Migration-seeded approved todo tasks (e.g. real epic breakdowns)
