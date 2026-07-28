@@ -148,6 +148,11 @@ class PmAgentAutomationTest extends TestCase
         // toggle right after approving an epic would get disabled again on
         // the very next run, every time, before the epic ever got a chance
         // to be broken down.
+        // Historical backfill migrations seed real approved todo tasks on
+        // every fresh migration (including epic-derived ones, which are now
+        // auto-approved) - clear the slate so this test's own epic is the
+        // only pending work.
+        ProjectTask::query()->delete();
         config(['services.pm_agent.board_token' => 'board-secret']);
         Epic::create(['title' => 'Approved but not yet broken down', 'agent_name' => 'Visioner Agent', 'status' => 'approved']);
 
@@ -159,6 +164,7 @@ class PmAgentAutomationTest extends TestCase
 
     public function test_disable_if_idle_disables_when_an_approved_epic_already_has_tasks(): void
     {
+        ProjectTask::query()->delete();
         config(['services.pm_agent.board_token' => 'board-secret', 'services.github_actions.token' => 'fake-token']);
         Http::fake([
             $this->workflowUrl() => Http::response(['state' => 'active'], 200),
