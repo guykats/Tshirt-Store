@@ -21,6 +21,16 @@ return Application::configure(basePath: dirname(__DIR__))
         // an idempotent crontab entry on the Hostinger host.
         $schedule->command('app:backup-database')->dailyAt('03:00');
 
+        // Feeds the admin "Discover" tab (Daily Design Suggestion Feed epic):
+        // a fresh batch of 20 candidate motifs every night so there's always
+        // something new to review each morning. Runs after the 3am backup,
+        // not before, purely so a slow backup never delays it — the two jobs
+        // don't otherwise depend on each other. This is server-side cron
+        // (deploy.yml's crontab entry driving `schedule:run` every minute),
+        // entirely independent of the separate pm-agent.yml GitHub Actions
+        // automation toggle.
+        $schedule->command('app:generate-design-suggestions')->dailyAt('03:15');
+
         // Checkout reserves (decrements) stock at order-creation time, before
         // payment is captured (see CheckoutController::store) — a shopper
         // who never comes back to pay would otherwise lock that stock away

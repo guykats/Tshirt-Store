@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\AgentStatusController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CheckoutController;
 use App\Http\Controllers\Api\DesignController;
+use App\Http\Controllers\Api\DesignSuggestionController;
 use App\Http\Controllers\Api\EpicController;
 use App\Http\Controllers\Api\HealthController;
 use App\Http\Controllers\Api\HomeStatsController;
@@ -130,6 +131,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/designs', [DesignController::class, 'index']);
     Route::post('/designs/{design}/approve', [DesignController::class, 'approve']);
     Route::post('/designs/{design}/reject', [DesignController::class, 'reject']);
+
+    Route::get('/design-suggestions', [DesignSuggestionController::class, 'index']);
+    Route::post('/design-suggestions/generate', [DesignSuggestionController::class, 'generateNow']);
+    Route::post('/design-suggestions/{designSuggestion}/keep', [DesignSuggestionController::class, 'keep']);
+    Route::post('/design-suggestions/{designSuggestion}/discard', [DesignSuggestionController::class, 'discard']);
 
     Route::get('/system-events', [SystemEventController::class, 'index']);
     Route::get('/agent-statuses', [AgentStatusController::class, 'index']);
