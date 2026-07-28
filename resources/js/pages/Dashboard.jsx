@@ -57,7 +57,6 @@ export default function Dashboard() {
     const [agents, setAgents] = useState([]);
     const [events, setEvents] = useState([]);
     const [activity, setActivity] = useState([]);
-    const [taskCounts, setTaskCounts] = useState({ todo: 0, in_progress: 0, blocked: 0, done: 0 });
     const [lowStock, setLowStock] = useState([]);
 
     function loadDesigns() {
@@ -87,10 +86,6 @@ export default function Dashboard() {
         api.get('/api/activity').then((res) => setActivity(res.data.data));
     }
 
-    function loadTaskCounts() {
-        api.get('/api/project-tasks').then((res) => setTaskCounts(res.data.counts));
-    }
-
     function loadLowStock() {
         api.get('/api/inventory/low-stock').then((res) => setLowStock(res.data.data));
     }
@@ -102,7 +97,6 @@ export default function Dashboard() {
         loadAgents();
         loadEvents();
         loadActivity();
-        loadTaskCounts();
         loadLowStock();
     }, []);
 
@@ -343,21 +337,6 @@ export default function Dashboard() {
             </section>
 
             <section className="mb-10">
-                <div className="mb-3 flex items-center justify-between">
-                    <h2 className="font-serif text-lg">{t('dashboard_progress')}</h2>
-                    <Link to="/dashboard/progress" className="text-sm text-brass hover:underline">
-                        {t('dashboard_progress_view_all')}
-                    </Link>
-                </div>
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                    <ProgressStat label={t('progress_status_blocked')} value={taskCounts.blocked} tone="text-red-700" />
-                    <ProgressStat label={t('progress_status_in_progress')} value={taskCounts.in_progress} tone="text-blue-700" />
-                    <ProgressStat label={t('progress_status_todo')} value={taskCounts.todo} tone="text-ink-soft" />
-                    <ProgressStat label={t('progress_status_done')} value={taskCounts.done} tone="text-green-700" />
-                </div>
-            </section>
-
-            <section className="mb-10">
                 <h2 className="mb-3 font-serif text-lg">{t('dashboard_agents')}</h2>
                 <p className="mb-3 text-sm text-ink-soft">{t('dashboard_agents_hint')}</p>
                 <div className="overflow-x-auto rounded border border-line">
@@ -414,15 +393,6 @@ export default function Dashboard() {
                     ))}
                 </ul>
             </section>
-        </div>
-    );
-}
-
-function ProgressStat({ label, value, tone }) {
-    return (
-        <div className="rounded border border-line p-3">
-            <p className={`text-2xl font-serif ${tone}`}>{value ?? 0}</p>
-            <p className="mt-1 text-xs text-ink-soft">{label}</p>
         </div>
     );
 }

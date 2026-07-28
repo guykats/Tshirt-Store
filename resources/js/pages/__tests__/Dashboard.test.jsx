@@ -45,7 +45,6 @@ const getMock = vi.fn((url, config) => {
     if (url === '/api/agent-statuses') return Promise.resolve({ data: { data: [] } });
     if (url === '/api/system-events') return Promise.resolve({ data: { data: [] } });
     if (url === '/api/activity') return Promise.resolve({ data: { data: [] } });
-    if (url === '/api/project-tasks') return Promise.resolve({ data: { counts: { todo: 0, in_progress: 0, blocked: 0, done: 0 } } });
     if (url === '/api/inventory/low-stock') return Promise.resolve({ data: { data: [] } });
     return Promise.reject(new Error(`unmocked GET ${url}`));
 });
