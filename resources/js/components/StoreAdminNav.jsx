@@ -13,6 +13,7 @@ const GROUPS = [
             { to: '/dashboard/products', key: 'nav_products' },
             { to: '/dashboard/coupons', key: 'nav_coupons' },
             { to: '/dashboard/reviews', key: 'nav_reviews' },
+            { to: '/dashboard/discover', key: 'nav_discover' },
         ],
     },
     {

@@ -30,6 +30,7 @@ const VisionerChat = lazy(() => import('./pages/VisionerChat'));
 const StyleGuide = lazy(() => import('./pages/StyleGuide'));
 const DesignSettings = lazy(() => import('./pages/DesignSettings'));
 const ProductManagement = lazy(() => import('./pages/ProductManagement'));
+const Discover = lazy(() => import('./pages/Discover'));
 const AuditLog = lazy(() => import('./pages/AuditLog'));
 const AdminReviews = lazy(() => import('./pages/AdminReviews'));
 const CouponManagement = lazy(() => import('./pages/CouponManagement'));
@@ -191,6 +192,16 @@ export default function App() {
                                         <RequireAdmin>
                                             <StoreAdminLayout>
                                                 <ProductManagement />
+                                            </StoreAdminLayout>
+                                        </RequireAdmin>
+                                    }
+                                />
+                                <Route
+                                    path="/dashboard/discover"
+                                    element={
+                                        <RequireAdmin>
+                                            <StoreAdminLayout>
+                                                <Discover />
                                             </StoreAdminLayout>
                                         </RequireAdmin>
                                     }
