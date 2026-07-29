@@ -6,6 +6,7 @@ use App\Models\Epic;
 use App\Models\ProjectTask;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class EpicTest extends TestCase
@@ -19,6 +20,11 @@ class EpicTest extends TestCase
         // A backfill migration seeds real Visioner Agent epics on every fresh
         // migration (including in tests via RefreshDatabase) — clear the slate.
         Epic::query()->delete();
+    }
+
+    protected function workflowUrl(string $suffix = ''): string
+    {
+        return "https://api.github.com/repos/guykats/Tshirt-Store/actions/workflows/pm-agent.yml{$suffix}";
     }
 
     public function test_customers_cannot_view_epics(): void
@@ -77,6 +83,39 @@ class EpicTest extends TestCase
         $response->assertOk()->assertJsonPath('data.status', 'approved');
         $this->assertDatabaseHas('epics', ['id' => $epic->id, 'status' => 'approved', 'decided_by' => $admin->id]);
         $this->assertDatabaseHas('system_events', ['event_type' => 'epic.approved', 'actor_name' => 'Deciding Admin']);
+    }
+
+    public function test_approving_an_epic_re_enables_a_disabled_pm_agent_workflow(): void
+    {
+        // Real bug: a disabled workflow can never fire on its own schedule
+        // to notice new approved work exists - run #157 -> #158 sat idle for
+        // almost 21 hours because nothing woke it back up after an epic got
+        // approved while it happened to be off. Approving must do it itself.
+        config(['services.github_actions.token' => 'fake-token']);
+        Http::fake([
+            $this->workflowUrl() => Http::response(['state' => 'disabled_manually'], 200),
+            $this->workflowUrl('/enable') => Http::response('', 204),
+        ]);
+        $admin = User::factory()->create(['role' => 'admin']);
+        $epic = Epic::create(['title' => 'Custom Design Studio', 'status' => 'proposed']);
+
+        $this->actingAs($admin)->postJson("/api/epics/{$epic->id}/approve")->assertOk();
+
+        Http::assertSent(fn ($request) => $request->url() === $this->workflowUrl('/enable') && $request->method() === 'PUT');
+        $this->assertDatabaseHas('system_events', ['event_type' => 'pm_agent.auto_enabled']);
+    }
+
+    public function test_approving_an_epic_leaves_an_already_enabled_workflow_alone(): void
+    {
+        config(['services.github_actions.token' => 'fake-token']);
+        Http::fake([$this->workflowUrl() => Http::response(['state' => 'active'], 200)]);
+        $admin = User::factory()->create(['role' => 'admin']);
+        $epic = Epic::create(['title' => 'Custom Design Studio', 'status' => 'proposed']);
+
+        $this->actingAs($admin)->postJson("/api/epics/{$epic->id}/approve")->assertOk();
+
+        Http::assertNotSent(fn ($request) => $request->method() === 'PUT');
+        $this->assertDatabaseMissing('system_events', ['event_type' => 'pm_agent.auto_enabled']);
     }
 
     public function test_an_admin_can_reject_an_epic(): void

@@ -6,11 +6,17 @@ use App\Models\Epic;
 use App\Models\ProjectTask;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class ProjectTaskTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function workflowUrl(string $suffix = ''): string
+    {
+        return "https://api.github.com/repos/guykats/Tshirt-Store/actions/workflows/pm-agent.yml{$suffix}";
+    }
 
     public function test_customers_cannot_view_project_tasks(): void
     {
@@ -149,6 +155,39 @@ class ProjectTaskTest extends TestCase
 
         $response->assertOk()->assertJsonPath('data.approved_for_dev', true);
         $this->assertTrue($task->fresh()->approved_for_dev);
+    }
+
+    public function test_approving_a_task_re_enables_a_disabled_pm_agent_workflow(): void
+    {
+        // Same real bug as the epic-approval equivalent: a disabled workflow
+        // can never fire on its own schedule to notice new approved work
+        // exists, so approving must wake it back up itself rather than
+        // waiting for a cron cycle that will never come.
+        config(['services.github_actions.token' => 'fake-token']);
+        Http::fake([
+            $this->workflowUrl() => Http::response(['state' => 'disabled_manually'], 200),
+            $this->workflowUrl('/enable') => Http::response('', 204),
+        ]);
+        $admin = User::factory()->create(['role' => 'admin']);
+        $task = ProjectTask::create(['title' => 'Approve me', 'agent_name' => 'Dev Agent', 'status' => 'todo']);
+
+        $this->actingAs($admin)->postJson("/api/project-tasks/{$task->id}/approve")->assertOk();
+
+        Http::assertSent(fn ($request) => $request->url() === $this->workflowUrl('/enable') && $request->method() === 'PUT');
+        $this->assertDatabaseHas('system_events', ['event_type' => 'pm_agent.auto_enabled']);
+    }
+
+    public function test_approving_a_task_leaves_an_already_enabled_workflow_alone(): void
+    {
+        config(['services.github_actions.token' => 'fake-token']);
+        Http::fake([$this->workflowUrl() => Http::response(['state' => 'active'], 200)]);
+        $admin = User::factory()->create(['role' => 'admin']);
+        $task = ProjectTask::create(['title' => 'Approve me', 'agent_name' => 'Dev Agent', 'status' => 'todo']);
+
+        $this->actingAs($admin)->postJson("/api/project-tasks/{$task->id}/approve")->assertOk();
+
+        Http::assertNotSent(fn ($request) => $request->method() === 'PUT');
+        $this->assertDatabaseMissing('system_events', ['event_type' => 'pm_agent.auto_enabled']);
     }
 
     public function test_admins_can_revoke_approval(): void

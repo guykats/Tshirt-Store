@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\EpicResource;
 use App\Models\Epic;
 use App\Models\SystemEvent;
+use App\Services\GitHubActionsClient;
 use Illuminate\Http\Request;
 
 class EpicController extends Controller
@@ -26,7 +27,7 @@ class EpicController extends Controller
         return EpicResource::collection($epics);
     }
 
-    public function approve(Request $request, Epic $epic)
+    public function approve(Request $request, Epic $epic, GitHubActionsClient $github)
     {
         abort_unless($request->user()->isAdmin(), 403);
 
@@ -43,6 +44,20 @@ class EpicController extends Controller
             'user',
             ['epic_id' => $epic->id],
         );
+
+        // A disabled workflow can never fire on its own schedule to notice
+        // this - without this, approving an epic while automation happens
+        // to be off (e.g. auto-disabled earlier for being idle) would sit
+        // untouched indefinitely, waiting for a human to notice and flip
+        // the toggle. See GitHubActionsClient::enableIfDisabled.
+        if ($github->enableIfDisabled()) {
+            SystemEvent::log(
+                'pm_agent.auto_enabled',
+                "The PM Agent workflow was automatically re-enabled because epic \"{$epic->title}\" was just approved.",
+                'system',
+                'system',
+            );
+        }
 
         return new EpicResource($epic->fresh()->loadCount('tasks')->load('decidedBy'));
     }

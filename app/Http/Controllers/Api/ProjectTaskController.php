@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\ProjectTaskResource;
 use App\Models\ProjectTask;
 use App\Models\SystemEvent;
+use App\Services\GitHubActionsClient;
 use Illuminate\Http\Request;
 
 class ProjectTaskController extends Controller
@@ -54,7 +55,7 @@ class ProjectTaskController extends Controller
         ]);
     }
 
-    public function approve(Request $request, ProjectTask $projectTask)
+    public function approve(Request $request, ProjectTask $projectTask, GitHubActionsClient $github)
     {
         abort_unless($request->user()->isAdmin(), 403);
 
@@ -67,6 +68,18 @@ class ProjectTaskController extends Controller
             'user',
             ['project_task_id' => $projectTask->id],
         );
+
+        // See EpicController::approve for why this matters: a disabled
+        // workflow can never fire on its own schedule to notice this task
+        // got approved, so it would otherwise sit untouched indefinitely.
+        if ($github->enableIfDisabled()) {
+            SystemEvent::log(
+                'pm_agent.auto_enabled',
+                "The PM Agent workflow was automatically re-enabled because task \"{$projectTask->title}\" was just approved.",
+                'system',
+                'system',
+            );
+        }
 
         return new ProjectTaskResource($projectTask->fresh());
     }
