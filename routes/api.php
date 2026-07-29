@@ -134,8 +134,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/design-suggestions', [DesignSuggestionController::class, 'index']);
     Route::post('/design-suggestions/generate', [DesignSuggestionController::class, 'generateNow']);
+    Route::post('/design-suggestions/publish-all', [DesignSuggestionController::class, 'publishAll']);
     Route::post('/design-suggestions/{designSuggestion}/keep', [DesignSuggestionController::class, 'keep']);
     Route::post('/design-suggestions/{designSuggestion}/discard', [DesignSuggestionController::class, 'discard']);
+    Route::post('/design-suggestions/{designSuggestion}/publish', [DesignSuggestionController::class, 'publish']);
 
     Route::get('/system-events', [SystemEventController::class, 'index']);
     Route::get('/agent-statuses', [AgentStatusController::class, 'index']);

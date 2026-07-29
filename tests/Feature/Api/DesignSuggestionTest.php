@@ -73,12 +73,27 @@ class DesignSuggestionTest extends TestCase
         $this->assertDatabaseHas('design_suggestions', ['id' => $suggestion->id, 'status' => 'pending']);
     }
 
-    public function test_an_admin_can_keep_a_suggestion_and_it_promotes_a_pending_approval_design(): void
+    public function test_an_admin_can_keep_a_suggestion_without_creating_a_design(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
         $suggestion = DesignSuggestion::create(['batch_date' => now(), 'motif' => 'hamsa', 'status' => 'pending']);
 
         $response = $this->actingAs($admin)->postJson("/api/design-suggestions/{$suggestion->id}/keep");
+
+        $response->assertOk()->assertJsonPath('data.status', 'kept');
+        $this->assertSame(0, \App\Models\Design::query()->count());
+
+        $suggestion->refresh();
+        $this->assertSame('kept', $suggestion->status);
+        $this->assertNull($suggestion->promoted_design_id);
+    }
+
+    public function test_an_admin_can_publish_a_kept_suggestion_and_it_promotes_a_pending_approval_design(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $suggestion = DesignSuggestion::create(['batch_date' => now(), 'motif' => 'hamsa', 'status' => 'kept']);
+
+        $response = $this->actingAs($admin)->postJson("/api/design-suggestions/{$suggestion->id}/publish");
 
         // 201, not 200: DesignResource wraps a Design row that
         // wasRecentlyCreated, and Laravel's ResourceResponse automatically
@@ -90,9 +105,75 @@ class DesignSuggestionTest extends TestCase
         ]);
 
         $suggestion->refresh();
-        $this->assertSame('kept', $suggestion->status);
+        $this->assertSame('published', $suggestion->status);
         $this->assertNotNull($suggestion->promoted_design_id);
         $this->assertDatabaseHas('designs', ['id' => $suggestion->promoted_design_id]);
+    }
+
+    public function test_publish_rejects_a_suggestion_that_is_not_kept(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $suggestion = DesignSuggestion::create(['batch_date' => now(), 'motif' => 'chai', 'status' => 'pending']);
+
+        $this->actingAs($admin)->postJson("/api/design-suggestions/{$suggestion->id}/publish")->assertStatus(422);
+        $this->assertDatabaseHas('design_suggestions', ['id' => $suggestion->id, 'status' => 'pending']);
+    }
+
+    public function test_guests_and_customers_cannot_publish_a_suggestion(): void
+    {
+        $customer = User::factory()->create(['role' => 'customer']);
+        $suggestion = DesignSuggestion::create(['batch_date' => now(), 'motif' => 'chai', 'status' => 'kept']);
+
+        $this->postJson("/api/design-suggestions/{$suggestion->id}/publish")->assertUnauthorized();
+        $this->actingAs($customer)->postJson("/api/design-suggestions/{$suggestion->id}/publish")->assertForbidden();
+
+        $this->assertDatabaseHas('design_suggestions', ['id' => $suggestion->id, 'status' => 'kept']);
+    }
+
+    public function test_an_admin_can_publish_all_kept_suggestions_in_the_latest_batch(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        DesignSuggestion::create(['batch_date' => '2026-07-01', 'motif' => 'star_of_david', 'status' => 'kept']);
+        $keptOne = DesignSuggestion::create(['batch_date' => '2026-07-03', 'motif' => 'chai', 'status' => 'kept']);
+        $keptTwo = DesignSuggestion::create(['batch_date' => '2026-07-03', 'motif' => 'hamsa', 'status' => 'kept']);
+        $pending = DesignSuggestion::create(['batch_date' => '2026-07-03', 'motif' => 'menorah', 'status' => 'pending']);
+
+        $response = $this->actingAs($admin)->postJson('/api/design-suggestions/publish-all');
+
+        $response->assertOk()->assertJsonCount(2, 'data');
+        $this->assertSame(2, \App\Models\Design::query()->count());
+
+        $keptOne->refresh();
+        $keptTwo->refresh();
+        $pending->refresh();
+        $this->assertSame('published', $keptOne->status);
+        $this->assertSame('published', $keptTwo->status);
+        $this->assertSame('pending', $pending->status);
+        $this->assertNotNull($keptOne->promoted_design_id);
+        $this->assertNotNull($keptTwo->promoted_design_id);
+    }
+
+    public function test_publish_all_is_a_no_op_when_there_are_no_kept_suggestions(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        DesignSuggestion::create(['batch_date' => now(), 'motif' => 'chai', 'status' => 'pending']);
+
+        $response = $this->actingAs($admin)->postJson('/api/design-suggestions/publish-all');
+
+        $response->assertOk()->assertJsonCount(0, 'data');
+        $this->assertSame(0, \App\Models\Design::query()->count());
+    }
+
+    public function test_guests_and_customers_cannot_publish_all(): void
+    {
+        $customer = User::factory()->create(['role' => 'customer']);
+        DesignSuggestion::create(['batch_date' => now(), 'motif' => 'chai', 'status' => 'kept']);
+
+        $this->postJson('/api/design-suggestions/publish-all')->assertUnauthorized();
+        $this->actingAs($customer)->postJson('/api/design-suggestions/publish-all')->assertForbidden();
+
+        $this->assertSame(0, \App\Models\Design::query()->count());
     }
 
     public function test_an_admin_can_discard_a_suggestion(): void
