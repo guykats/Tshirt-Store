@@ -4,11 +4,12 @@ import GarmentMockup from './GarmentMockup';
 
 // Renders a product's gallery of `product_images` rows (see App\Models\ProductImage)
 // as a large main visual plus a thumbnail strip, replacing what used to be a single,
-// un-clickable <GarmentMockup> fed only by the linked Design's motif. Every "image" in
-// this catalog — gallery images included — is really a DesignArt motif keyword composited
-// onto a GarmentMockup silhouette (see GarmentMockup.jsx's own comment on why there's no
-// real product photography yet), not a photograph, so each thumbnail is a small
-// GarmentMockup of its own rather than an <img>.
+// un-clickable <GarmentMockup> fed only by the linked Design's motif. Each `url` value is
+// either a DesignArt motif keyword composited onto a GarmentMockup silhouette, or a real
+// photo URL — GarmentMockup itself tells the two apart and renders a real <img> for the
+// latter (see GarmentMockup.jsx's `isPhotographicMotif`), so this component doesn't need
+// to know which kind of image any given row is; each thumbnail is just a small
+// GarmentMockup of its own either way.
 export default function ProductGallery({ product, images, color, className = '' }) {
     const { t } = useTranslation();
 

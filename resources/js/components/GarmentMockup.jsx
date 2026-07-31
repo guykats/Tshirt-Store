@@ -2,14 +2,17 @@ import { useId } from 'react';
 import DesignArt from './DesignArt';
 import { normalizeColorKey, SWATCH_HEX } from './ColorSwatch';
 
-// Flat-lay garment mockups, built entirely as SVG + CSS gradients/filters — no external
-// photography or image-generation tooling was available for this task (see the
-// "Real garment mockup imagery" task notes). This renders a real garment silhouette
-// (crew-neck tee or hoodie, chosen by product name) with fabric shading, a subtle woven
-// grain, collar/hood/rib detail, and the brand's existing DesignArt line-art mark
-// composited on the chest as the print — a materially higher-fidelity stand-in for a
-// product photo than a bare motif icon floating in a colored square, while staying
-// inside the same restrained parchment/ink/brass, single-stroke design language.
+// Flat-lay garment mockups, built entirely as SVG + CSS gradients/filters, for any
+// `motif` that isn't a real photo URL (see `isPhotographicMotif` below) — originally
+// built because no external photography or image-generation tooling was available for
+// this task (see the "Real garment mockup imagery" task notes). For a motif keyword this
+// renders a real garment silhouette (crew-neck tee or hoodie, chosen by product name)
+// with fabric shading, a subtle woven grain, collar/hood/rib detail, and the brand's
+// existing DesignArt line-art mark composited on the chest as the print — a materially
+// higher-fidelity stand-in for a product photo than a bare motif icon floating in a
+// colored square, while staying inside the same restrained parchment/ink/brass,
+// single-stroke design language. Once an admin points `motif` at a real photo URL
+// instead, this renders that photo directly — see `isPhotographicMotif`.
 
 const PALETTES = {
     Black: {
@@ -110,8 +113,33 @@ const HOODIE_BODY =
 const HOOD_SHAPE =
     'M96,58 C100,36 120,20 150,20 C180,20 200,36 204,58 C196,50 178,44 150,44 C122,44 104,50 96,58 Z';
 
+// `motif` doubles as two very different kinds of value depending on what an admin typed
+// into the (already-existing) product image / design mockup URL field: a DesignArt motif
+// keyword (e.g. 'star-of-david', 'menorah' — see DesignArt.jsx's REGISTRY), or a real,
+// externally-hosted photo URL. Anything that looks like a URL or an absolute/relative
+// path is treated as a real photo; everything else (including typos or not-yet-supported
+// keywords) is left to DesignArt's own REGISTRY lookup, which already falls back to the
+// Star-of-David SVG for anything it doesn't recognize.
+export function isPhotographicMotif(motif) {
+    return typeof motif === 'string' && /^(https?:\/\/|\/)/i.test(motif);
+}
+
 export default function GarmentMockup({ motif, product, color, className = '', label }) {
     const rawId = useId().replace(/[:]/g, '');
+
+    // A real photo URL replaces the entire synthetic garment illustration — there's no
+    // "print this photo onto an SVG chest" step, the photo already shows the actual
+    // product. Sized/cropped the same aspect-square way the SVG mockup is (callers
+    // already pass an `aspect-square` className), just with `object-cover` doing the
+    // cropping instead of a `viewBox`.
+    if (isPhotographicMotif(motif)) {
+        return (
+            <div className={`relative flex items-center justify-center overflow-hidden bg-parchment-dim ${className}`}>
+                <img src={motif} alt={label || product?.name || ''} className="h-full w-full object-cover" />
+            </div>
+        );
+    }
+
     const garment = garmentTypeFromProduct(product);
     const isHoodie = garment === 'hoodie';
     const resolvedColor = color || product?.variants?.[0]?.color || 'Sand';
