@@ -89,6 +89,34 @@ class DatabaseSeeder extends Seeder
         ],
     ];
 
+    /**
+     * Real, license-appropriate stock photography, one per garment silhouette (not per
+     * product/color) — reused across every product that shares that silhouette, the same
+     * way the SVG GarmentMockup already reuses one generic tee/hoodie shape for every
+     * design. Both are hosted on Wikimedia Commons (a stable, freely-licensed CDN safe to
+     * hotlink) and were picked because they're plain/unbranded garments that plausibly
+     * match a real color option every product in $catalog actually has ('Black'):
+     * - tee: "Camiseta-negra.jpg" by Commons user Camisetas, CC BY 3.0
+     *   (https://commons.wikimedia.org/wiki/File:Camiseta-negra.jpg) — attribution
+     *   required: "Camiseta-negra" by Camisetas / camisetas.info, CC BY 3.0.
+     * - hoodie: "Kapuzensweater.jpg" by German Wikipedia user Mikezaubzer, released into
+     *   the public domain (https://commons.wikimedia.org/wiki/File:Kapuzensweater.jpg) —
+     *   no attribution required.
+     * Sand-color and additional angle photography isn't sourced yet — see the
+     * "Source and seed real photographic imagery for the existing catalog" task's
+     * completion notes on the project board for the follow-up.
+     */
+    protected array $photoLibrary = [
+        'tee' => [
+            'url' => 'https://upload.wikimedia.org/wikipedia/commons/8/81/Camiseta-negra.jpg',
+            'alt_text' => 'Plain black crew-neck cotton T-shirt, folded flat against a white background.',
+        ],
+        'hoodie' => [
+            'url' => 'https://upload.wikimedia.org/wikipedia/commons/8/83/Kapuzensweater.jpg',
+            'alt_text' => 'Plain black pullover hoodie hanging against a white background.',
+        ],
+    ];
+
     public function run(): void
     {
         $admin = User::factory()->create([
@@ -138,6 +166,24 @@ class DatabaseSeeder extends Seeder
                     $firstVariant ??= $variant;
                 }
             }
+
+            // Real photography as the primary gallery image (position 0, so it's what
+            // Catalog cards and the ProductDetail hero render), with the brand's own
+            // SVG line-art motif kept right behind it (position 1) as a gallery
+            // thumbnail — additive, not a replacement of the existing DesignArt/
+            // GarmentMockup rendering. See $photoLibrary's doc comment for sourcing/
+            // license details.
+            $photo = $this->photoLibrary[$item['type']];
+            $product->images()->create([
+                'url' => $photo['url'],
+                'alt_text' => "{$photo['alt_text']} ({$item['name']})",
+                'position' => 0,
+            ]);
+            $product->images()->create([
+                'url' => $item['motif'],
+                'alt_text' => "{$item['title']} — the brand's single-line SVG art mark for this design.",
+                'position' => 1,
+            ]);
         }
 
         // Two more designs still pending approval, to demo the human-in-the-loop dashboard.

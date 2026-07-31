@@ -312,7 +312,8 @@ export default function Catalog() {
                             <div key={product.id} className="group relative">
                                 <Link to={`/products/${product.slug}`} className="block">
                                     <GarmentMockup
-                                        motif={product.design?.mockup_url}
+                                        motif={product.images?.[0]?.url || product.design?.mockup_url}
+                                        label={product.images?.[0]?.alt_text}
                                         product={product}
                                         className="aspect-square rounded transition-colors group-hover:bg-line"
                                     />
