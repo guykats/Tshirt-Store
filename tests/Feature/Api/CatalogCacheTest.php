@@ -62,6 +62,12 @@ class CatalogCacheTest extends TestCase
 
     public function test_updating_a_product_invalidates_the_catalog_listing_cache(): void
     {
+        // A data migration seeds real active products into every fresh database (see
+        // database/migrations/2026_08_07_181000_seed_catalog_depth_new_products.php) —
+        // clear them first so `data.0` deterministically points at the product this
+        // test actually cares about.
+        Product::query()->delete();
+
         $product = $this->makeProduct(['name' => 'Original Name']);
 
         $this->getJson('/api/products')

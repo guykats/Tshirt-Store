@@ -186,6 +186,13 @@ class AdminProductManagementTest extends TestCase
      */
     public function test_the_51st_product_is_reachable_via_page_two(): void
     {
+        // A data migration seeds real active products into every fresh database (see
+        // database/migrations/2026_08_07_181000_seed_catalog_depth_new_products.php) —
+        // clear them first so this test's exact "51 products" totals/ordering aren't
+        // thrown off, the same convention CLAUDE.md documents for project_tasks/epics
+        // row-count assertions.
+        Product::query()->delete();
+
         $admin = User::factory()->create(['role' => 'admin']);
 
         for ($i = 1; $i <= 50; $i++) {
@@ -226,6 +233,9 @@ class AdminProductManagementTest extends TestCase
 
     public function test_product_listing_behavior_for_50_or_fewer_products_is_unchanged(): void
     {
+        // See the comment on test_the_51st_product_is_reachable_via_page_two above.
+        Product::query()->delete();
+
         $admin = User::factory()->create(['role' => 'admin']);
         $this->makeProduct(['name' => 'Only Active One', 'status' => 'active']);
         $this->makeProduct(['name' => 'Only Draft One', 'status' => 'draft']);

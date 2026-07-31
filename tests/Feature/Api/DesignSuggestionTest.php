@@ -2,7 +2,9 @@
 
 namespace Tests\Feature\Api;
 
+use App\Models\Design;
 use App\Models\DesignSuggestion;
+use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -10,6 +12,21 @@ use Tests\TestCase;
 class DesignSuggestionTest extends TestCase
 {
     use RefreshDatabase;
+
+    /**
+     * A data migration seeds real approved designs (each referenced by a product) into
+     * every fresh database (see
+     * database/migrations/2026_08_07_181000_seed_catalog_depth_new_products.php) —
+     * clear the products first (designs.id is a restrict-on-delete FK target from
+     * products.design_id) and then the designs themselves, so tests asserting an exact
+     * Design::count() aren't thrown off — the same convention CLAUDE.md documents for
+     * project_tasks/epics row-count assertions.
+     */
+    protected function clearSeededCatalog(): void
+    {
+        Product::query()->delete();
+        Design::query()->delete();
+    }
 
     public function test_guests_cannot_view_the_suggestions_index(): void
     {
@@ -75,6 +92,8 @@ class DesignSuggestionTest extends TestCase
 
     public function test_an_admin_can_keep_a_suggestion_without_creating_a_design(): void
     {
+        $this->clearSeededCatalog();
+
         $admin = User::factory()->create(['role' => 'admin']);
         $suggestion = DesignSuggestion::create(['batch_date' => now(), 'motif' => 'hamsa', 'status' => 'pending']);
 
@@ -132,6 +151,8 @@ class DesignSuggestionTest extends TestCase
 
     public function test_an_admin_can_publish_all_kept_suggestions_in_the_latest_batch(): void
     {
+        $this->clearSeededCatalog();
+
         $admin = User::factory()->create(['role' => 'admin']);
 
         DesignSuggestion::create(['batch_date' => '2026-07-01', 'motif' => 'star_of_david', 'status' => 'kept']);
@@ -156,6 +177,8 @@ class DesignSuggestionTest extends TestCase
 
     public function test_publish_all_is_a_no_op_when_there_are_no_kept_suggestions(): void
     {
+        $this->clearSeededCatalog();
+
         $admin = User::factory()->create(['role' => 'admin']);
         DesignSuggestion::create(['batch_date' => now(), 'motif' => 'chai', 'status' => 'pending']);
 
@@ -167,6 +190,8 @@ class DesignSuggestionTest extends TestCase
 
     public function test_guests_and_customers_cannot_publish_all(): void
     {
+        $this->clearSeededCatalog();
+
         $customer = User::factory()->create(['role' => 'customer']);
         DesignSuggestion::create(['batch_date' => now(), 'motif' => 'chai', 'status' => 'kept']);
 

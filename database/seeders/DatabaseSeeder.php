@@ -87,6 +87,76 @@ class DatabaseSeeder extends Seeder
             'price' => 32.00,
             'type' => 'tee',
         ],
+        // Products 8-14: same HebrewMark-typography approach as chai/shalom/aleph above —
+        // no new illustration, just new, meaningful, correctly-spelled Hebrew words that
+        // fit the collection's restrained voice (see DesignArt.jsx's REGISTRY for the
+        // matching motif entries). `colors` is an optional per-product override of the
+        // default Black/Sand (tee) or Black (hoodie) colorway below.
+        [
+            'motif' => 'emunah',
+            'title' => 'Emunah Mark',
+            'name' => 'Emunah Mark Tee',
+            'slug' => 'emunah-mark-tee',
+            'description' => 'אמונה — "faith." Five letters, one steady line, for a conviction that doesn\'t need to explain itself.',
+            'price' => 32.00,
+            'type' => 'tee',
+            'colors' => ['Black', 'Sand', 'Charcoal'],
+        ],
+        [
+            'motif' => 'bracha',
+            'title' => 'Bracha Mark',
+            'name' => 'Bracha Mark Tee',
+            'slug' => 'bracha-mark-tee',
+            'description' => 'ברכה — "blessing." A word reached for constantly — over bread, over wine, over each other — printed here as quietly as it\'s meant.',
+            'price' => 32.00,
+            'type' => 'tee',
+        ],
+        [
+            'motif' => 'tikvah',
+            'title' => 'Tikvah Script',
+            'name' => 'Tikvah Script Hoodie',
+            'slug' => 'tikvah-script-hoodie',
+            'description' => 'תקווה — "hope." The word that gave Israel\'s national anthem its name, set large and calm across heavyweight fleece.',
+            'price' => 68.00,
+            'type' => 'hoodie',
+        ],
+        [
+            'motif' => 'ahava',
+            'title' => 'Ahava Mark',
+            'name' => 'Ahava Mark Tee',
+            'slug' => 'ahava-mark-tee',
+            'description' => 'אהבה — "love." Four letters that carry the weight without needing any decoration.',
+            'price' => 34.00,
+            'type' => 'tee',
+            'colors' => ['Black', 'Sand', 'Charcoal'],
+        ],
+        [
+            'motif' => 'simcha',
+            'title' => 'Simcha Mark',
+            'name' => 'Simcha Mark Tee',
+            'slug' => 'simcha-mark-tee',
+            'description' => 'שמחה — "joy." The word Hebrew reaches for at every celebration, kept as understated as the rest of the collection.',
+            'price' => 34.00,
+            'type' => 'tee',
+        ],
+        [
+            'motif' => 'emet',
+            'title' => 'Emet Mark',
+            'name' => 'Emet Mark Tee',
+            'slug' => 'emet-mark-tee',
+            'description' => 'אמת — "truth." Three letters at the center of an old story about what gives something life — here, simply a mark worth wearing.',
+            'price' => 32.00,
+            'type' => 'tee',
+        ],
+        [
+            'motif' => 'or',
+            'title' => 'Or Mark',
+            'name' => 'Or Mark Hoodie',
+            'slug' => 'or-mark-hoodie',
+            'description' => 'אור — "light." The oldest word for the oldest idea, set in a serif built to last.',
+            'price' => 68.00,
+            'type' => 'hoodie',
+        ],
     ];
 
     /**
@@ -135,6 +205,17 @@ class DatabaseSeeder extends Seeder
         $firstVariant = null;
 
         foreach ($this->catalog as $i => $item) {
+            // The 7 catalog-depth products (8-14) are also created by a real data
+            // migration (see database/migrations/2026_08_07_181000_seed_catalog_depth_new_products.php)
+            // so they reach production, which never re-runs this seeder — see CLAUDE.md.
+            // On `migrate:fresh --seed`, that migration already ran and inserted them
+            // before we get here, so skip re-creating (and colliding on slug/sku with)
+            // whatever's already in place; only the original 7 (created by this seeder
+            // alone, not by any migration) actually get built in this loop.
+            if (Product::where('slug', $item['slug'])->exists()) {
+                continue;
+            }
+
             $design = Design::create([
                 'title' => $item['title'],
                 'category' => 'cultural-signal',
@@ -154,7 +235,7 @@ class DatabaseSeeder extends Seeder
                 'status' => 'active',
             ]);
 
-            $colors = $item['type'] === 'hoodie' ? ['Black'] : ['Black', 'Sand'];
+            $colors = $item['colors'] ?? ($item['type'] === 'hoodie' ? ['Black'] : ['Black', 'Sand']);
             foreach ($colors as $color) {
                 foreach (['S', 'M', 'L', 'XL'] as $size) {
                     $variant = $product->variants()->create([

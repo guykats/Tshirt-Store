@@ -3,6 +3,7 @@
 namespace Tests\Feature\Api;
 
 use App\Models\Design;
+use App\Models\Product;
 use App\Models\SystemEvent;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -21,6 +22,16 @@ class DesignApprovalTest extends TestCase
 
     public function test_admins_can_view_the_designs_queue(): void
     {
+        // A data migration seeds real approved designs (each referenced by a product) into
+        // every fresh database (see
+        // database/migrations/2026_08_07_181000_seed_catalog_depth_new_products.php) —
+        // clear the products first (designs.id is a restrict-on-delete FK target from
+        // products.design_id) and then the designs themselves, so this unfiltered
+        // listing's exact count isn't thrown off — the same convention CLAUDE.md
+        // documents for project_tasks/epics row-count assertions.
+        Product::query()->delete();
+        Design::query()->delete();
+
         $admin = User::factory()->create(['role' => 'admin']);
         Design::create(['title' => 'Pending Design', 'status' => 'pending_approval']);
 

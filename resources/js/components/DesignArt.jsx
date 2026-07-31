@@ -163,6 +163,17 @@ const REGISTRY = {
     aleph: () => <HebrewMark text="א" fontSize={90} />,
     'olive-branch': OliveBranch,
     'hebrew-script': HebrewScript,
+    // Same low-risk approach as chai/shalom/aleph above: real, correctly-spelled Hebrew
+    // words set in the collection's serif rather than bespoke illustration, each meaning
+    // verified before use (see DatabaseSeeder.php's $catalog for the matching product
+    // copy that spells out the translation).
+    emunah: () => <HebrewMark text="אמונה" fontSize={40} />, // faith
+    bracha: () => <HebrewMark text="ברכה" fontSize={48} />, // blessing
+    tikvah: () => <HebrewMark text="תקווה" fontSize={40} />, // hope
+    ahava: () => <HebrewMark text="אהבה" fontSize={48} />, // love
+    simcha: () => <HebrewMark text="שמחה" fontSize={44} />, // joy
+    emet: () => <HebrewMark text="אמת" fontSize={64} />, // truth
+    or: () => <HebrewMark text="אור" fontSize={64} />, // light
 };
 
 export default function DesignArt({ motif, className = '', label, tone = 'light', background = true }) {

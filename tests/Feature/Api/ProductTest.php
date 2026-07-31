@@ -166,6 +166,12 @@ class ProductTest extends TestCase
 
     public function test_the_catalog_exposes_pagination_metadata_the_frontend_depends_on(): void
     {
+        // A data migration seeds real active products into every fresh database (see
+        // database/migrations/2026_08_07_181000_seed_catalog_depth_new_products.php) —
+        // clear them first so this test's exact totals aren't thrown off, the same
+        // convention CLAUDE.md documents for project_tasks/epics row-count assertions.
+        Product::query()->delete();
+
         foreach (range(1, 25) as $i) {
             $this->makeProduct(['name' => "Product {$i}"]);
         }
@@ -220,6 +226,9 @@ class ProductTest extends TestCase
 
     public function test_sort_by_price_ascending_reorders_results(): void
     {
+        // See the comment on test_the_catalog_exposes_pagination_metadata_the_frontend_depends_on above.
+        Product::query()->delete();
+
         $this->makeProduct(['name' => 'Expensive Tee', 'base_price' => 90.00]);
         $this->makeProduct(['name' => 'Cheap Tee', 'base_price' => 10.00]);
         $this->makeProduct(['name' => 'Mid Tee', 'base_price' => 50.00]);
@@ -233,6 +242,9 @@ class ProductTest extends TestCase
 
     public function test_sort_by_price_descending_reorders_results(): void
     {
+        // See the comment on test_the_catalog_exposes_pagination_metadata_the_frontend_depends_on above.
+        Product::query()->delete();
+
         $this->makeProduct(['name' => 'Expensive Tee', 'base_price' => 90.00]);
         $this->makeProduct(['name' => 'Cheap Tee', 'base_price' => 10.00]);
         $this->makeProduct(['name' => 'Mid Tee', 'base_price' => 50.00]);
