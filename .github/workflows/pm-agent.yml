@@ -175,12 +175,21 @@ jobs:
                approved epic, which are pre-approved per step 3 below — a `todo` task
                with `approved_for_dev = 0` is NOT yet cleared to build; never start on
                one, no matter how obviously good it looks. Only move on to a SECOND approved
-               task after the first is fully shipped (verified, committed, pushed,
-               marked `done`) AND you're confident you have enough turns left to finish
-               the next one just as completely — a full cycle (implement, run the whole
-               verification bar, screenshot if there's a UI, commit, write and push the
-               completion migration) reliably costs several dozen turns. If you're not
-               sure you can finish a next task cleanly, stop here instead of starting it.
+               task after the first reaches a real, complete resolution — either shipped
+               (verified, committed, pushed, marked `done`) or correctly `blocked` with a
+               clear `blocked_reason` per step 6 — AND you're confident you have enough
+               turns left to finish the next one just as completely. Blocking a task you
+               genuinely cannot do is a fast, complete resolution, not a half-finished
+               attempt — it does NOT count as "starting work you're not sure you can
+               finish," so don't let this caution talk you into ending the run empty-handed
+               after a quick, correct block when turn budget and an independent approved
+               task (one that doesn't depend on the blocked one) are both still available.
+               A full implement-and-ship cycle reliably costs several dozen turns; a
+               correct block costs far fewer. What this caution actually guards against is
+               starting REAL IMPLEMENTATION on a second task without finishing it, or
+               burning most of the run "investigating" without ever landing on shipped-or-
+               blocked for anything — not triaging one blocked task and then doing real,
+               complete work on the next one.
             3. If an epic is `approved` with zero linked `project_tasks`, break it into
                concrete tasks now (set `epic_id` on each) — that's the PM's job. Set
                `approved_for_dev = 1` on each of these tasks — by explicit owner
@@ -215,6 +224,11 @@ jobs:
                owner has no way to see or act on. If the task turns out to need a tool or
                capability this run doesn't have (see CLAUDE.md's "no WebFetch" gotcha for
                the exact precedent), `blocked` with that reason is correct, not a stall.
+               Then check the board again: if turn budget allows, pick up the next
+               highest-value approved task that doesn't depend on the one you just
+               blocked and actually ship it, per step 2's carve-out — don't let one
+               correctly-blocked task end the run empty-handed when independent approved
+               work and turns are both still available.
             7. If you discover a durable, repeatable gap this run — not just "this one
                task turned out hard," but something that would trip up a *future* run the
                same way (a missing tool capability, a false assumption baked into
