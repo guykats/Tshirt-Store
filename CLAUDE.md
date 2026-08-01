@@ -75,6 +75,26 @@ entirely) rather than removing the cap if it needs tuning.
   can finish (implement + full verification bar + commit + push + mark done)
   is the failure mode to avoid, not idling. If stuck runs recur, that
   discipline — not just the numeric cap — is the first thing to revisit.
+- **When a run discovers a durable, repeatable gap, write the lesson down —
+  don't just route around it once.** A missing tool capability, a false
+  assumption baked into this file/a skill/an epic, a process step that
+  doesn't actually work as documented — if it would bite a *future* run the
+  same way, silently working around it (or worse, quietly giving up with
+  nothing shippable) throws the lesson away. Add it to this file — the
+  "Hard-won conventions and gotchas" section for a concrete gotcha, this
+  section for a process-level one — as part of the same run, committed and
+  pushed, the same way the turn-budget lesson above was captured after runs
+  #129/#130. This applies to interactive sessions too, not just the cron:
+  first concrete case, added below — the PM Agent's own `--allowedTools`
+  has no `WebFetch`, so a task/epic that assumes it can fetch a real
+  external file (an image, a dataset, anything not reachable by a Bash
+  `curl` to a URL already pinned in the task itself) will silently stall
+  with nothing pushed, not even a `blocked_reason`, unless the task is
+  scoped to only need tools it actually has. A task genuinely blocked for a
+  structural reason like this must still get `status = 'blocked'` with a
+  clear `blocked_reason` (per the ship-project-task skill) — silently
+  spending turns and reporting `success` with zero commits is never
+  acceptable, run it as a failure to surface, not a quiet no-op.
 
 ## Standing operating agreement with the project owner
 
@@ -197,6 +217,17 @@ other command-execution path in production. Concretely this means:
   (`task-screenshots/<name>.(png|jpe?g)`, no `..`).
 - **Bilingual by default:** every user-facing string needs both an English and
   a real (not literal-translation) Hebrew entry in `resources/js/i18n/index.js`.
+- **The PM Agent has no `WebFetch`** — `pm-agent.yml`'s `--allowedTools` is
+  `Read,Write,Edit,Bash,Grep,Glob,WebSearch` only. `WebSearch` returns search
+  results, it cannot download a file. Run #163 (the "Photographic Product
+  Imagery Layer" task, sourcing real placeholder photography) spent 17 turns
+  and ~$3 and pushed nothing — not even a `blocked` mark — almost certainly
+  because the task assumed it could fetch a real external image with no
+  concrete, Bash-`curl`-reachable URL pinned in the task description. When
+  writing or breaking down a task/epic that needs an external asset, either
+  pin an exact fetchable URL in the task itself, or scope it as something a
+  human sources and hands off — don't leave "go find a real photo" open-ended
+  for an agent that structurally cannot browse or download one.
 - **Accessibility is not optional:** paired `<label htmlFor>`/`id`,
   `role="alert"` on error text, `aria-label`/`role="img"` vs `aria-hidden` on
   meaningful vs. decorative SVG (see `DesignArt.jsx`'s `label` prop).

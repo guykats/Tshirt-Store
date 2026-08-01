@@ -209,7 +209,20 @@ jobs:
                block on them.
             6. If something genuinely needs a human decision (ambiguous priority,
                unusually risky, or a task with no safe path forward), mark it `blocked`
-               with a clear `blocked_reason` on the board instead of guessing.
+               with a clear `blocked_reason` on the board instead of guessing. Never spend
+               real turns investigating something and then end the run with nothing
+               pushed and no `blocked_reason` explaining why — that's a silent no-op the
+               owner has no way to see or act on. If the task turns out to need a tool or
+               capability this run doesn't have (see CLAUDE.md's "no WebFetch" gotcha for
+               the exact precedent), `blocked` with that reason is correct, not a stall.
+            7. If you discover a durable, repeatable gap this run — not just "this one
+               task turned out hard," but something that would trip up a *future* run the
+               same way (a missing tool capability, a false assumption baked into
+               CLAUDE.md/a skill/an epic, a process step that doesn't work as documented)
+               — write it into CLAUDE.md as part of this same run, committed and pushed,
+               the same way the turn-budget lesson from runs #129/#130 was captured there.
+               Don't just route around it silently; future runs (and interactive sessions)
+               read CLAUDE.md first and have no other way to learn what this run learned.
 
             Turn-budget discipline matters more than throughput: a run that ships ONE
             task completely (implemented, fully verified, committed, pushed, marked
