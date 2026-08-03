@@ -255,6 +255,22 @@ other command-execution path in production. Concretely this means:
 - **CI builds the frontend before testing** (`.github/workflows/tests.yml`
   runs `npm ci && npm run build` before `php artisan test`) because the root
   route needs a real Vite manifest to render at all.
+- **Sessions authenticated via a GitHub App installation token (visible as
+  `x-access-token:ghs_...` in `git remote -v`) cannot push changes to
+  `.github/workflows/*.yml`** — GitHub rejects it server-side with
+  `refusing to allow a GitHub App to create or update workflow ... without
+  workflows permission`, even though the same push succeeds for other files
+  in the same commit. Hit during an 2026-08-03 unattended run trying to fix
+  a stale "30-minute cron" comment inside `pm-agent.yml`'s own embedded
+  prompt: `CLAUDE.md` pushed fine, the workflow-file edit had to be reverted
+  into a separate commit. This is specific to that installation-token auth
+  path, not a property of `pm-agent.yml`'s own run (which authenticates via
+  `secrets.GITHUB_TOKEN` inside a real Actions job and *has* successfully
+  edited itself before — see commits `8dde750`/`692cfd3`). If a workflow-file
+  edit is genuinely needed from a session using this token type, land the
+  content change in a non-workflow file (or describe it in a commit message
+  / task note) for the owner or an in-Actions run to apply instead of
+  retrying the same push.
 
 ## Verification bar before marking anything done
 
