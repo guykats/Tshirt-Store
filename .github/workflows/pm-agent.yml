@@ -140,7 +140,7 @@ jobs:
             --max-turns 150
             --allowedTools "Read,Write,Edit,Bash,Grep,Glob,WebSearch"
           prompt: |
-            You are running unattended as this project's PM, triggered on a 30-minute
+            You are running unattended as this project's PM, triggered on a 15-minute
             schedule with no human present. Read CLAUDE.md first and follow it exactly —
             the standing operating agreement, the hard-won conventions, and the
             verification bar all apply to this run exactly as they would to an

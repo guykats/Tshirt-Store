@@ -52,8 +52,10 @@ through git" below.
 ### Autonomous runs
 
 `.github/workflows/pm-agent.yml` runs this exact PM workflow unattended on a
-30-minute cron, independent of any interactive session or whether the
-owner's machine is on — it reads this file, checks the board, ships or
+15-minute cron (`cron: '*/15 * * * *'` — shortened from an original 30
+minutes because runs finish in ~3-13 min, well under the old cadence),
+independent of any interactive session or whether the owner's machine is on
+— it reads this file, checks the board, ships or
 seeds work, and pushes to `main` on its own. If you're starting an
 interactive session, `git log` / the board may already reflect work you
 didn't do — that's expected, not a conflict to resolve. It authenticates
