@@ -189,6 +189,25 @@ other command-execution path in production. Concretely this means:
 - **`RefreshDatabase` re-runs every historical migration**, including data
   backfills into `project_tasks`/`epics`. A test asserting an exact row count
   on either table must clear it first (`ProjectTask::query()->delete();`).
+- **New board-seeding migrations must be dated after the newest existing
+  migration filename, not after today's real-world date.** A one-time
+  historical migration, `2026_08_04_100000_reset_board_clear_non_done_tasks_and_epics.php`,
+  does an owner-requested `DB::table('project_tasks')->where('status', '!=',
+  'done')->delete()` + `DB::table('epics')->delete()`. That's correct as a
+  one-off past event, but `migrate:fresh` replays full migration history in
+  filename order every time — so any new seed migration whose timestamp
+  sorts *before* that reset (e.g. because it was dated off the real
+  calendar date instead of the repo's already-far-future migration
+  timeline) gets its rows silently deleted by the replay before you ever
+  see them. This bit a live run: a migration dated `2026_08_03_270000` ran
+  successfully (recorded in the `migrations` table, no error) but its 3
+  inserted rows were gone after `migrate:fresh --seed`, because the repo's
+  newest migration at the time was already dated `2026_08_15_100000`.
+  Always check `ls database/migrations | tail -5` (or equivalent) and pick
+  a timestamp after that, not after `date`'s real output, before writing a
+  new seed/backfill migration — and always re-query the actual inserted
+  rows by title after `migrate:fresh --seed`, not just a clean migration
+  run, before trusting a seed migration worked.
 - **Commit-sha discipline:** when a migration references a commit hash as
   evidence, get it from `git rev-parse HEAD` and verify the length is exactly
   40 (`python3 -c "print(len(sha))"`) — don't eyeball it. The usual sequence
