@@ -296,22 +296,33 @@ other command-execution path in production. Concretely this means:
 - **CI builds the frontend before testing** (`.github/workflows/tests.yml`
   runs `npm ci && npm run build` before `php artisan test`) because the root
   route needs a real Vite manifest to render at all.
-- **Sessions authenticated via a GitHub App installation token (visible as
-  `x-access-token:ghs_...` in `git remote -v`) cannot push changes to
-  `.github/workflows/*.yml`** — GitHub rejects it server-side with
-  `refusing to allow a GitHub App to create or update workflow ... without
-  workflows permission`, even though the same push succeeds for other files
-  in the same commit. Hit during an 2026-08-03 unattended run trying to fix
-  a stale "30-minute cron" comment inside `pm-agent.yml`'s own embedded
-  prompt: `CLAUDE.md` pushed fine, the workflow-file edit had to be reverted
-  into a separate commit. This is specific to that installation-token auth
-  path, not a property of `pm-agent.yml`'s own run (which authenticates via
-  `secrets.GITHUB_TOKEN` inside a real Actions job and *has* successfully
-  edited itself before — see commits `8dde750`/`692cfd3`). If a workflow-file
-  edit is genuinely needed from a session using this token type, land the
+- **No session — interactive or the `pm-agent.yml` cron itself — can push
+  changes to `.github/workflows/*.yml` under the current setup.** GitHub
+  rejects the push server-side with `refusing to allow a GitHub App to
+  create or update workflow ... without workflows permission`, even though
+  the same push succeeds for other files in the same commit. First hit
+  2026-08-03 from an interactive session using a GitHub App installation
+  token (`x-access-token:ghs_...` in `git remote -v`) trying to fix a stale
+  "30-minute cron" comment inside `pm-agent.yml`'s own embedded prompt:
+  `CLAUDE.md` pushed fine, the workflow-file edit had to be reverted into a
+  separate commit. That entry used to claim this was specific to
+  interactive installation-token auth and that `pm-agent.yml`'s own run
+  (authenticating via `secrets.GITHUB_TOKEN` inside a real Actions job) was
+  exempt, citing commits `8dde750`/`692cfd3` as precedent — a live
+  2026-08-04 test from inside an actual `pm-agent.yml` run (confirmed via
+  `GITHUB_ACTIONS=true` and a `ghs_...` token) disproved that: a trivial,
+  fully-reverted probe push to `pm-agent.yml` on a throwaway branch got the
+  exact same rejection. The real cause is simpler and applies to both auth
+  paths identically: `pm-agent.yml`'s own `permissions:` block only grants
+  `contents: write` and `id-token: write` — no `workflows: write` — so the
+  `GITHUB_TOKEN` minted for that job structurally cannot touch workflow
+  files, regardless of who or what triggered the run. (Whatever let
+  `8dde750`/`692cfd3` through was some other configuration or credential at
+  the time, not a property of this auth path in general — don't treat it as
+  current precedent.) If a workflow-file edit is genuinely needed, land the
   content change in a non-workflow file (or describe it in a commit message
-  / task note) for the owner or an in-Actions run to apply instead of
-  retrying the same push.
+  / task note) for the owner to apply manually — no autonomous run can do
+  it under the current permissions, full stop.
 - **`pm-agent.yml`'s "Configure local environment" step only overrides
   `DB_CONNECTION`, not `DB_DATABASE`, so the PM Agent's local board replica
   is silently written to the wrong file.** `.env.example` sets
