@@ -344,6 +344,34 @@ other command-execution path in production. Concretely this means:
   autonomous) that finds `project_tasks`/`epics` queries failing with
   `no such table` should check `.env`'s `DB_DATABASE` value and/or look for
   a stray `./tshirt_store` file before assuming the board is actually empty.
+- **`env()` does not observe a test's runtime `putenv()` call in this Laravel
+  13.20/phpdotenv 5.6 stack — use `$_ENV`/`$_SERVER` instead.** Confirmed via
+  `php artisan tinker --execute="putenv('X=v'); var_dump(getenv('X'));
+  var_dump(env('X'));"`: `getenv()` sees the putenv()'d value, `env()` returns
+  `''` regardless, because Laravel's `env()` resolves through phpdotenv's
+  Repository (backed by `$_ENV`/`$_SERVER`), which a runtime `putenv()` call
+  never populates. A real process-level env var set *before* the PHP process
+  starts (`X=v php artisan ...` — which is exactly how a GitHub Actions
+  `env:` step block supplies a secret to `php artisan <command>`) IS observed
+  correctly. This means any test that tries to simulate an env-var-gated code
+  path with `putenv('KEY=value')` mid-process will silently exercise the
+  "env var absent" branch instead of the intended one — the test can still
+  pass (if that branch's behavior happens to match the assertion) or fail in
+  a way that looks like a production/functional regression when it's really
+  just an untestable-as-written test. Hit exactly this on task "SyncApproved
+  TaskTitles and SyncEpicDecisions no longer actually sync on a clean
+  checkout" (`tests/Feature/Console/SyncApprovedTaskTitlesCommandTest.php`,
+  `SyncEpicDecisionsCommandTest.php`): 4 tests using `putenv('PM_AGENT_BOARD_
+  TOKEN=board-secret')` fail because the command under test never sees a
+  non-empty token and always takes the early-return path — the original task
+  description (written before this was root-caused) worried this meant
+  `pm-agent.yml`'s real production sync was broken too, which a 2026-08-19
+  investigation ruled out: the workflow sets the token as a genuine step-level
+  `env:` var, which `env()` reads fine (verified directly). Fix tests like
+  this by setting `$_ENV['KEY']`/`$_SERVER['KEY']` directly (and unsetting in
+  teardown) instead of `putenv()`. Don't "fix" the production code path for a
+  failure that's actually a test-technique bug — verify which side is broken
+  (as above) before assuming a red test means a real regression.
 
 ## Verification bar before marking anything done
 
