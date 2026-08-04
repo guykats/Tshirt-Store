@@ -97,6 +97,47 @@ entirely) rather than removing the cap if it needs tuning.
   clear `blocked_reason` (per the ship-project-task skill) — silently
   spending turns and reporting `success` with zero commits is never
   acceptable, run it as a failure to surface, not a quiet no-op.
+- **`deploy.yml` silently stopped auto-deploying on 2026-08-01 — this is a
+  much bigger blast radius than the previously-known "can't edit workflow
+  files" limitation, and it went undetected for 3+ days.** The gotcha below
+  ("Sessions authenticated via a GitHub App installation token... cannot
+  push changes to `.github/workflows/*.yml`") documents one symptom of a
+  broader fact: GitHub does not create a new `push`-triggered workflow run
+  for commits authored via `GITHUB_TOKEN` (or an equivalent installation
+  token), full stop — not just for commits that touch workflow files. A run
+  on 2026-08-04 found, by comparing `gh run list --workflow=deploy.yml`
+  against real commit history, that every commit since `8dde7500`
+  (2026-08-01T18:20:33Z, author `Claude`/verified/GPG-signed) has landed on
+  `main` with committer identity `claude[bot]`/unverified instead — and
+  **not one** of the 8+ commits pushed since then triggered a deploy run,
+  confirmed via `gh api repos/guykats/Tshirt-Store/commits/<sha> --jq
+  '.commit.verification.verified'` on both sides of the divide. Production
+  was still serving `8dde7500` three days and ~15 commits later. Concretely:
+  this means the *board itself* (`project_tasks`/`epics`, seeded via
+  migration) had also been frozen since 2026-08-01 on production — so every
+  run in between correctly found "everything is unapproved," but that was a
+  *symptom* of production never having received the newly-seeded rows for
+  the owner to review, not evidence the owner was ignoring the backlog.
+  Don't mistake the two again: if the board looks suspiciously static run
+  after run, check whether `deploy.yml` has actually run recently
+  (`gh run list --workflow=deploy.yml --limit 5`) before assuming it's an
+  owner-review lag. The standard escape hatch — an explicit
+  `gh workflow run deploy.yml --ref main` dispatch after pushing, which per
+  GitHub's docs is exempt from this restriction — was tried live and also
+  failed (`HTTP 403: Resource not accessible by integration`), because
+  `pm-agent.yml`'s `permissions:` block grants only `contents: write` and
+  `id-token: write`, not `actions: write`. Fixing this durably means adding
+  `actions: write` to that block plus a step that runs
+  `gh workflow run deploy.yml --ref main` whenever `HEAD` changed during the
+  run — but that is itself an edit to a workflow file, which no autonomous
+  run can currently push (same installation-token restriction). This needs
+  a human: either (a) immediately unstick production by manually running
+  "Deploy to Production" from the Actions tab (or pushing any
+  human-authored commit, whose identity carries the missing scope), and/or
+  (b) durably fix it by adding a PAT with `repo`+`workflow` scopes as a new
+  secret for `pm-agent.yml` to push with instead of the default
+  `GITHUB_TOKEN`, or by applying the `actions: write` + explicit-dispatch
+  change above directly via the GitHub UI.
 
 ## Standing operating agreement with the project owner
 
