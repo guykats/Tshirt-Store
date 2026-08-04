@@ -64,6 +64,72 @@ class EpicTest extends TestCase
         $response->assertOk()->assertJsonPath('data.0.task_count', 2);
     }
 
+    public function test_an_approved_epic_with_a_blocked_task_reads_build_status_blocked_even_if_other_tasks_are_done(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $epic = Epic::create(['title' => 'Custom Design Studio', 'status' => 'approved']);
+        ProjectTask::create(['epic_id' => $epic->id, 'title' => 'Done task', 'agent_name' => 'Dev Agent', 'status' => 'done']);
+        ProjectTask::create(['epic_id' => $epic->id, 'title' => 'Blocked task', 'agent_name' => 'Dev Agent', 'status' => 'blocked']);
+        ProjectTask::create(['epic_id' => $epic->id, 'title' => 'In progress task', 'agent_name' => 'Dev Agent', 'status' => 'in_progress']);
+
+        $response = $this->actingAs($admin)->getJson('/api/epics');
+
+        $response->assertOk()->assertJsonPath('data.0.build_status', 'blocked');
+    }
+
+    public function test_an_approved_epic_with_all_done_tasks_reads_build_status_done(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $epic = Epic::create(['title' => 'Custom Design Studio', 'status' => 'approved']);
+        ProjectTask::create(['epic_id' => $epic->id, 'title' => 'Design picker UI', 'agent_name' => 'Dev Agent', 'status' => 'done']);
+        ProjectTask::create(['epic_id' => $epic->id, 'title' => 'Live preview', 'agent_name' => 'Dev Agent', 'status' => 'done']);
+
+        $response = $this->actingAs($admin)->getJson('/api/epics');
+
+        $response->assertOk()->assertJsonPath('data.0.build_status', 'done');
+    }
+
+    public function test_an_approved_epic_with_zero_linked_tasks_reads_build_status_todo(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        Epic::create(['title' => 'Custom Design Studio', 'status' => 'approved']);
+
+        $response = $this->actingAs($admin)->getJson('/api/epics');
+
+        $response->assertOk()->assertJsonPath('data.0.build_status', 'todo');
+    }
+
+    public function test_a_proposed_or_rejected_epics_build_status_is_null_regardless_of_linked_tasks(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $proposed = Epic::create(['title' => 'Proposed epic', 'status' => 'proposed']);
+        $rejected = Epic::create(['title' => 'Rejected epic', 'status' => 'rejected']);
+        ProjectTask::create(['epic_id' => $proposed->id, 'title' => 'Some task', 'agent_name' => 'Dev Agent', 'status' => 'done']);
+        ProjectTask::create(['epic_id' => $rejected->id, 'title' => 'Another task', 'agent_name' => 'Dev Agent', 'status' => 'blocked']);
+
+        $response = $this->actingAs($admin)->getJson('/api/epics');
+
+        $response->assertOk()
+            ->assertJsonPath('data.0.build_status', null)
+            ->assertJsonPath('data.1.build_status', null);
+    }
+
+    public function test_build_status_query_param_filters_to_only_matching_epics(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $blockedEpic = Epic::create(['title' => 'Blocked epic', 'status' => 'approved']);
+        ProjectTask::create(['epic_id' => $blockedEpic->id, 'title' => 'Blocked task', 'agent_name' => 'Dev Agent', 'status' => 'blocked']);
+        $doneEpic = Epic::create(['title' => 'Done epic', 'status' => 'approved']);
+        ProjectTask::create(['epic_id' => $doneEpic->id, 'title' => 'Finished task', 'agent_name' => 'Dev Agent', 'status' => 'done']);
+
+        $response = $this->actingAs($admin)->getJson('/api/epics?status=approved&build_status=blocked');
+
+        $response->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.title', 'Blocked epic')
+            ->assertJsonPath('data.0.build_status', 'blocked');
+    }
+
     public function test_customers_cannot_decide_an_epic(): void
     {
         $customer = User::factory()->create(['role' => 'customer']);
