@@ -271,6 +271,38 @@ other command-execution path in production. Concretely this means:
   content change in a non-workflow file (or describe it in a commit message
   / task note) for the owner or an in-Actions run to apply instead of
   retrying the same push.
+- **`pm-agent.yml`'s "Configure local environment" step only overrides
+  `DB_CONNECTION`, not `DB_DATABASE`, so the PM Agent's local board replica
+  is silently written to the wrong file.** `.env.example` sets
+  `DB_DATABASE=tshirt_store` for its MySQL example config; the sqlite
+  connection in `config/database.php` also reads `DB_DATABASE` (Laravel
+  convention — `env('DB_DATABASE', database_path('database.sqlite'))`), so
+  when the step does `cp .env.example .env` +
+  `sed -i 's/^DB_CONNECTION=.*/DB_CONNECTION=sqlite/' .env` without also
+  clearing `DB_DATABASE`, every `php artisan migrate` in that run creates/
+  uses a flat file literally named `tshirt_store` at the repo root instead
+  of `database/database.sqlite` — `php artisan` commands all still work
+  (Laravel's config resolution is internally consistent), but this repo's
+  own documented verification bar (`rm -f database/database.sqlite && touch
+  database/database.sqlite; php artisan migrate:fresh --seed --force`) and
+  any direct `sqlite3 database/database.sqlite ...` inspection silently
+  target the wrong, empty file and report `no such table`. The stray
+  `/tshirt_store` file has been gitignored since the initial commit — so
+  the symptom was already being tolerated, not fixed. README.md's own local
+  sqlite instructions get this right ("`DB_CONNECTION=sqlite` (remove/ignore
+  the other DB_* vars)"); `pm-agent.yml`'s step doesn't follow that pattern.
+  Root-caused during the 2026-08-04 run after `migrate:fresh --seed`
+  reported success but a direct board query still failed — fixing it means
+  adding a `DB_DATABASE` clear/override alongside the existing
+  `DB_CONNECTION` sed in `pm-agent.yml`'s "Configure local environment"
+  step (mirroring `phpunit.xml`'s `DB_DATABASE=":memory:"` override, which
+  already does this correctly), but that's a workflow-file edit blocked by
+  the installation-token restriction just above when hit from a Claude Code
+  session — needs the owner or a `secrets.GITHUB_TOKEN`-authenticated
+  in-Actions run to apply. Until fixed, any session (interactive or
+  autonomous) that finds `project_tasks`/`epics` queries failing with
+  `no such table` should check `.env`'s `DB_DATABASE` value and/or look for
+  a stray `./tshirt_store` file before assuming the board is actually empty.
 
 ## Verification bar before marking anything done
 
