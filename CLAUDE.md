@@ -355,6 +355,46 @@ other command-execution path in production. Concretely this means:
   autonomous) that finds `project_tasks`/`epics` queries failing with
   `no such table` should check `.env`'s `DB_DATABASE` value and/or look for
   a stray `./tshirt_store` file before assuming the board is actually empty.
+- **The stray `./tshirt_store` file above is not just misdirected — it is
+  where that run's REAL `SyncApprovedTaskTitles`/`SyncEpicDecisions` output
+  actually landed, so treat it as live data, not scratch, until you've read
+  it.** A 2026-08-06 run hit the `no such table` symptom, "fixed" it by
+  `sed`-ing `.env`'s `DB_DATABASE` to `database/database.sqlite`, then ran
+  `rm -f tshirt_store` followed by `php artisan migrate:fresh --seed --force`
+  to get a working local replica — without ever inspecting the stray file's
+  contents first. That deleted the one copy, anywhere in this run's
+  filesystem, of the real production sync (both "Sync real ... from
+  production" steps had already run against the misconfigured `.env` before
+  the PM Agent step starts, per `pm-agent.yml`'s step order, so the sync
+  output was already sitting in `tshirt_store` — not merely stale, but the
+  actual data). Confirmed as a real loss, not a hypothetical: epic 18
+  ("Epic Build-Status Rollup") already had fully-`done` linked tasks built
+  from an earlier run, which per the approval gate in step 3 of this prompt
+  is only possible if it was really `approved` on production — yet with the
+  sync gone, the freshly-replayed local row read back `proposed`, the
+  migration-only default. Worse, this can't be repaired mid-run:
+  `PM_AGENT_BOARD_TOKEN` is only passed via `env:` to the two dedicated sync
+  steps in `pm-agent.yml`, not to the "Run PM Agent" step, so a session at
+  that point has no credential to re-fetch what it just deleted — it's
+  gone until the next scheduled run re-syncs from scratch. The safe recovery
+  when you hit this is: **never `rm` the stray file blindly** — first run
+  `sqlite3 tshirt_store ".tables"` and `sqlite3 tshirt_store "SELECT title
+  FROM project_tasks WHERE approved_for_dev=1"` / `SELECT title, status FROM
+  epics"` against it *in place* to read the real synced approvals/decisions,
+  cross-reference those against the freshly-migrated `database/database.sqlite`
+  before trusting the latter for task selection, and only delete the stray
+  file once you've confirmed you don't need it (or better, leave it alone —
+  it's gitignored and harmless to leave on disk). If you've already deleted
+  it before reading it, treat this run's approval visibility as degraded
+  exactly like a failed sync (`continue-on-error` already treats that as a
+  harmless no-op that falls back to migration-only state) — do not guess an
+  epic or task into "approved," and do not compensate by force-seeding extra
+  backlog, since the actual gap is visibility, not backlog volume. The
+  underlying fix is the same pending workflow-file edit noted above (add a
+  `DB_DATABASE` clear to `pm-agent.yml`'s "Configure local environment" step
+  before the migrate/sync steps run, not after) — until a human applies
+  that, this failure mode recurs every single run, not just when someone
+  goes looking for the stray file.
 - **`env()` does not observe a test's runtime `putenv()` call in this Laravel
   13.20/phpdotenv 5.6 stack — use `$_ENV`/`$_SERVER` instead.** Confirmed via
   `php artisan tinker --execute="putenv('X=v'); var_dump(getenv('X'));
