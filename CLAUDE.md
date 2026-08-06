@@ -138,6 +138,32 @@ entirely) rather than removing the cap if it needs tuning.
   secret for `pm-agent.yml` to push with instead of the default
   `GITHUB_TOKEN`, or by applying the `actions: write` + explicit-dispatch
   change above directly via the GitHub UI.
+- **Still broken as of 2026-08-06 (5 days, not 3) — and blind per-run backlog
+  seeding while it's broken has quietly piled up 91 unapproved `todo` tasks
+  plus 12 unreviewed `proposed` epics with zero approvals across that whole
+  stretch.** Re-checked `gh run list --workflow=deploy.yml --limit 8` this
+  run: the newest run is still `2026-08-01T18:20:33Z`/`8dde7500`, and
+  `HEAD`'s own commit is still `claude[bot]`/unverified — nothing has
+  changed since the 2026-08-04 finding above, confirming this needs the
+  human intervention already described, not another autonomous attempt.
+  Given that, step 4 of the standing run prompt ("no approved todo task? seed
+  more so there's always something ready to be approved") is *not* a
+  free pass to add more every single run regardless of how deep the
+  unreviewed pile already is — the whole reason the pile is 91-deep with
+  zero approvals is almost certainly that production's board never received
+  any of it (see the entry above), i.e. the owner may not even be able to
+  see these to approve them yet, not that the backlog itself is thin. Adding
+  a few more per run in that state doesn't fix anything and just burns turn
+  budget on output nobody can act on until deploy is unstuck. The fix isn't
+  "stop seeding forever" — once deploy is unstuck this pile becomes exactly
+  the non-empty backlog the standing rule wants — it's: **check
+  `gh run list --workflow=deploy.yml --limit 1` early in the run**, and if
+  it's stale (more than a day or so old) *and* `project_tasks`/`epics`
+  already have a substantial unapproved/unreviewed queue (tens of items, not
+  zero or a handful), treat seeding as optional that run rather than
+  mandatory — confirming the existing blocked-deploy task is still accurate
+  (or refreshing its reasoning, as this entry does) is a complete, valid use
+  of the run instead.
 
 ## Standing operating agreement with the project owner
 
