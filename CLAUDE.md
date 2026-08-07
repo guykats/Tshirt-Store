@@ -138,25 +138,38 @@ entirely) rather than removing the cap if it needs tuning.
   secret for `pm-agent.yml` to push with instead of the default
   `GITHUB_TOKEN`, or by applying the `actions: write` + explicit-dispatch
   change above directly via the GitHub UI.
-- **Still broken as of 2026-08-06 (5 days, not 3) — and blind per-run backlog
-  seeding while it's broken has quietly piled up 91 unapproved `todo` tasks
-  plus 12 unreviewed `proposed` epics with zero approvals across that whole
-  stretch.** Re-checked `gh run list --workflow=deploy.yml --limit 8` this
-  run: the newest run is still `2026-08-01T18:20:33Z`/`8dde7500`, and
-  `HEAD`'s own commit is still `claude[bot]`/unverified — nothing has
-  changed since the 2026-08-04 finding above, confirming this needs the
-  human intervention already described, not another autonomous attempt.
-  Given that, step 4 of the standing run prompt ("no approved todo task? seed
-  more so there's always something ready to be approved") is *not* a
-  free pass to add more every single run regardless of how deep the
-  unreviewed pile already is — the whole reason the pile is 91-deep with
-  zero approvals is almost certainly that production's board never received
-  any of it (see the entry above), i.e. the owner may not even be able to
-  see these to approve them yet, not that the backlog itself is thin. Adding
-  a few more per run in that state doesn't fix anything and just burns turn
-  budget on output nobody can act on until deploy is unstuck. The fix isn't
-  "stop seeding forever" — once deploy is unstuck this pile becomes exactly
-  the non-empty backlog the standing rule wants — it's: **check
+- **Still broken as of 2026-08-07 (6 days, not 3) — and blind per-run backlog
+  seeding while it's broken has quietly piled up 91 unapproved `todo` tasks.**
+  Re-checked `gh run list --workflow=deploy.yml --limit 5` this run: the
+  newest run is still `2026-08-01T18:20:33Z`/`8dde7500`, and `HEAD`'s own
+  commit (walked back 20 commits via `gh api .../commits`, since the local
+  checkout here is shallow/depth-1) is still 100% `claude[bot]`/unverified —
+  nothing has changed since the 2026-08-04/06 findings above, confirming this
+  still needs the human intervention already described, not another
+  autonomous attempt. One useful data point *did* change and confirms the
+  mechanism theory precisely: 5 of the epics counted as "unreviewed" on
+  2026-08-06 (ids 7, 9, 15, 16, 18) are now `status='approved'` with every
+  linked task already `done`, but all 5 were originally committed
+  2026-07-27 through 2026-07-31 — i.e. *before* the freeze — so they'd
+  already reached production's real DB and stayed reviewable/approvable via
+  the (stale but functional) live dashboard the whole time. This confirms
+  production isn't "down," just frozen on old code+data: rows that landed
+  before `8dde7500` keep working normally (including the owner approving
+  them), while anything seeded by a migration after 2026-08-01 simply never
+  reaches production to be seen at all. Don't mistake continued approvals
+  on old rows for evidence the freeze has lifted — check the deploy run
+  timestamp, not just whether epics are getting approved. Given that, step 4
+  of the standing run prompt ("no approved todo task? seed more so there's
+  always something ready to be approved") is *not* a free pass to add more
+  every single run regardless of how deep the unreviewed pile already is —
+  the whole reason the pile is 91-deep with zero approvals is almost
+  certainly that production's board never received any of it (see the entry
+  above), i.e. the owner may not even be able to see these to approve them
+  yet, not that the backlog itself is thin. Adding a few more per run in
+  that state doesn't fix anything and just burns turn budget on output
+  nobody can act on until deploy is unstuck. The fix isn't "stop seeding
+  forever" — once deploy is unstuck this pile becomes exactly the non-empty
+  backlog the standing rule wants — it's: **check
   `gh run list --workflow=deploy.yml --limit 1` early in the run**, and if
   it's stale (more than a day or so old) *and* `project_tasks`/`epics`
   already have a substantial unapproved/unreviewed queue (tens of items, not
