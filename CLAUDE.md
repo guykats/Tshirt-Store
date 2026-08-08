@@ -138,15 +138,21 @@ entirely) rather than removing the cap if it needs tuning.
   secret for `pm-agent.yml` to push with instead of the default
   `GITHUB_TOKEN`, or by applying the `actions: write` + explicit-dispatch
   change above directly via the GitHub UI.
-- **Still broken as of 2026-08-07 (6 days, not 3) — and blind per-run backlog
+- **Still broken as of 2026-08-08 (7 days, not 3) — and blind per-run backlog
   seeding while it's broken has quietly piled up 91 unapproved `todo` tasks.**
   Re-checked `gh run list --workflow=deploy.yml --limit 5` this run: the
   newest run is still `2026-08-01T18:20:33Z`/`8dde7500`, and `HEAD`'s own
-  commit (walked back 20 commits via `gh api .../commits`, since the local
-  checkout here is shallow/depth-1) is still 100% `claude[bot]`/unverified —
-  nothing has changed since the 2026-08-04/06 findings above, confirming this
-  still needs the human intervention already described, not another
-  autonomous attempt. One useful data point *did* change and confirms the
+  commit (walked back via `gh api .../commits`, since the local checkout here
+  is shallow/depth-1) is still 100% `claude[bot]`/unverified —
+  nothing has changed since the 2026-08-04/06/07 findings above (unapproved
+  `todo` count is still exactly 91, no drift either direction), confirming
+  this still needs the human intervention already described, not another
+  autonomous attempt. This run also re-confirmed `pm-agent.yml`'s
+  `permissions:` block is unchanged (`contents: write` + `id-token: write`
+  only, no `actions: write`) and that no alternate push credential (PAT) is
+  present in the run environment — the two fixes described below are both
+  still pending on the human side, nothing to retry from here. One useful
+  data point *did* change and confirms the
   mechanism theory precisely: 5 of the epics counted as "unreviewed" on
   2026-08-06 (ids 7, 9, 15, 16, 18) are now `status='approved'` with every
   linked task already `done`, but all 5 were originally committed
