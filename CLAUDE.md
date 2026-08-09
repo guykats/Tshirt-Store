@@ -454,6 +454,41 @@ other command-execution path in production. Concretely this means:
   teardown) instead of `putenv()`. Don't "fix" the production code path for a
   failure that's actually a test-technique bug — verify which side is broken
   (as above) before assuming a red test means a real regression.
+- **A local epics table where every row reads `proposed` is suspicious, not
+  just "nothing new" — the epic sync can fail silently and look identical to
+  a clean no-op.** On 2026-08-09, this run's local replica — after both
+  "Sync real ... from production" steps had already completed with
+  step-level conclusion `success` — showed all 12 epics as `status=
+  'proposed'`, including the 5 (ids 7, 9, 15, 16, 18) explicitly confirmed
+  `approved` with linked `done` tasks as of 2026-08-06. That's a regression
+  from a previously-verified state, not an absence of new approvals.
+  `SyncEpicDecisions::handle()` (`app/Console/Commands/SyncEpicDecisions.php`)
+  treats three very different situations identically: an empty/unset
+  `PM_AGENT_BOARD_TOKEN`, a network failure, and a non-2xx HTTP response
+  (e.g. an expired or drifted token — remember `PM_AGENT_BOARD_TOKEN` is a
+  shared secret that must be kept identical in both the GitHub Actions
+  secret and production `.env`, per the description above). All three are
+  caught, logged with one `$this->warn(...)` line, and resolved via
+  `return self::SUCCESS` — so the step's Actions conclusion is `success`
+  regardless of whether real data was synced at all. This run had no way to
+  tell which case it was: `gh api repos/.../jobs/{id}/logs` 404s
+  (`BlobNotFound`) until the job/run has actually finished, so a
+  still-running PM Agent step can't inspect its own earlier steps' captured
+  stdout to see the actual `Synced N epic(s)...` / `Could not reach...` /
+  `not set` message. It's also possible (though unconfirmed) this is a real
+  reversion via the already-tracked `EpicController::delay()` bug (no status
+  guard, unconditionally sets `status='proposed'`) rather than a sync
+  failure — but 5 epics reverting via independent accidental double-clicks
+  is a less likely explanation than one systemic sync/token problem hitting
+  all of them at once. A future run (once turn budget allows) or the owner
+  can disambiguate this: run `gh run list --workflow=pm-agent.yml --limit 5`
+  to find a completed run, then
+  `gh api repos/guykats/Tshirt-Store/actions/jobs/<job_id>/logs | grep -A2
+  "Sync real epic decisions"` to read the real message, and separately check
+  production's live Epics tab directly to see whether those 5 epics still
+  show `approved` there right now. Until this is resolved, don't treat a
+  `proposed`-only local epics table as proof nothing is approved on
+  production.
 
 ## Verification bar before marking anything done
 
