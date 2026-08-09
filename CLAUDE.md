@@ -454,41 +454,45 @@ other command-execution path in production. Concretely this means:
   teardown) instead of `putenv()`. Don't "fix" the production code path for a
   failure that's actually a test-technique bug — verify which side is broken
   (as above) before assuming a red test means a real regression.
-- **A local epics table where every row reads `proposed` is suspicious, not
-  just "nothing new" — the epic sync can fail silently and look identical to
-  a clean no-op — but confirmed on 2026-08-09 to be a transient, self-
-  resolving network blip, not a durable bug.** Earlier the same day, one
-  run's local replica — after both "Sync real ... from production" steps had
-  already completed with step-level conclusion `success` — showed all 12
-  epics as `status='proposed'`, including the 5 (ids 7, 9, 15, 16, 18)
-  explicitly confirmed `approved` with linked `done` tasks as of 2026-08-06.
-  That run flagged this as an unconfirmed mystery (possible silent sync
-  failure vs. a real reversion via the already-tracked `EpicController::
-  delay()` no-status-guard bug) because `gh api .../jobs/{id}/logs` 404s
-  until a run has actually finished, so it couldn't read its own earlier
-  steps' captured output mid-run. A later run that same day (2026-08-09) had
-  the job finish and could read it: `gh api repos/guykats/Tshirt-Store/
-  actions/jobs/93281757304/logs | grep -i "could not reach\|synced"` showed
-  that specific run's epic-sync step logged exactly `Could not reach
-  production for real epic state — leaving migration-replayed epics as-is.`
-  — a genuine `SyncEpicDecisions` failure to reach the production endpoint,
-  not a status reversion. Since none of these 5 epics' `approved` status is
-  baked into any migration (they were seeded `proposed` by the Visioner
-  Agent and only ever flipped to `approved` via a live dashboard click, per
-  `grep -n "status" database/migrations/*daily_design_suggestion_feed*`),
-  migration-replay alone reproduces exactly the all-`proposed` symptom when
-  sync fails — fully explaining it with no code bug required. The very next
-  completed run's own job log (`.../jobs/93297084169/logs`, 20:23 UTC) showed
-  `Synced 12 epic(s), inserted 0 live-only epic(s) from production.` — sync
-  succeeded again one run later with no other change, confirming this was a
-  one-off network hiccup that self-resolved, not a recurring problem. If
-  this symptom recurs, use the same `gh api .../jobs/<id>/logs | grep -i
-  "could not reach\|synced\|not set"` check (works only on a run that has
-  already finished — not the one currently running) before assuming a real
-  reversion; only escalate to investigating `EpicController::delay()` if the
-  "Could not reach" message is absent and the previous message was `not
-  set` or another sync succeeded around the same time yet the table still
-  shows stale data.
+- **CORRECTION (2026-08-09, ~23:19 UTC): the "confirmed transient blip"
+  conclusion previously written here was premature — this is a real,
+  persisting data reversion on production, root-caused and now tracked as
+  task id 348, not a self-resolving network hiccup.** The earlier version of
+  this entry closed the investigation after one run (`.../jobs/93297084169/logs`,
+  20:23 UTC) logged `Synced 12 epic(s), inserted 0 live-only epic(s) from
+  production.` and treated that as proof the all-`proposed` symptom had
+  self-resolved — but that log line only proves the sync *mechanism*
+  reached production successfully; it says nothing about whether the actual
+  approved epics came back. They didn't. A run-by-run check of every
+  `pm-agent.yml` run from 21:27 through 22:55 UTC that same day (`gh run
+  view <id> --log | grep -i "synced\|real approved todo"`) showed **five
+  consecutive, fully successful** syncs (`Synced 12 epic(s)...`, never
+  "Could not reach") each still reporting all 12 epics at `status=proposed`
+  and 0 approved todo tasks — a stable, persisting state over 90+ minutes,
+  not an intermittent blip. Root cause: `EpicController::approve()`,
+  `::reject()`, and `::delay()` (`app/Http/Controllers/Api/EpicController.php`)
+  have no guard on the epic's current status — `delay()` unconditionally
+  sets `status = 'proposed'` regardless of what it was before. The
+  `Epics.jsx` frontend only renders the delay button when
+  `epic.status === 'proposed'`, so a normal dashboard click can't trigger
+  this on an already-`approved` epic — but the route
+  (`POST /api/epics/{epic}/delay`) itself has no server-side check, so any
+  direct/programmatic call against an approved epic (even one with real
+  linked `done` tasks, like ids 7, 9, 15, 16, 18 as of 2026-08-06) silently
+  reverts it, discarding the approval with no guard, log distinction, or
+  recovery path. This exact bug is already tracked as **task id 348**
+  ("EpicController::approve/reject/delay have no guard on the epic's
+  current status..."), `todo`/`approved_for_dev=0` — seeded by a later run
+  (`database/migrations/2026_08_20_100000_seed_visioner_history_epic_guard_backlog.php`)
+  that independently re-discovered and root-caused this same symptom, but
+  never circled back to correct this entry, which is exactly the kind of
+  silent non-fix step 7 of the standing run prompt exists to prevent. Don't
+  re-investigate this mystery from scratch again: if a future run's local
+  epics table shows previously-approved epics back at `proposed` after a
+  clean, successful sync, that is expected and already explained until task
+  348 ships and (separately, a human/owner call, not something to force via
+  migration) any wrongly-reverted epics are explicitly re-approved from the
+  dashboard.
 
 ## Verification bar before marking anything done
 
