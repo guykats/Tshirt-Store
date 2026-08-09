@@ -97,31 +97,39 @@ entirely) rather than removing the cap if it needs tuning.
   clear `blocked_reason` (per the ship-project-task skill) — silently
   spending turns and reporting `success` with zero commits is never
   acceptable, run it as a failure to surface, not a quiet no-op.
-- **`deploy.yml` silently stopped auto-deploying on 2026-08-01 — this is a
-  much bigger blast radius than the previously-known "can't edit workflow
-  files" limitation, and it went undetected for 3+ days.** The gotcha below
-  ("Sessions authenticated via a GitHub App installation token... cannot
-  push changes to `.github/workflows/*.yml`") documents one symptom of a
-  broader fact: GitHub does not create a new `push`-triggered workflow run
-  for commits authored via `GITHUB_TOKEN` (or an equivalent installation
-  token), full stop — not just for commits that touch workflow files. A run
-  on 2026-08-04 found, by comparing `gh run list --workflow=deploy.yml`
-  against real commit history, that every commit since `8dde7500`
-  (2026-08-01T18:20:33Z, author `Claude`/verified/GPG-signed) has landed on
-  `main` with committer identity `claude[bot]`/unverified instead — and
-  **not one** of the 8+ commits pushed since then triggered a deploy run,
-  confirmed via `gh api repos/guykats/Tshirt-Store/commits/<sha> --jq
-  '.commit.verification.verified'` on both sides of the divide. Production
-  was still serving `8dde7500` three days and ~15 commits later. Concretely:
-  this means the *board itself* (`project_tasks`/`epics`, seeded via
-  migration) had also been frozen since 2026-08-01 on production — so every
-  run in between correctly found "everything is unapproved," but that was a
-  *symptom* of production never having received the newly-seeded rows for
-  the owner to review, not evidence the owner was ignoring the backlog.
-  Don't mistake the two again: if the board looks suspiciously static run
-  after run, check whether `deploy.yml` has actually run recently
-  (`gh run list --workflow=deploy.yml --limit 5`) before assuming it's an
-  owner-review lag. The standard escape hatch — an explicit
+- **`deploy.yml` silently stopped auto-deploying on 2026-08-01 — still broken
+  as of 2026-08-09 (8 days), tracked as blocked `project_tasks` id 345.**
+  This is a much bigger blast radius than the previously-known "can't edit
+  workflow files" limitation. The gotcha below ("Sessions authenticated via a
+  GitHub App installation token... cannot push changes to
+  `.github/workflows/*.yml`") documents one symptom of a broader fact: GitHub
+  does not create a new `push`-triggered workflow run for commits authored
+  via `GITHUB_TOKEN` (or an equivalent installation token), full stop — not
+  just for commits that touch workflow files. Root-caused 2026-08-04 by
+  comparing `gh run list --workflow=deploy.yml` against real commit history:
+  every commit since `8dde7500` (2026-08-01T18:20:33Z, author
+  `Claude`/verified/GPG-signed) landed on `main` with committer identity
+  `claude[bot]`/unverified instead, and **not one** since has triggered a
+  deploy run (`gh api repos/guykats/Tshirt-Store/commits/<sha> --jq
+  '.commit.verification.verified'` confirms `false` on every post-freeze
+  commit, `true` on `8dde7500` itself). Concretely: this means the *board
+  itself* (`project_tasks`/`epics`, seeded via migration) has also been
+  frozen since 2026-08-01 on production — migration-seeded rows never reach
+  it — so a static-looking board is a *symptom* of that, not evidence the
+  owner is ignoring the backlog. If the board looks suspiciously static run
+  after run, check whether `deploy.yml` has actually run recently before
+  assuming it's an owner-review lag. Confirmed 2026-08-06: 5 epics (ids 7, 9,
+  15, 16, 18) show as `approved` with linked tasks `done`, but all 5 were
+  originally committed 2026-07-27 through 2026-07-31 — *before* the freeze —
+  so they'd already reached production's real DB and stayed
+  reviewable/approvable via the (stale but functional) live dashboard the
+  whole time. This proves production isn't "down," just frozen on old
+  code+data: rows that landed before `8dde7500` keep working normally
+  (including the owner approving them), while anything seeded after
+  2026-08-01 simply never reaches production to be seen at all — don't
+  mistake continued approvals on old rows for evidence the freeze has
+  lifted; check the deploy run timestamp, not just whether epics are getting
+  approved. The standard escape hatch — an explicit
   `gh workflow run deploy.yml --ref main` dispatch after pushing, which per
   GitHub's docs is exempt from this restriction — was tried live and also
   failed (`HTTP 403: Resource not accessible by integration`), because
@@ -130,59 +138,37 @@ entirely) rather than removing the cap if it needs tuning.
   `actions: write` to that block plus a step that runs
   `gh workflow run deploy.yml --ref main` whenever `HEAD` changed during the
   run — but that is itself an edit to a workflow file, which no autonomous
-  run can currently push (same installation-token restriction). This needs
-  a human: either (a) immediately unstick production by manually running
-  "Deploy to Production" from the Actions tab (or pushing any
-  human-authored commit, whose identity carries the missing scope), and/or
-  (b) durably fix it by adding a PAT with `repo`+`workflow` scopes as a new
-  secret for `pm-agent.yml` to push with instead of the default
-  `GITHUB_TOKEN`, or by applying the `actions: write` + explicit-dispatch
-  change above directly via the GitHub UI.
-- **Still broken as of 2026-08-08 (7 days, not 3) — and blind per-run backlog
-  seeding while it's broken has quietly piled up 91 unapproved `todo` tasks.**
-  Re-checked `gh run list --workflow=deploy.yml --limit 5` this run: the
-  newest run is still `2026-08-01T18:20:33Z`/`8dde7500`, and `HEAD`'s own
-  commit (walked back via `gh api .../commits`, since the local checkout here
-  is shallow/depth-1) is still 100% `claude[bot]`/unverified —
-  nothing has changed since the 2026-08-04/06/07 findings above (unapproved
-  `todo` count is still exactly 91, no drift either direction), confirming
-  this still needs the human intervention already described, not another
-  autonomous attempt. This run also re-confirmed `pm-agent.yml`'s
-  `permissions:` block is unchanged (`contents: write` + `id-token: write`
-  only, no `actions: write`) and that no alternate push credential (PAT) is
-  present in the run environment — the two fixes described below are both
-  still pending on the human side, nothing to retry from here. One useful
-  data point *did* change and confirms the
-  mechanism theory precisely: 5 of the epics counted as "unreviewed" on
-  2026-08-06 (ids 7, 9, 15, 16, 18) are now `status='approved'` with every
-  linked task already `done`, but all 5 were originally committed
-  2026-07-27 through 2026-07-31 — i.e. *before* the freeze — so they'd
-  already reached production's real DB and stayed reviewable/approvable via
-  the (stale but functional) live dashboard the whole time. This confirms
-  production isn't "down," just frozen on old code+data: rows that landed
-  before `8dde7500` keep working normally (including the owner approving
-  them), while anything seeded by a migration after 2026-08-01 simply never
-  reaches production to be seen at all. Don't mistake continued approvals
-  on old rows for evidence the freeze has lifted — check the deploy run
-  timestamp, not just whether epics are getting approved. Given that, step 4
-  of the standing run prompt ("no approved todo task? seed more so there's
-  always something ready to be approved") is *not* a free pass to add more
-  every single run regardless of how deep the unreviewed pile already is —
-  the whole reason the pile is 91-deep with zero approvals is almost
-  certainly that production's board never received any of it (see the entry
-  above), i.e. the owner may not even be able to see these to approve them
-  yet, not that the backlog itself is thin. Adding a few more per run in
-  that state doesn't fix anything and just burns turn budget on output
-  nobody can act on until deploy is unstuck. The fix isn't "stop seeding
-  forever" — once deploy is unstuck this pile becomes exactly the non-empty
-  backlog the standing rule wants — it's: **check
-  `gh run list --workflow=deploy.yml --limit 1` early in the run**, and if
-  it's stale (more than a day or so old) *and* `project_tasks`/`epics`
-  already have a substantial unapproved/unreviewed queue (tens of items, not
-  zero or a handful), treat seeding as optional that run rather than
-  mandatory — confirming the existing blocked-deploy task is still accurate
-  (or refreshing its reasoning, as this entry does) is a complete, valid use
-  of the run instead.
+  run can currently push (same installation-token restriction). This needs a
+  human: either (a) immediately unstick production by manually running
+  "Deploy to Production" from the Actions tab (or pushing any human-authored
+  commit, whose identity carries the missing scope), and/or (b) durably fix
+  it by adding a PAT with `repo`+`workflow` scopes as a new secret for
+  `pm-agent.yml` to push with instead of the default `GITHUB_TOKEN`, or by
+  applying the `actions: write` + explicit-dispatch change above directly
+  via the GitHub UI. Since the 2026-08-04 root-cause, every run through
+  2026-08-09 has re-checked `gh run list --workflow=deploy.yml --limit 5`
+  and found zero drift: newest run still `2026-08-01T18:20:33Z`/`8dde7500`,
+  `HEAD` still 100% `claude[bot]`/unverified, `pm-agent.yml`'s permissions
+  block still lacking `actions: write`, no alternate push credential (PAT)
+  present, and unapproved `todo` count frozen at exactly 91 (blind per-run
+  seeding while broken had piled this up before the fix below was adopted).
+  All of this consistently confirms the human intervention above is still
+  pending, not something to keep re-attempting autonomously. Given that,
+  step 4 of the standing run prompt ("no approved todo task? seed more so
+  there's always something ready to be approved") is *not* a free pass to
+  add more every single run regardless of how deep the unreviewed pile
+  already is — with production unable to receive new rows at all, more
+  seeding doesn't fix anything and just burns turn budget on output nobody
+  can act on. The fix isn't "stop seeding forever" — once deploy is unstuck
+  this pile becomes exactly the non-empty backlog the standing rule wants —
+  it's: **check `gh run list --workflow=deploy.yml --limit 1` early in the
+  run**, and if it's stale (more than a day or so old) *and*
+  `project_tasks`/`epics` already have a substantial unapproved/unreviewed
+  queue (tens of items, not zero or a handful), treat seeding as optional
+  that run rather than mandatory — confirming the existing blocked-deploy
+  task (id 345) is still accurate, refreshing this entry's date if a run
+  re-verifies zero drift, is a complete, valid use of the run instead of
+  appending a new near-duplicate paragraph each time.
 
 ## Standing operating agreement with the project owner
 
