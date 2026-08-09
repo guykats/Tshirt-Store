@@ -456,39 +456,39 @@ other command-execution path in production. Concretely this means:
   (as above) before assuming a red test means a real regression.
 - **A local epics table where every row reads `proposed` is suspicious, not
   just "nothing new" — the epic sync can fail silently and look identical to
-  a clean no-op.** On 2026-08-09, this run's local replica — after both
-  "Sync real ... from production" steps had already completed with
-  step-level conclusion `success` — showed all 12 epics as `status=
-  'proposed'`, including the 5 (ids 7, 9, 15, 16, 18) explicitly confirmed
-  `approved` with linked `done` tasks as of 2026-08-06. That's a regression
-  from a previously-verified state, not an absence of new approvals.
-  `SyncEpicDecisions::handle()` (`app/Console/Commands/SyncEpicDecisions.php`)
-  treats three very different situations identically: an empty/unset
-  `PM_AGENT_BOARD_TOKEN`, a network failure, and a non-2xx HTTP response
-  (e.g. an expired or drifted token — remember `PM_AGENT_BOARD_TOKEN` is a
-  shared secret that must be kept identical in both the GitHub Actions
-  secret and production `.env`, per the description above). All three are
-  caught, logged with one `$this->warn(...)` line, and resolved via
-  `return self::SUCCESS` — so the step's Actions conclusion is `success`
-  regardless of whether real data was synced at all. This run had no way to
-  tell which case it was: `gh api repos/.../jobs/{id}/logs` 404s
-  (`BlobNotFound`) until the job/run has actually finished, so a
-  still-running PM Agent step can't inspect its own earlier steps' captured
-  stdout to see the actual `Synced N epic(s)...` / `Could not reach...` /
-  `not set` message. It's also possible (though unconfirmed) this is a real
-  reversion via the already-tracked `EpicController::delay()` bug (no status
-  guard, unconditionally sets `status='proposed'`) rather than a sync
-  failure — but 5 epics reverting via independent accidental double-clicks
-  is a less likely explanation than one systemic sync/token problem hitting
-  all of them at once. A future run (once turn budget allows) or the owner
-  can disambiguate this: run `gh run list --workflow=pm-agent.yml --limit 5`
-  to find a completed run, then
-  `gh api repos/guykats/Tshirt-Store/actions/jobs/<job_id>/logs | grep -A2
-  "Sync real epic decisions"` to read the real message, and separately check
-  production's live Epics tab directly to see whether those 5 epics still
-  show `approved` there right now. Until this is resolved, don't treat a
-  `proposed`-only local epics table as proof nothing is approved on
-  production.
+  a clean no-op — but confirmed on 2026-08-09 to be a transient, self-
+  resolving network blip, not a durable bug.** Earlier the same day, one
+  run's local replica — after both "Sync real ... from production" steps had
+  already completed with step-level conclusion `success` — showed all 12
+  epics as `status='proposed'`, including the 5 (ids 7, 9, 15, 16, 18)
+  explicitly confirmed `approved` with linked `done` tasks as of 2026-08-06.
+  That run flagged this as an unconfirmed mystery (possible silent sync
+  failure vs. a real reversion via the already-tracked `EpicController::
+  delay()` no-status-guard bug) because `gh api .../jobs/{id}/logs` 404s
+  until a run has actually finished, so it couldn't read its own earlier
+  steps' captured output mid-run. A later run that same day (2026-08-09) had
+  the job finish and could read it: `gh api repos/guykats/Tshirt-Store/
+  actions/jobs/93281757304/logs | grep -i "could not reach\|synced"` showed
+  that specific run's epic-sync step logged exactly `Could not reach
+  production for real epic state — leaving migration-replayed epics as-is.`
+  — a genuine `SyncEpicDecisions` failure to reach the production endpoint,
+  not a status reversion. Since none of these 5 epics' `approved` status is
+  baked into any migration (they were seeded `proposed` by the Visioner
+  Agent and only ever flipped to `approved` via a live dashboard click, per
+  `grep -n "status" database/migrations/*daily_design_suggestion_feed*`),
+  migration-replay alone reproduces exactly the all-`proposed` symptom when
+  sync fails — fully explaining it with no code bug required. The very next
+  completed run's own job log (`.../jobs/93297084169/logs`, 20:23 UTC) showed
+  `Synced 12 epic(s), inserted 0 live-only epic(s) from production.` — sync
+  succeeded again one run later with no other change, confirming this was a
+  one-off network hiccup that self-resolved, not a recurring problem. If
+  this symptom recurs, use the same `gh api .../jobs/<id>/logs | grep -i
+  "could not reach\|synced\|not set"` check (works only on a run that has
+  already finished — not the one currently running) before assuming a real
+  reversion; only escalate to investigating `EpicController::delay()` if the
+  "Could not reach" message is absent and the previous message was `not
+  set` or another sync succeeded around the same time yet the table still
+  shows stale data.
 
 ## Verification bar before marking anything done
 
