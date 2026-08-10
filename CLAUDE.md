@@ -169,6 +169,47 @@ entirely) rather than removing the cap if it needs tuning.
   task (id 345) is still accurate, refreshing this entry's date if a run
   re-verifies zero drift, is a complete, valid use of the run instead of
   appending a new near-duplicate paragraph each time.
+- **The freeze has a second, previously undocumented cascading effect:
+  `pm-agent.yml`'s own idle self-disable check can never fire while any of
+  the 5 pre-freeze-approved epics (7, 9, 15, 16, 18) remain un-deployed, so
+  the cron keeps firing every 15 minutes indefinitely, each run burning real
+  cost for zero shippable output — confirmed 2026-08-10.**
+  `PmAgentAutomationController::disableIfIdle()` (called by the "Disable PM
+  Agent automation if nothing is approved to build" step, before the agent
+  even starts) only disables the workflow if there's no approved todo task
+  *and* no approved epic with zero linked tasks
+  (`hasApprovedEpicAwaitingBreakdown()`, `Epic::where('status','approved')
+  ->whereDoesntHave('tasks')`) — evaluated against production's real,
+  frozen-since-2026-08-01 DB, not this run's local replica. The breakdown
+  migrations that gave epics 7, 9, 15, 16, 18 their `project_tasks` rows
+  (`2026_08_04_170000_break_down_daily_design_suggestion_feed_epic.php`,
+  `2026_08_06_110000_break_down_discover_publish_gate_epic.php`,
+  `2026_08_07_110000_break_down_photographic_imagery_layer_epic.php`,
+  `2026_08_07_120000_break_down_catalog_depth_epic.php`, and
+  `2026_08_17_100000_break_down_epic_build_status_rollup_epic.php`) all
+  landed *after* the freeze commit `8dde7500` (2026-08-01T18:20:33Z), so
+  none of them ever deployed — production still sees all 5 of these epics
+  as approved with zero linked tasks, exactly the state
+  `hasApprovedEpicAwaitingBreakdown()` treats as "real work is pending."
+  This means every run's disable-if-idle call returns
+  `{"disabled":false,"reason":"epic_awaiting_breakdown"}` regardless of
+  how thin the actual local backlog is, keeping automation permanently
+  enabled. Confirmed via `gh run list --workflow=pm-agent.yml` +
+  `gh run view <id> --log` across 7 consecutive runs on 2026-08-10 between
+  17:32 and 22:23 UTC: every one logged that exact `disabled:false` line,
+  ran 9-17 turns, cost $0.27-$0.34, and pushed zero commits — because
+  locally (in the replayed migration history) those same 5 epics already
+  show real linked tasks, so step 3 of the run prompt correctly finds
+  nothing left to break down and the run has nothing new to do. This is an
+  expected, harmless-but-wasteful side effect of the *same* underlying
+  blocked task 345, not a separate bug — don't open a new blocked task or
+  try to patch `hasApprovedEpicAwaitingBreakdown()` for it; the fix is
+  identical to 345's (get a real deploy through). A future run seeing a
+  string of near-empty, few-turn pm-agent.yml runs with a stable
+  `epic_awaiting_breakdown` reason and no new commits should recognize this
+  pattern immediately rather than re-diagnosing it from scratch — check
+  `gh run list --workflow=deploy.yml --limit 1` for drift first, per the
+  entry above, before spending turns on it again.
 
 ## Standing operating agreement with the project owner
 
