@@ -146,7 +146,7 @@ entirely) rather than removing the cap if it needs tuning.
   `pm-agent.yml` to push with instead of the default `GITHUB_TOKEN`, or by
   applying the `actions: write` + explicit-dispatch change above directly
   via the GitHub UI. Since the 2026-08-04 root-cause, every run through
-  2026-08-10 has re-checked `gh run list --workflow=deploy.yml --limit 5`
+  2026-08-11 has re-checked `gh run list --workflow=deploy.yml --limit 5`
   and found zero drift: newest run still `2026-08-01T18:20:33Z`/`8dde7500`,
   `HEAD` still 100% `claude[bot]`/unverified, `pm-agent.yml`'s permissions
   block still lacking `actions: write`, no alternate push credential (PAT)
@@ -210,6 +210,24 @@ entirely) rather than removing the cap if it needs tuning.
   pattern immediately rather than re-diagnosing it from scratch — check
   `gh run list --workflow=deploy.yml --limit 1` for drift first, per the
   entry above, before spending turns on it again.
+  **UPDATE (2026-08-11, ~02:57 UTC):** the specific claim above that
+  production has exactly "5 approved epics with zero linked tasks" no
+  longer holds as a snapshot — this run's synced local `epics` table shows
+  ALL 12 epics (including 7, 9, 15, 16, 18) at `status='proposed'`, not
+  `approved`, most likely another symptom of the same unguarded
+  approve/reject/delay bug tracked as task 348 (still `todo`,
+  unapproved) rather than a real owner review. This does not mean the
+  cascade is resolved: `gh api repos/guykats/Tshirt-Store/actions/workflows/pm-agent.yml
+  --jq '.state'` still reports `active`, and the most recent completed
+  run's disable-if-idle call (00:45 UTC 2026-08-11) still returned
+  `{"disabled":false,"reason":"epic_awaiting_breakdown"}` — so *some*
+  epic was still approved-with-zero-tasks on production as of then, only a
+  couple hours before this run's sync saw none. Net effect: the exact set
+  of "stuck approved" epics is a moving target (bug 348 keeps flipping
+  epic status underneath both the dashboard and this check), but the
+  underlying mechanism and fix are unchanged — still task 345 (get a real
+  deploy through) plus task 348 (guard the status transitions), not
+  something to re-diagnose or patch around per-epic.
 
 ## Standing operating agreement with the project owner
 
