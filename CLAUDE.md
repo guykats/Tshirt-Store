@@ -146,7 +146,7 @@ entirely) rather than removing the cap if it needs tuning.
   `pm-agent.yml` to push with instead of the default `GITHUB_TOKEN`, or by
   applying the `actions: write` + explicit-dispatch change above directly
   via the GitHub UI. Since the 2026-08-04 root-cause, every run through
-  2026-08-12 (last re-checked ~07:50 UTC) has re-checked
+  2026-08-12 (last re-checked ~09:59 UTC) has re-checked
   `gh run list --workflow=deploy.yml --limit 5` and found zero drift: newest
   run still `2026-08-01T18:20:33Z`/`8dde7500`, `HEAD` still 100%
   `claude[bot]`/unverified, `pm-agent.yml`'s permissions block still lacking
@@ -154,9 +154,13 @@ entirely) rather than removing the cap if it needs tuning.
   unapproved `todo` count still frozen at exactly 91 (blind per-run seeding
   while broken had piled this up before the fix below was adopted) — epic
   statuses keep flipping per unfixed task 348 (still `todo`, unapproved;
-  this run's ~07:50 UTC snapshot again saw epics 7, 9, 15, 16, 18 approved
-  with linked tasks, all already `done` — the moving-target behavior already
-  documented in the UPDATE below), not a real owner review pass.
+  this run's ~09:59 UTC snapshot again saw epics 7, 9, 15, 16, 18 back at
+  `proposed` with linked tasks, all already `done` — the moving-target
+  behavior already documented in the UPDATE below, and consistent with the
+  08:57 UTC pm-agent.yml run one cycle earlier still logging
+  `{"disabled":false,"reason":"epic_awaiting_breakdown"}`, i.e. one of these
+  five was still approved-with-zero-tasks an hour ago and has since flipped
+  back — not a real owner review pass.
   All of this consistently confirms the human intervention above is still
   pending, not something to keep re-attempting autonomously. Given that,
   step 4 of the standing run prompt ("no approved todo task? seed more so
