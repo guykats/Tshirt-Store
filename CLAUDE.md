@@ -146,7 +146,7 @@ entirely) rather than removing the cap if it needs tuning.
   `pm-agent.yml` to push with instead of the default `GITHUB_TOKEN`, or by
   applying the `actions: write` + explicit-dispatch change above directly
   via the GitHub UI. Since the 2026-08-04 root-cause, every run through
-  2026-08-12 (last re-checked ~20:31 UTC, still zero drift vs. the ~11:38 UTC
+  2026-08-12 (last re-checked ~21:31 UTC, still zero drift vs. the ~11:38 UTC
   snapshot below — same deploy timestamp/sha, same unverified HEAD, same 5
   approved epics with linked tasks at counts 2/2/2/1/2, same 91 unapproved
   backlog, no `actions: write` grant, no PAT) has re-checked
