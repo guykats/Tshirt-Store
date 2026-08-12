@@ -146,12 +146,12 @@ entirely) rather than removing the cap if it needs tuning.
   `pm-agent.yml` to push with instead of the default `GITHUB_TOKEN`, or by
   applying the `actions: write` + explicit-dispatch change above directly
   via the GitHub UI. Since the 2026-08-04 root-cause, every run through
-  2026-08-12 (last re-checked ~22:59 UTC, still zero drift vs. the ~11:38 UTC
+  2026-08-12 (last re-checked ~23:37 UTC, still zero drift vs. the ~11:38 UTC
   snapshot below — same deploy timestamp/sha, same unverified HEAD, same 91
   unapproved backlog, no `actions: write` grant, no PAT; the 5 epics 7, 9,
-  15, 16, 18 were observed back at `approved` this check (flipped again
-  from the immediately preceding ~22:07 UTC check's `proposed` snapshot),
-  with linked task counts still intact at 2/2/2/1/2 — the same documented
+  15, 16, 18 were observed still at `approved` this check (same as the
+  immediately preceding ~22:59 UTC check, i.e. no flip this round), with
+  linked task counts still intact at 2/2/2/1/2 — the same documented
   task-348 oscillation, not a new finding, so still no approved-epic-
   awaiting-breakdown work and no approved todo task to build this run
   either) has re-checked
