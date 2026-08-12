@@ -146,9 +146,9 @@ entirely) rather than removing the cap if it needs tuning.
   `pm-agent.yml` to push with instead of the default `GITHUB_TOKEN`, or by
   applying the `actions: write` + explicit-dispatch change above directly
   via the GitHub UI. Since the 2026-08-04 root-cause, every run through
-  2026-08-12 (last re-checked ~11:38 UTC, still zero drift vs. the ~10:55 UTC
+  2026-08-12 (last re-checked ~12:30 UTC, still zero drift vs. the ~11:38 UTC
   snapshot below — same deploy timestamp/sha, same unverified HEAD, same 5
-  approved epics with linked tasks at counts 2/2/2/2/1, same 91 unapproved
+  approved epics with linked tasks at counts 2/2/2/1/2, same 91 unapproved
   backlog, no `actions: write` grant, no PAT) has re-checked
   `gh run list --workflow=deploy.yml --limit 5` and found zero drift: newest
   run still `2026-08-01T18:20:33Z`/`8dde7500`, `HEAD` still 100%
