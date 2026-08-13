@@ -146,8 +146,8 @@ entirely) rather than removing the cap if it needs tuning.
   `pm-agent.yml` to push with instead of the default `GITHUB_TOKEN`, or by
   applying the `actions: write` + explicit-dispatch change above directly
   via the GitHub UI. Since the 2026-08-04 root-cause, every run through
-  2026-08-13 (last re-checked ~18:35 UTC, still zero drift vs. the ~16:32 UTC
-  snapshot below — same deploy timestamp/sha (`2026-08-01T18:20:33Z`/
+  2026-08-13 (last re-checked ~20:19 UTC, still zero drift vs. the ~18:35 UTC
+  snapshot before it — same deploy timestamp/sha (`2026-08-01T18:20:33Z`/
   `8dde7500`), same unverified HEAD, same 91 unapproved backlog, no
   `actions: write` grant, no PAT; this check found epics 7, 9, 15, 16, 18
   still at `approved` (with their linked tasks intact, counts 2, 2, 2, 1, 2)
