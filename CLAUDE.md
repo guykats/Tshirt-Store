@@ -146,14 +146,14 @@ entirely) rather than removing the cap if it needs tuning.
   `pm-agent.yml` to push with instead of the default `GITHUB_TOKEN`, or by
   applying the `actions: write` + explicit-dispatch change above directly
   via the GitHub UI. Since the 2026-08-04 root-cause, every run through
-  2026-08-13 (last re-checked ~00:42 UTC, still zero drift vs. the ~11:38 UTC
+  2026-08-13 (last re-checked ~03:15 UTC, still zero drift vs. the ~11:38 UTC
   snapshot below — same deploy timestamp/sha (`2026-08-01T18:20:33Z`/
   `8dde7500`), same unverified HEAD, same 91 unapproved backlog, no
-  `actions: write` grant, no PAT; this check found all 12 epics — not just
-  7, 9, 15, 16, 18 — at `proposed`, the far end of the same task-348
-  oscillation swing already documented below, not a new finding, so still
-  no approved-epic-awaiting-breakdown work and no approved todo task to
-  build this run either) has re-checked
+  `actions: write` grant, no PAT; this check found epics 7, 9, 15, 16, 18
+  back at `approved` with their linked tasks intact, the other end of the
+  same task-348 oscillation swing already documented below, not a new
+  finding, so still no approved-epic-awaiting-breakdown work and no
+  approved todo task to build this run either) has re-checked
   `gh run list --workflow=deploy.yml --limit 5` and found zero drift: newest
   run still `2026-08-01T18:20:33Z`/`8dde7500`, `HEAD` still 100%
   `claude[bot]`/unverified, `pm-agent.yml`'s permissions block still lacking
