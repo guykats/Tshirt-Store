@@ -126,7 +126,7 @@ entirely) rather than removing the cap if it needs tuning.
   for `pm-agent.yml` to push with, or by adding `actions: write` + an
   explicit-dispatch step via the GitHub UI directly. **Every re-check from
   2026-08-04 through 2026-08-14 (dozens of checks across many runs, most
-  recently ~21:13 UTC 2026-08-14) has found zero drift**: same deploy
+  recently ~21:40 UTC 2026-08-14) has found zero drift**: same deploy
   timestamp/sha, HEAD still unverified, no `actions: write` grant, no PAT,
   unapproved `todo` backlog steady around 91. Given this, **seeding more
   ad hoc backlog is optional, not mandatory, whenever `deploy.yml` is stale
