@@ -225,18 +225,18 @@ entirely) rather than removing the cap if it needs tuning.
   seeding again for the same reason as the prior re-verification (deploy
   stale + queue already substantial: 91 unapproved todo tasks, 12 proposed
   epics).
-  **Re-verified 2026-08-14 ~13:37 UTC, ~14:38 UTC, ~15:28 UTC, and again
-  ~16:14 UTC: still zero drift on the deploy freeze itself** — newest
-  `deploy.yml` run still `2026-08-01T18:20:33Z`/`8dde7500`, HEAD still
+  **Re-verified 2026-08-14 ~13:37 UTC, ~14:38 UTC, ~15:28 UTC, ~16:14 UTC,
+  and again ~17:10 UTC: still zero drift on the deploy freeze itself** —
+  newest `deploy.yml` run still `2026-08-01T18:20:33Z`/`8dde7500`, HEAD still
   unverified (`claude[bot]`), `pm-agent.yml` permissions still just
   `contents: write` + `id-token: write` (no `actions: write`, no PAT),
   task 345 still `blocked`/task 348 still `todo`/unapproved. Epics
-  unchanged across all four checks — 7, 9, 15, 16, 18 steady at `approved`
+  unchanged across all five checks — 7, 9, 15, 16, 18 steady at `approved`
   with linked tasks intact (counts 2, 2, 2, 1, 2), no further task-348
-  oscillation observed across the ~2.5 hours. No approved `todo` task
+  oscillation observed across the ~3.5 hours. No approved `todo` task
   (still 0 of 91) and no approved-epic-awaiting-breakdown (all 5 approved
   epics already have linked tasks), so no buildable work on any of the
-  four runs. Skipped ad hoc backlog seeding each time for the same reason
+  five runs. Skipped ad hoc backlog seeding each time for the same reason
   as prior re-verifications (deploy stale + queue already substantial: 91
   unapproved todo tasks, 7 proposed epics — healthy, not thin).
 - **The freeze has a second, previously undocumented cascading effect:
