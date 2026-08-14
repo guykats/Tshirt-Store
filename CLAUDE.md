@@ -225,6 +225,20 @@ entirely) rather than removing the cap if it needs tuning.
   seeding again for the same reason as the prior re-verification (deploy
   stale + queue already substantial: 91 unapproved todo tasks, 12 proposed
   epics).
+  **Re-verified 2026-08-14 ~13:37 UTC: still zero drift on the deploy freeze
+  itself** — newest `deploy.yml` run still `2026-08-01T18:20:33Z`/`8dde7500`,
+  HEAD (`21cba2c`) still unverified, `pm-agent.yml` permissions still just
+  `contents: write` + `id-token: write` (no `actions: write`, no PAT), task
+  345 still `blocked`/task 348 still `todo`/unapproved. Epics swung back
+  again — 7, 9, 15, 16, 18 back at `approved` with linked tasks intact
+  (counts 2, 2, 2, 1, 2), the opposite of the ~12:05 UTC snapshot 92 minutes
+  earlier that saw all 12 at `proposed`. Same live task-348 oscillation, not
+  a new state. No approved `todo` task (still 0 of 91) and no
+  approved-epic-awaiting-breakdown (all 5 approved epics already have linked
+  tasks), so no buildable work this run. Skipped ad hoc backlog seeding for
+  the same reason as the prior two re-verifications (deploy stale + queue
+  already substantial: 91 unapproved todo tasks, 7 proposed epics — healthy,
+  not thin).
 - **The freeze has a second, previously undocumented cascading effect:
   `pm-agent.yml`'s own idle self-disable check can never fire while any of
   the 5 pre-freeze-approved epics (7, 9, 15, 16, 18) remain un-deployed, so
