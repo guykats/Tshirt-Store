@@ -195,19 +195,18 @@ entirely) rather than removing the cap if it needs tuning.
   task (id 345) is still accurate, refreshing this entry's date if a run
   re-verifies zero drift, is a complete, valid use of the run instead of
   appending a new near-duplicate paragraph each time.
-  **Re-verified 2026-08-14 ~04:28 UTC: still zero drift** — newest
+  **Re-verified 2026-08-14 ~07:05 UTC: still zero drift** — newest
   `deploy.yml` run still `2026-08-01T18:20:33Z`/`8dde7500`, HEAD still
   unverified (`claude[bot]`), unapproved `todo` count still exactly 91,
   task 345 still `blocked`/task 348 still `todo`/unapproved, and this run's
-  epics snapshot found 5 `approved` (7, 9, 15, 16, 18, each already with
-  linked tasks — counts 2, 2, 2, 2, 1) + 7 `proposed` — the same
-  five-`approved` read as the ~00:05 UTC snapshot two entries up, not the
-  ~02:45 UTC all-12-`proposed` one 90 minutes prior — consistent with the
-  already-documented task-348 oscillation, not a new state. Skipped ad hoc
-  backlog seeding this run per the rule just above (deploy stale + 91-item
-  unreviewed queue already substantial); no approved todo task and no
-  approved epic awaiting breakdown (all 5 approved epics already have
-  linked tasks), so there was no buildable work this run either.
+  epics snapshot found the same 5 `approved` (7, 9, 15, 16, 18, each already
+  with linked tasks — counts 2, 2, 2, 2, 1) as the prior ~04:28 UTC
+  re-verification, consistent with the already-documented task-348
+  oscillation, not a new state. Skipped ad hoc backlog seeding this run per
+  the rule just above (deploy stale + 91-item unreviewed queue already
+  substantial); no approved todo task and no approved epic awaiting
+  breakdown (all 5 approved epics already have linked tasks), so there was
+  no buildable work this run either.
 - **The freeze has a second, previously undocumented cascading effect:
   `pm-agent.yml`'s own idle self-disable check can never fire while any of
   the 5 pre-freeze-approved epics (7, 9, 15, 16, 18) remain un-deployed, so
