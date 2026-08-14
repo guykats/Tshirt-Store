@@ -126,15 +126,15 @@ entirely) rather than removing the cap if it needs tuning.
   for `pm-agent.yml` to push with, or by adding `actions: write` + an
   explicit-dispatch step via the GitHub UI directly. **Every re-check from
   2026-08-04 through 2026-08-14 (dozens of checks across many runs, most
-  recently ~23:36 UTC 2026-08-14) has found zero drift**: same deploy
-  timestamp/sha, HEAD still unverified, no `actions: write` grant, no PAT,
-  unapproved `todo` backlog steady around 91. Given this, **seeding more
-  ad hoc backlog is optional, not mandatory, whenever `deploy.yml` is stale
-  (>1 day) and the unapproved queue is already substantial (tens of
-  items)** — production can't receive new rows anyway, so more seeding
-  just burns turns on output nobody can act on. A run that re-verifies zero
-  drift should update this paragraph's date/timestamp rather than append a
-  new near-duplicate one.
+  recently ~23:58 UTC 2026-08-14) has found zero drift**: same deploy
+  timestamp/sha (`8dde7500`, 2026-08-01T18:20:33Z), HEAD still unverified,
+  no `actions: write` grant, no PAT, unapproved `todo` backlog steady around
+  91. Given this, **seeding more ad hoc backlog is optional, not mandatory,
+  whenever `deploy.yml` is stale (>1 day) and the unapproved queue is
+  already substantial (tens of items)** — production can't receive new rows
+  anyway, so more seeding just burns turns on output nobody can act on. A
+  run that re-verifies zero drift should update this paragraph's
+  date/timestamp rather than append a new near-duplicate one.
   Separately: epics 7, 9, 15, 16, 18 have been observed oscillating between
   `approved` (with linked tasks intact) and `proposed` across different
   checks with no consistent direction — this is **task 348**
