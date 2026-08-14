@@ -195,18 +195,19 @@ entirely) rather than removing the cap if it needs tuning.
   task (id 345) is still accurate, refreshing this entry's date if a run
   re-verifies zero drift, is a complete, valid use of the run instead of
   appending a new near-duplicate paragraph each time.
-  **Re-verified 2026-08-14 ~09:42 UTC: still zero drift** — newest
+  **Re-verified 2026-08-14 ~10:39 UTC: still zero drift** — newest
   `deploy.yml` run still `2026-08-01T18:20:33Z`/`8dde7500`, HEAD still
   unverified (`claude[bot]`), unapproved `todo` count still exactly 91,
   task 345 still `blocked`/task 348 still `todo`/unapproved, and this run's
   epics snapshot found the same 5 `approved` (7, 9, 15, 16, 18, each already
-  with linked tasks — counts 2, 2, 2, 1, 2) as the prior ~08:36 UTC
+  with linked tasks — counts 2, 2, 2, 1, 2) as the prior ~09:42 UTC
   re-verification, consistent with the already-documented task-348
   oscillation, not a new state. Skipped ad hoc backlog seeding this run per
   the rule just above (deploy stale + 91-item unreviewed queue already
-  substantial); no approved todo task and no approved epic awaiting
-  breakdown (all 5 approved epics already have linked tasks), so there was
-  no buildable work this run either.
+  substantial, and the proposed-epics queue is a healthy 7 items, not thin);
+  no approved todo task and no approved epic awaiting breakdown (all 5
+  approved epics already have linked tasks), so there was no buildable work
+  this run either.
 - **The freeze has a second, previously undocumented cascading effect:
   `pm-agent.yml`'s own idle self-disable check can never fire while any of
   the 5 pre-freeze-approved epics (7, 9, 15, 16, 18) remain un-deployed, so
