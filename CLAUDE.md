@@ -97,208 +97,74 @@ entirely) rather than removing the cap if it needs tuning.
   clear `blocked_reason` (per the ship-project-task skill) — silently
   spending turns and reporting `success` with zero commits is never
   acceptable, run it as a failure to surface, not a quiet no-op.
-- **`deploy.yml` silently stopped auto-deploying on 2026-08-01 — still broken
-  as of 2026-08-09 (8 days), tracked as blocked `project_tasks` id 345.**
-  This is a much bigger blast radius than the previously-known "can't edit
-  workflow files" limitation. The gotcha below ("Sessions authenticated via a
-  GitHub App installation token... cannot push changes to
-  `.github/workflows/*.yml`") documents one symptom of a broader fact: GitHub
-  does not create a new `push`-triggered workflow run for commits authored
-  via `GITHUB_TOKEN` (or an equivalent installation token), full stop — not
-  just for commits that touch workflow files. Root-caused 2026-08-04 by
-  comparing `gh run list --workflow=deploy.yml` against real commit history:
-  every commit since `8dde7500` (2026-08-01T18:20:33Z, author
-  `Claude`/verified/GPG-signed) landed on `main` with committer identity
-  `claude[bot]`/unverified instead, and **not one** since has triggered a
-  deploy run (`gh api repos/guykats/Tshirt-Store/commits/<sha> --jq
-  '.commit.verification.verified'` confirms `false` on every post-freeze
-  commit, `true` on `8dde7500` itself). Concretely: this means the *board
-  itself* (`project_tasks`/`epics`, seeded via migration) has also been
-  frozen since 2026-08-01 on production — migration-seeded rows never reach
-  it — so a static-looking board is a *symptom* of that, not evidence the
-  owner is ignoring the backlog. If the board looks suspiciously static run
-  after run, check whether `deploy.yml` has actually run recently before
-  assuming it's an owner-review lag. Confirmed 2026-08-06: 5 epics (ids 7, 9,
-  15, 16, 18) show as `approved` with linked tasks `done`, but all 5 were
-  originally committed 2026-07-27 through 2026-07-31 — *before* the freeze —
-  so they'd already reached production's real DB and stayed
-  reviewable/approvable via the (stale but functional) live dashboard the
-  whole time. This proves production isn't "down," just frozen on old
-  code+data: rows that landed before `8dde7500` keep working normally
-  (including the owner approving them), while anything seeded after
-  2026-08-01 simply never reaches production to be seen at all — don't
-  mistake continued approvals on old rows for evidence the freeze has
-  lifted; check the deploy run timestamp, not just whether epics are getting
-  approved. The standard escape hatch — an explicit
-  `gh workflow run deploy.yml --ref main` dispatch after pushing, which per
-  GitHub's docs is exempt from this restriction — was tried live and also
-  failed (`HTTP 403: Resource not accessible by integration`), because
-  `pm-agent.yml`'s `permissions:` block grants only `contents: write` and
-  `id-token: write`, not `actions: write`. Fixing this durably means adding
-  `actions: write` to that block plus a step that runs
-  `gh workflow run deploy.yml --ref main` whenever `HEAD` changed during the
-  run — but that is itself an edit to a workflow file, which no autonomous
-  run can currently push (same installation-token restriction). This needs a
-  human: either (a) immediately unstick production by manually running
-  "Deploy to Production" from the Actions tab (or pushing any human-authored
-  commit, whose identity carries the missing scope), and/or (b) durably fix
-  it by adding a PAT with `repo`+`workflow` scopes as a new secret for
-  `pm-agent.yml` to push with instead of the default `GITHUB_TOKEN`, or by
-  applying the `actions: write` + explicit-dispatch change above directly
-  via the GitHub UI. Since the 2026-08-04 root-cause, every run through
-  2026-08-14 (last re-checked ~00:05 UTC, still zero drift vs. the ~23:30 UTC
-  snapshot before it — same deploy timestamp/sha (`2026-08-01T18:20:33Z`/
-  `8dde7500`), same unverified HEAD, same 91 unapproved todo backlog, no
-  `actions: write` grant, no PAT; this check found epics 7, 9, 15, 16, 18
-  back at `approved` with their `done` linked tasks intact (counts 2, 2, 2,
-  1, 2) — the opposite of the ~23:30 UTC snapshot's all-12-`proposed` read,
-  just the moving-target task-348 oscillation already documented below, not
-  a real owner review pass; blocked task 345 unchanged, task 348 still
-  `todo`/unapproved — no approved-epic-awaiting-breakdown work (all 5 already
-  have their tasks built) and no approved todo task to build this run
-  either) has re-checked
-  `gh run list --workflow=deploy.yml --limit 5` and found zero drift: newest
-  run still `2026-08-01T18:20:33Z`/`8dde7500`, `HEAD` still 100%
-  `claude[bot]`/unverified, `pm-agent.yml`'s permissions block still lacking
-  `actions: write`, no alternate push credential (PAT) present, and
-  unapproved `todo` count still frozen at exactly 91 (blind per-run seeding
-  while broken had piled this up before the fix below was adopted) — epic
-  statuses keep flipping per unfixed task 348 (still `todo`, unapproved;
-  the ~09:59 UTC snapshot saw epics 7, 9, 15, 16, 18 at `proposed`, but this
-  run's ~10:55 UTC snapshot found all five flipped back to `approved` with
-  their linked tasks intact (task counts 2, 2, 2, 2, 1) — i.e. the moving
-  target swung the other way within about an hour, confirming this is
-  still the live unguarded-transition bug (task 348), not a one-way settle
-  — the moving-target behavior already documented in the UPDATE below, and
-  consistent with the 08:57 UTC pm-agent.yml run one cycle earlier still
-  logging `{"disabled":false,"reason":"epic_awaiting_breakdown"}`, i.e. one
-  of these five was still approved-with-zero-tasks an hour ago and has
-  since flipped back — not a real owner review pass. (With all five back
-  at `approved` + linked tasks as of 10:55 UTC, `hasApprovedEpicAwaitingBreakdown()`
-  should itself read false again right now — expect it to keep oscillating
-  with task 348 rather than settling, so don't treat either state as
-  durable confirmation the cascade in the entry below has resolved.)
-  All of this consistently confirms the human intervention above is still
-  pending, not something to keep re-attempting autonomously. Given that,
-  step 4 of the standing run prompt ("no approved todo task? seed more so
-  there's always something ready to be approved") is *not* a free pass to
-  add more every single run regardless of how deep the unreviewed pile
-  already is — with production unable to receive new rows at all, more
-  seeding doesn't fix anything and just burns turn budget on output nobody
-  can act on. The fix isn't "stop seeding forever" — once deploy is unstuck
-  this pile becomes exactly the non-empty backlog the standing rule wants —
-  it's: **check `gh run list --workflow=deploy.yml --limit 1` early in the
-  run**, and if it's stale (more than a day or so old) *and*
-  `project_tasks`/`epics` already have a substantial unapproved/unreviewed
-  queue (tens of items, not zero or a handful), treat seeding as optional
-  that run rather than mandatory — confirming the existing blocked-deploy
-  task (id 345) is still accurate, refreshing this entry's date if a run
-  re-verifies zero drift, is a complete, valid use of the run instead of
-  appending a new near-duplicate paragraph each time.
-  **Re-verified 2026-08-14 ~10:39 UTC: still zero drift** — newest
-  `deploy.yml` run still `2026-08-01T18:20:33Z`/`8dde7500`, HEAD still
-  unverified (`claude[bot]`), unapproved `todo` count still exactly 91,
-  task 345 still `blocked`/task 348 still `todo`/unapproved, and this run's
-  epics snapshot found the same 5 `approved` (7, 9, 15, 16, 18, each already
-  with linked tasks — counts 2, 2, 2, 1, 2) as the prior ~09:42 UTC
-  re-verification, consistent with the already-documented task-348
-  oscillation, not a new state. Skipped ad hoc backlog seeding this run per
-  the rule just above (deploy stale + 91-item unreviewed queue already
-  substantial, and the proposed-epics queue is a healthy 7 items, not thin);
-  no approved todo task and no approved epic awaiting breakdown (all 5
-  approved epics already have linked tasks), so there was no buildable work
-  this run either.
-  **Re-verified 2026-08-14 ~12:05 UTC: still zero drift on the deploy
-  freeze itself** — newest `deploy.yml` run still `2026-08-01T18:20:33Z`/
-  `8dde7500`, HEAD (`a43a667`) still unverified, `pm-agent.yml` permissions
-  still just `contents: write` + `id-token: write` (no `actions: write`,
-  no PAT), task 345 still `blocked`/task 348 still `todo`/unapproved. The
-  epics snapshot this run swung the other way again — **all 12 epics
-  (including 7, 9, 15, 16, 18) back at `status='proposed'`, zero
-  `approved`** — the opposite of the ~10:39 UTC snapshot 86 minutes earlier
-  that saw those same 5 at `approved` with linked tasks intact. This is the
-  same live task-348 oscillation already documented above (and in the
-  2026-08-11 UPDATE), not a new state or a real owner review pass — don't
-  chase it further per-run. No approved `todo` task (still 0 of 91) and,
-  with every epic back at `proposed`, no approved-epic-awaiting-breakdown
-  either, so there was no buildable work this run. Skipped ad hoc backlog
-  seeding again for the same reason as the prior re-verification (deploy
-  stale + queue already substantial: 91 unapproved todo tasks, 12 proposed
-  epics).
-  **Re-verified 2026-08-14 ~13:37 UTC, ~14:38 UTC, ~15:28 UTC, ~16:14 UTC,
-  ~17:10 UTC, ~17:30 UTC, ~19:11 UTC, ~19:54 UTC, ~20:21 UTC, and again
-  ~20:52 UTC: still zero drift on the deploy freeze itself** — newest
-  `deploy.yml` run still `2026-08-01T18:20:33Z`/`8dde7500`, HEAD still
-  unverified (`claude[bot]`), `pm-agent.yml` permissions still just
-  `contents: write` + `id-token: write` (no `actions: write`, no PAT), task
-  345 still `blocked`/task 348 still `todo`/unapproved. Epics unchanged
-  across all ten checks — 7, 9, 15, 16, 18 steady at `approved` with linked
-  tasks intact (counts 2, 2, 2, 1, 2), no further task-348 oscillation
-  observed across the ~7.25 hours. No approved `todo` task (still 0 of 91)
-  and no approved-epic-awaiting-breakdown (all 5 approved epics already
-  have linked tasks), so no buildable work on any of the ten runs. Skipped
-  ad hoc backlog seeding each time for the same reason as prior
-  re-verifications (deploy stale + queue already substantial: 91 unapproved
-  todo tasks, 7 proposed epics — healthy, not thin).
-- **The freeze has a second, previously undocumented cascading effect:
-  `pm-agent.yml`'s own idle self-disable check can never fire while any of
-  the 5 pre-freeze-approved epics (7, 9, 15, 16, 18) remain un-deployed, so
-  the cron keeps firing every 15 minutes indefinitely, each run burning real
-  cost for zero shippable output — confirmed 2026-08-10.**
-  `PmAgentAutomationController::disableIfIdle()` (called by the "Disable PM
-  Agent automation if nothing is approved to build" step, before the agent
-  even starts) only disables the workflow if there's no approved todo task
-  *and* no approved epic with zero linked tasks
-  (`hasApprovedEpicAwaitingBreakdown()`, `Epic::where('status','approved')
-  ->whereDoesntHave('tasks')`) — evaluated against production's real,
-  frozen-since-2026-08-01 DB, not this run's local replica. The breakdown
-  migrations that gave epics 7, 9, 15, 16, 18 their `project_tasks` rows
-  (`2026_08_04_170000_break_down_daily_design_suggestion_feed_epic.php`,
-  `2026_08_06_110000_break_down_discover_publish_gate_epic.php`,
-  `2026_08_07_110000_break_down_photographic_imagery_layer_epic.php`,
-  `2026_08_07_120000_break_down_catalog_depth_epic.php`, and
-  `2026_08_17_100000_break_down_epic_build_status_rollup_epic.php`) all
-  landed *after* the freeze commit `8dde7500` (2026-08-01T18:20:33Z), so
-  none of them ever deployed — production still sees all 5 of these epics
-  as approved with zero linked tasks, exactly the state
-  `hasApprovedEpicAwaitingBreakdown()` treats as "real work is pending."
-  This means every run's disable-if-idle call returns
-  `{"disabled":false,"reason":"epic_awaiting_breakdown"}` regardless of
-  how thin the actual local backlog is, keeping automation permanently
-  enabled. Confirmed via `gh run list --workflow=pm-agent.yml` +
-  `gh run view <id> --log` across 7 consecutive runs on 2026-08-10 between
-  17:32 and 22:23 UTC: every one logged that exact `disabled:false` line,
-  ran 9-17 turns, cost $0.27-$0.34, and pushed zero commits — because
-  locally (in the replayed migration history) those same 5 epics already
-  show real linked tasks, so step 3 of the run prompt correctly finds
-  nothing left to break down and the run has nothing new to do. This is an
-  expected, harmless-but-wasteful side effect of the *same* underlying
-  blocked task 345, not a separate bug — don't open a new blocked task or
-  try to patch `hasApprovedEpicAwaitingBreakdown()` for it; the fix is
-  identical to 345's (get a real deploy through). A future run seeing a
-  string of near-empty, few-turn pm-agent.yml runs with a stable
-  `epic_awaiting_breakdown` reason and no new commits should recognize this
-  pattern immediately rather than re-diagnosing it from scratch — check
-  `gh run list --workflow=deploy.yml --limit 1` for drift first, per the
-  entry above, before spending turns on it again.
-  **UPDATE (2026-08-11, ~02:57 UTC):** the specific claim above that
-  production has exactly "5 approved epics with zero linked tasks" no
-  longer holds as a snapshot — this run's synced local `epics` table shows
-  ALL 12 epics (including 7, 9, 15, 16, 18) at `status='proposed'`, not
-  `approved`, most likely another symptom of the same unguarded
-  approve/reject/delay bug tracked as task 348 (still `todo`,
-  unapproved) rather than a real owner review. This does not mean the
-  cascade is resolved: `gh api repos/guykats/Tshirt-Store/actions/workflows/pm-agent.yml
-  --jq '.state'` still reports `active`, and the most recent completed
-  run's disable-if-idle call (00:45 UTC 2026-08-11) still returned
-  `{"disabled":false,"reason":"epic_awaiting_breakdown"}` — so *some*
-  epic was still approved-with-zero-tasks on production as of then, only a
-  couple hours before this run's sync saw none. Net effect: the exact set
-  of "stuck approved" epics is a moving target (bug 348 keeps flipping
-  epic status underneath both the dashboard and this check), but the
-  underlying mechanism and fix are unchanged — still task 345 (get a real
-  deploy through) plus task 348 (guard the status transitions), not
-  something to re-diagnose or patch around per-epic.
+- **`deploy.yml` silently stopped auto-deploying on 2026-08-01 and is STILL
+  broken as of 2026-08-14 (13+ days), tracked as blocked `project_tasks` id
+  345 — treat this as a durable, human-blocked fact, not something to
+  re-investigate each run.** Root cause (found 2026-08-04): GitHub does not
+  create a new `push`-triggered workflow run for commits authored via
+  `GITHUB_TOKEN`/an installation token, full stop — not just for commits
+  touching workflow files. Every commit since `8dde7500`
+  (2026-08-01T18:20:33Z, the last verified/GPG-signed commit) has landed
+  with committer identity `claude[bot]`/unverified and triggered zero
+  deploy runs. Consequence: the board itself is also frozen — any
+  migration-seeded `project_tasks`/`epics` row created after 2026-08-01
+  never reaches production, so a static-looking live dashboard is a
+  *symptom* of the freeze, not an owner-review lag. Epics 7, 9, 15, 16, 18
+  are the exception: they were committed 2026-07-27–07-31, *before* the
+  freeze, so they did reach production and stay live-approvable — don't
+  mistake continued activity on those old rows for evidence the freeze has
+  lifted. The standard escape hatch (`gh workflow run deploy.yml --ref
+  main`, normally exempt from this restriction) was tried and also fails
+  with `HTTP 403: Resource not accessible by integration`, because
+  `pm-agent.yml`'s `permissions:` block grants only `contents: write` +
+  `id-token: write`, not `actions: write` — and granting that requires
+  editing a workflow file, which no autonomous run can push (see the
+  installation-token gotcha further below). This needs a human: either
+  (a) unstick production now by manually running "Deploy to Production"
+  from the Actions tab, or pushing any human-authored commit, and/or
+  (b) durably fix it with a PAT (`repo`+`workflow` scope) as a new secret
+  for `pm-agent.yml` to push with, or by adding `actions: write` + an
+  explicit-dispatch step via the GitHub UI directly. **Every re-check from
+  2026-08-04 through 2026-08-14 (dozens of checks across many runs, most
+  recently ~21:13 UTC 2026-08-14) has found zero drift**: same deploy
+  timestamp/sha, HEAD still unverified, no `actions: write` grant, no PAT,
+  unapproved `todo` backlog steady around 91. Given this, **seeding more
+  ad hoc backlog is optional, not mandatory, whenever `deploy.yml` is stale
+  (>1 day) and the unapproved queue is already substantial (tens of
+  items)** — production can't receive new rows anyway, so more seeding
+  just burns turns on output nobody can act on. A run that re-verifies zero
+  drift should update this paragraph's date/timestamp rather than append a
+  new near-duplicate one.
+  Separately: epics 7, 9, 15, 16, 18 have been observed oscillating between
+  `approved` (with linked tasks intact) and `proposed` across different
+  checks with no consistent direction — this is **task 348**
+  (`EpicController::approve/reject/delay` have no guard on an epic's
+  current status, so any direct API call can silently revert an
+  already-approved, already-built epic back to `proposed`), still
+  `todo`/unapproved as of 2026-08-14. Don't re-diagnose this oscillation as
+  a new bug or as evidence of a real owner review pass each time it's
+  seen — it's the known, unfixed task 348, orthogonal to the deploy freeze
+  itself.
+- **The freeze has a second, cascading effect: `pm-agent.yml`'s own idle
+  self-disable check can never fire while any pre-freeze-approved epic
+  remains un-deployed, so the cron keeps firing every 15 minutes
+  indefinitely for zero shippable output (confirmed 2026-08-10).**
+  `PmAgentAutomationController::disableIfIdle()` only disables the workflow
+  if there's no approved todo task *and* no approved epic with zero linked
+  tasks (`hasApprovedEpicAwaitingBreakdown()`), evaluated against
+  production's frozen-since-2026-08-01 DB. The breakdown migrations that
+  gave epics 7, 9, 15, 16, 18 their `project_tasks` rows all landed *after*
+  the freeze commit, so none of them ever deployed — production still sees
+  all 5 as approved with zero linked tasks, exactly the condition that
+  keeps `disabled:false, reason:"epic_awaiting_breakdown"` firing every
+  run regardless of how thin the real local backlog is. This is an
+  expected, harmless-but-wasteful side effect of task 345, not a separate
+  bug — don't open a new blocked task or patch
+  `hasApprovedEpicAwaitingBreakdown()` for it; the fix is identical to
+  345's (get a real deploy through). A run seeing a string of near-empty,
+  few-turn `pm-agent.yml` runs with a stable `epic_awaiting_breakdown`
+  reason and no new commits should recognize this pattern immediately
+  rather than re-diagnosing it from scratch.
 
 ## Standing operating agreement with the project owner
 
