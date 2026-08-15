@@ -126,15 +126,37 @@ entirely) rather than removing the cap if it needs tuning.
   for `pm-agent.yml` to push with, or by adding `actions: write` + an
   explicit-dispatch step via the GitHub UI directly. **Every re-check from
   2026-08-04 through 2026-08-15 (dozens of checks across many runs, most
-  recently ~03:02 UTC 2026-08-15) has found zero drift**: same deploy
+  recently ~04:20 UTC 2026-08-15) has found zero drift**: same deploy
   timestamp/sha (`8dde7500`, 2026-08-01T18:20:33Z), HEAD still unverified,
   no `actions: write` grant, no PAT, unapproved `todo` backlog steady around
   91. Given this, **seeding more ad hoc backlog is optional, not mandatory,
   whenever `deploy.yml` is stale (>1 day) and the unapproved queue is
   already substantial (tens of items)** — production can't receive new rows
-  anyway, so more seeding just burns turns on output nobody can act on. A
-  run that re-verifies zero drift should update this paragraph's
-  date/timestamp rather than append a new near-duplicate one.
+  anyway, so more seeding just burns turns on output nobody can act on.
+  **CORRECTION (2026-08-15, ~04:20 UTC): stop pushing a "re-verify zero
+  drift" commit every run — this had become its own instance of the exact
+  waste this paragraph warns against.** Between 2026-08-10 and this
+  correction, 69 separate commits (`git log --oneline | grep -i
+  "drift\|re-verify"`) did nothing but bump this paragraph's timestamp,
+  sometimes less than 20 minutes apart. Each one is a normal push to
+  `main`, and `tests.yml` triggers on every push to `main`/`master`/`*.x`
+  with no path filter (confirmed in `.github/workflows/tests.yml` — no
+  `paths:` key under `on.push`), so every single one of those 69 commits
+  also kicked off a full CI test run (frontend build + `php artisan test`)
+  for a documentation-only timestamp edit. Nobody can add a `paths:` filter
+  to fix this at the source — that's a workflow-file edit, and no
+  autonomous run can push to `.github/workflows/*.yml` (see the
+  installation-token gotcha below) — so the fix has to be in *how often
+  this paragraph gets touched*, not in CI config. **New rule: only push a
+  commit updating this paragraph if either (a) something actually changed
+  — a new deploy sha, HEAD verified, an `actions: write`/PAT grant
+  appearing, or the epic-oscillation state flipping — or (b) it's been
+  over 12 hours since the timestamp this paragraph currently records.**
+  Anything short of that, a run that re-checks and finds zero drift should
+  say so in its own summary and move on without touching this file. This
+  is a stricter instance of the turn-budget-discipline lesson above
+  (runs #129/#130): a clean no-op check is a good outcome and doesn't need
+  a commit to prove it happened.
   Separately: epics 7, 9, 15, 16, 18 have been observed oscillating between
   `approved` (with linked tasks intact) and `proposed` across different
   checks with no consistent direction — this is **task 348**
