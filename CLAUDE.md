@@ -156,12 +156,12 @@ entirely) rather than removing the cap if it needs tuning.
   say so in its own summary and move on without touching this file. This
   is a stricter instance of the turn-budget-discipline lesson above
   (runs #129/#130): a clean no-op check is a good outcome and doesn't need
-  a commit to prove it happened. **Last re-check: 2026-08-16, ~17:41 UTC —
+  a commit to prove it happened. **Last re-check: 2026-08-17, ~05:56 UTC —
   still zero drift** (same deploy sha `8dde7500`/2026-08-01T18:20:33Z, HEAD
   still unverified, no `actions: write` grant, no PAT, unapproved `todo`
   backlog still 91, task 348 still `todo`/unapproved, no epic-oscillation
   flip). This edit is only happening because >12h had elapsed since the
-  prior recorded timestamp (~05:23 UTC on 2026-08-16) per rule (b) above —
+  prior recorded timestamp (~17:41 UTC on 2026-08-16) per rule (b) above —
   the next run should apply the same threshold from *this* timestamp, not
   reset to a shorter cadence.
   Separately: epics 7, 9, 15, 16, 18 have been observed oscillating between
