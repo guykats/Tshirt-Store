@@ -202,7 +202,11 @@ entirely) rather than removing the cap if it needs tuning.
   (2026-08-01T18:20:33Z), HEAD still unverified, no `actions: write` grant,
   no PAT, unapproved `todo` backlog still 91, task 348 still
   `todo`/unapproved, no approved `todo` task or approved epic-awaiting-
-  breakdown existed to build.
+  breakdown existed to build. **Re-check (2026-08-18, ~16:18 UTC, >12h
+  later per rule (b)): still zero drift** — same sha `8dde7500`
+  (2026-08-01T18:20:33Z), HEAD unverified, no `actions: write` grant,
+  backlog still 91, epics 7/9/15/16/18 all `approved` (no oscillation this
+  time), task 348 still `todo`/unapproved, nothing approved to build.
 - **The freeze has a second, cascading effect: `pm-agent.yml`'s own idle
   self-disable check can never fire while any pre-freeze-approved epic
   remains un-deployed, so the cron keeps firing every 15 minutes
