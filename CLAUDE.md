@@ -180,7 +180,29 @@ entirely) rather than removing the cap if it needs tuning.
   `todo`/unapproved as of 2026-08-14. Don't re-diagnose this oscillation as
   a new bug or as evidence of a real owner review pass each time it's
   seen — it's the known, unfixed task 348, orthogonal to the deploy freeze
-  itself.
+  itself. **CORRECTION (2026-08-18, ~03:57 UTC): narrow rule (a) above so
+  it no longer treats every oscillation flip as commit-worthy — only one
+  more than 12 hours after the last recorded oscillation note, same as
+  rule (b).** The flip recorded just above (03:08 UTC, `approved` →
+  `proposed`) had already reversed back to `approved` by 03:57 UTC — one
+  single `pm-agent.yml` cycle later — confirming task 348 flips epic
+  status on sub-hour timescales, unlike rule (a)'s other triggers (a new
+  deploy sha, HEAD verified, an `actions: write`/PAT grant), which are
+  rare, meaningful, one-way transitions. Committing on every oscillation
+  flip would reproduce the exact 69-commit waste the 2026-08-15 correction
+  was written to stop, just keyed off epic status instead of deploy sha.
+  From now on, treat an oscillation flip as reportable in your own run
+  summary, but only fold it into a paragraph-updating commit here once
+  >12h has passed since the last recorded oscillation note (merge it with
+  the routine zero-drift re-check under rule (b), don't push a dedicated
+  commit for the flip alone). This run (2026-08-18, ~03:57 UTC) found the
+  flip above already reversed, is applying that narrowed rule to treat it
+  as a no-op rather than pushing another oscillation update, and confirms
+  deploy state is otherwise still unchanged: same sha `8dde7500`
+  (2026-08-01T18:20:33Z), HEAD still unverified, no `actions: write` grant,
+  no PAT, unapproved `todo` backlog still 91, task 348 still
+  `todo`/unapproved, no approved `todo` task or approved epic-awaiting-
+  breakdown existed to build.
 - **The freeze has a second, cascading effect: `pm-agent.yml`'s own idle
   self-disable check can never fire while any pre-freeze-approved epic
   remains un-deployed, so the cron keeps firing every 15 minutes
