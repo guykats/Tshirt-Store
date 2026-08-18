@@ -156,15 +156,21 @@ entirely) rather than removing the cap if it needs tuning.
   say so in its own summary and move on without touching this file. This
   is a stricter instance of the turn-budget-discipline lesson above
   (runs #129/#130): a clean no-op check is a good outcome and doesn't need
-  a commit to prove it happened. **Last re-check: 2026-08-17, ~18:20 UTC —
-  still zero drift** (same deploy sha `8dde7500`/2026-08-01T18:20:33Z, HEAD
-  still unverified, no `actions: write` grant, no PAT, unapproved `todo`
-  backlog still 91, task 348 still `todo`/unapproved, all 5 approved epics
-  (7, 9, 15, 16, 18) still `approved` with linked tasks intact — no
-  epic-oscillation flip this check). This edit is only happening because
-  >12h had elapsed since the prior recorded timestamp (~05:56 UTC on
-  2026-08-17) per rule (b) above — the next run should apply the same
-  threshold from *this* timestamp, not reset to a shorter cadence.
+  a commit to prove it happened. **Last re-check: 2026-08-18, ~03:08 UTC —
+  deploy state still zero drift, but epics 7/9/15/16/18 flipped back to
+  `proposed`** (same deploy sha `8dde7500`/2026-08-01T18:20:33Z, HEAD still
+  unverified, no `actions: write` grant, no PAT, unapproved `todo` backlog
+  still 91, task 348 still `todo`/unapproved). This edit is happening under
+  rule (a) — the epic-oscillation state flipped since the prior check
+  (2026-08-17 ~18:20 UTC recorded all 5 as still `approved`); this check
+  found all 5 back at `proposed`, linked tasks still intact and `done`.
+  Per the note below, this flip is expected, unfixed task-348 behavior, not
+  a new bug or a sign the freeze lifted — recorded here only because the
+  rule explicitly treats an oscillation flip as a reportable change, not
+  because it needed new investigation. No approved `todo` task and no
+  approved epic-awaiting-breakdown existed this run either way, so nothing
+  was shippable; per CLAUDE.md's "optional, not mandatory" guidance the
+  91-item unapproved backlog was left as-is rather than padded further.
   Separately: epics 7, 9, 15, 16, 18 have been observed oscillating between
   `approved` (with linked tasks intact) and `proposed` across different
   checks with no consistent direction — this is **task 348**
