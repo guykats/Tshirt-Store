@@ -223,7 +223,20 @@ entirely) rather than removing the cap if it needs tuning.
   no `actions: write` grant, no PAT, backlog still 91, epics 7/9/15/16/18
   all `approved` (no oscillation this time), task 348 still
   `todo`/unapproved, no approved `todo` task and no approved
-  epic-awaiting-breakdown existed to build.
+  epic-awaiting-breakdown existed to build. **Re-check (2026-08-20, ~17:54
+  UTC, >12h later per rule (b)): still zero drift on the deploy itself** —
+  same sha `8dde7500` (2026-08-01T18:20:33Z), last `Deploy to Production`
+  run still that same push, HEAD (`b204403`) unverified, no
+  `actions: write` grant (still `403`), no PAT, backlog still 91, task 345
+  still `blocked`/correct, task 348 still `todo`/unapproved. Epics
+  7/9/15/16/18 flipped back to `proposed` this check (all still have their
+  `done` linked tasks intact) — an oscillation event per task 348, and per
+  the narrowed rule this is being folded in here because it's >12h since
+  the last recorded oscillation note (2026-08-18 ~03:57 UTC), not because
+  the flip itself is new or interesting. No approved `todo` task and no
+  approved epic-awaiting-breakdown existed to build either way, so nothing
+  was shippable; the 91-item unapproved backlog was left as-is per the
+  "optional, not mandatory" guidance above.
 - **The freeze has a second, cascading effect: `pm-agent.yml`'s own idle
   self-disable check can never fire while any pre-freeze-approved epic
   remains un-deployed, so the cron keeps firing every 15 minutes
