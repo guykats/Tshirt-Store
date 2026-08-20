@@ -217,7 +217,13 @@ entirely) rather than removing the cap if it needs tuning.
   PAT, backlog still 91, epics 7/9/15/16/18 all `approved` (no oscillation
   this time), task 348 still `todo`/unapproved, no approved `todo` task and
   no approved epic-awaiting-breakdown existed to build (all 5 approved
-  epics already have ≥1 linked task).
+  epics already have ≥1 linked task). **Re-check (2026-08-20, ~05:43 UTC,
+  >12h later per rule (b)): still zero drift** — same sha `8dde7500`
+  (2026-08-01T18:20:33Z), HEAD (`2216ecd`, 2026-08-19T17:17:14Z) unverified,
+  no `actions: write` grant, no PAT, backlog still 91, epics 7/9/15/16/18
+  all `approved` (no oscillation this time), task 348 still
+  `todo`/unapproved, no approved `todo` task and no approved
+  epic-awaiting-breakdown existed to build.
 - **The freeze has a second, cascading effect: `pm-agent.yml`'s own idle
   self-disable check can never fire while any pre-freeze-approved epic
   remains un-deployed, so the cron keeps firing every 15 minutes
