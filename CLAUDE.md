@@ -299,6 +299,19 @@ entirely) rather than removing the cap if it needs tuning.
   and no approved epic-awaiting-breakdown existed to build (all 5 approved
   epics already have ≥1 linked task), so nothing was shippable this run;
   the 91-item unapproved backlog was left as-is per the "optional, not
+  mandatory" guidance above. **Re-check (2026-08-22, ~23:55 UTC, >12h later
+  per rule (b)): still zero drift** — last successful `Deploy to
+  Production` run is still the same 2026-08-01T18:20:33Z push (confirmed
+  via `gh run list --workflow=deploy.yml`), HEAD (`594d6a5`) unverified, no
+  `actions: write` grant (a live `gh workflow run deploy.yml --ref main`
+  still fails with the same `HTTP 403: Resource not accessible by
+  integration`), no PAT (`gh secret list` also 403s), backlog still 91
+  unapproved `todo` tasks, task 345 still `blocked`/correct, task 348 still
+  `todo`/unapproved. Epics 7/9/15/16/18 all still `approved` this check (no
+  oscillation since the 11:35 UTC check). No approved `todo` task and no
+  approved epic-awaiting-breakdown existed to build (all 5 approved epics
+  already have ≥1 linked task), so nothing was shippable this run; the
+  91-item unapproved backlog was left as-is per the "optional, not
   mandatory" guidance above.
 - **The freeze has a second, cascading effect: `pm-agent.yml`'s own idle
   self-disable check can never fire while any pre-freeze-approved epic
