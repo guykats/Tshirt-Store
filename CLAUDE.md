@@ -449,7 +449,23 @@ entirely) rather than removing the cap if it needs tuning.
   epic-awaiting-breakdown existed to build (all epics are currently
   `proposed`, not `approved`, so step 3's breakdown trigger doesn't apply
   either), so nothing was shippable; the 91-item unapproved backlog was
-  left as-is per the "optional, not mandatory" guidance above.
+  left as-is per the "optional, not mandatory" guidance above. **Re-check
+  (2026-08-26, ~20:18 UTC, >12h later per rule (b)): still zero drift** —
+  last successful `Deploy to Production` run is still the same
+  2026-08-01T18:20:33Z push at sha `8dde7500` (confirmed via `gh run list
+  --workflow=deploy.yml`), HEAD (`dc8d446`) unverified, no `actions: write`
+  grant (a live `gh workflow run deploy.yml --ref main` still fails with
+  the same `HTTP 403: Resource not accessible by integration`), no PAT
+  (`gh secret list` also 403s), backlog still 91 unapproved `todo` tasks,
+  task 345 still `blocked`/correct, task 348 still `todo`/unapproved.
+  Epics 7/9/15/16/18 flipped back to `approved` this check (reversing the
+  06:31 UTC check's `proposed` reading, linked `done` tasks intact
+  throughout) — another oscillation event per task 348, folded in here
+  under the same >12h rule rather than as its own commit. No approved
+  `todo` task and no approved epic-awaiting-breakdown existed to build
+  (all 5 approved epics already have ≥1 linked task), so nothing was
+  shippable this run; the 91-item unapproved backlog was left as-is per
+  the "optional, not mandatory" guidance above.
 - **The freeze has a second, cascading effect: `pm-agent.yml`'s own idle
   self-disable check can never fire while any pre-freeze-approved epic
   remains un-deployed, so the cron keeps firing every 15 minutes
