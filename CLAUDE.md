@@ -427,7 +427,29 @@ entirely) rather than removing the cap if it needs tuning.
   approved epic-awaiting-breakdown existed to build (all 5 approved epics
   already have ≥1 linked task), so nothing was shippable this run; the
   91-item unapproved backlog was left as-is per the "optional, not
-  mandatory" guidance above.
+  mandatory" guidance above. **Re-check (2026-08-26, ~06:31 UTC): deploy
+  state still zero drift** — last successful `Deploy to Production` run is
+  still the same 2026-08-01T18:20:33Z push at sha `8dde7500` (confirmed via
+  `gh run view` on that exact run id), HEAD (`554acdc`) unverified, no
+  `actions: write` grant (a live `gh workflow run deploy.yml --ref main`
+  still fails with the same `HTTP 403: Resource not accessible by
+  integration`), no PAT (`gh secret list` also 403s), backlog still 91
+  unapproved `todo` tasks, task 345 still `blocked`/correct, task 348 still
+  `todo`/unapproved. Epics 7/9/15/16/18 flipped back to `proposed` this
+  check (reversing the 20:47 UTC check's `approved` reading, linked `done`
+  tasks intact throughout, confirmed via a direct query) — another
+  oscillation event per task 348. This is being folded into a commit now
+  under the narrowed rule because it's >12h since the last *recorded
+  oscillation note* (2026-08-24 ~20:16 UTC), even though it's only ~9h44m
+  since the last routine zero-drift timestamp (~20:47 UTC 2026-08-25) — the
+  two triggers are tracked independently, and this run's commit is
+  justified by the oscillation-note clock, not the routine-recheck clock,
+  exactly as in the 2026-08-21 ~23:14 UTC and 2026-08-23 ~02:14 UTC
+  precedents. No approved `todo` task existed and no approved
+  epic-awaiting-breakdown existed to build (all epics are currently
+  `proposed`, not `approved`, so step 3's breakdown trigger doesn't apply
+  either), so nothing was shippable; the 91-item unapproved backlog was
+  left as-is per the "optional, not mandatory" guidance above.
 - **The freeze has a second, cascading effect: `pm-agent.yml`'s own idle
   self-disable check can never fire while any pre-freeze-approved epic
   remains un-deployed, so the cron keeps firing every 15 minutes
