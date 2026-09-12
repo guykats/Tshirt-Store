@@ -28,7 +28,7 @@ jobs:
         run: npm run build
 
       - name: Pull latest code, install PHP dependencies, and migrate
-        uses: appleboy/ssh-action@v1.2.0
+        uses: appleboy/ssh-action@v1.2.5
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
@@ -70,7 +70,7 @@ jobs:
           strip_components: 2
 
       - name: Recache config, routes and views
-        uses: appleboy/ssh-action@v1.2.0
+        uses: appleboy/ssh-action@v1.2.5
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
