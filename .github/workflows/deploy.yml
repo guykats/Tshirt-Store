@@ -82,3 +82,13 @@ jobs:
             php artisan config:cache
             php artisan route:cache
             php artisan view:cache
+
+            # Idempotent: strips any pre-existing schedule:run line before re-adding it,
+            # so re-running this step (or re-deploying) never duplicates the crontab entry.
+            # Laravel's own scheduler (bootstrap/app.php's withSchedule()) does nothing in
+            # production without this - something has to invoke `schedule:run` every
+            # minute for withSchedule()'s dailyAt(...) jobs to ever actually fire. This was
+            # long-blocked (task 65/67/69/duplicate-cron-wiring) because no autonomous
+            # run's installation token can push a change to .github/workflows/*.yml -
+            # landing here now via a human-authenticated push.
+            (crontab -l 2>/dev/null | grep -v 'artisan schedule:run'; echo "* * * * * cd ${{ secrets.DEPLOY_PATH }} && php artisan schedule:run >> /dev/null 2>&1") | crontab -

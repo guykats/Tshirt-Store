@@ -53,6 +53,19 @@ jobs:
         run: |
           cp .env.example .env
           sed -i 's/^DB_CONNECTION=.*/DB_CONNECTION=sqlite/' .env
+          # DB_DATABASE must be cleared/overridden too - config/database.php's sqlite
+          # connection also reads DB_DATABASE (Laravel convention), and .env.example's
+          # DB_DATABASE=tshirt_store (its MySQL example value) survives the sed above
+          # untouched. Without this, every migrate/artisan call in this job silently
+          # creates/uses a flat file literally named `tshirt_store` at the repo root
+          # instead of database/database.sqlite - `php artisan` itself works fine
+          # (Laravel's config resolution is internally consistent), but it means the
+          # real synced board data never ends up where later steps or a human
+          # inspecting database/database.sqlite would expect to find it. Using a real
+          # file path, not phpunit.xml's `:memory:`, because this value has to persist
+          # across the several separate `php artisan` process invocations in this job,
+          # not just within one PHPUnit process.
+          sed -i 's|^DB_DATABASE=.*|DB_DATABASE=database/database.sqlite|' .env
           touch database/database.sqlite
           php artisan key:generate
 
