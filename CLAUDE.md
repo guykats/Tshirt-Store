@@ -1399,10 +1399,23 @@ entirely) rather than removing the cap if it needs tuning.
 These were granted explicitly during earlier sessions and remain in force
 unless the owner says otherwise:
 
-- **Keep working continuously without waiting for prompts.** The owner wants
-  an always-nonempty backlog across multiple agents/roles, refilled proactively
-  before it empties — not one task at a time, and not paused waiting for
-  "should I keep going?" confirmation.
+- **SUPERSEDED 2026-09-23: `pm-agent.yml`'s cron is intentionally disabled —
+  do not re-enable it without a fresh, explicit owner request.** The owner
+  said the automation was "abus[ing] my tokens" and asked to stop it. The
+  `schedule:` trigger was removed from `.github/workflows/pm-agent.yml`
+  (`workflow_dispatch` kept, so it can still be run manually on demand). The
+  "keep working continuously" line just below predates this and is now
+  overridden for the unattended cron specifically — it still describes how
+  to behave *within* a session the owner has actually started (interactive
+  or manually dispatched), just not as a standing license to keep the
+  15-minute autopilot running. If a future session is tempted to restore
+  the `schedule:` block because this file elsewhere says to keep working
+  continuously, don't — that's exactly the behavior that prompted this.
+- **Keep working continuously without waiting for prompts** (within a
+  session the owner has actually started — see the cron override just
+  above). The owner wants an always-nonempty backlog across multiple
+  agents/roles, refilled proactively before it empties — not one task at a
+  time, and not paused waiting for "should I keep going?" confirmation.
 - **Direct push/merge to `main` is authorized** for this ongoing work — main
   auto-deploys via `deploy.yml`. This does not extend beyond this repo or
   beyond the kind of routine feature/fix/infra work already being done this

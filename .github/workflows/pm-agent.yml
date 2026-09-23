@@ -6,13 +6,10 @@ name: PM Agent (autonomous)
 # board-driven workflow exists at all.
 
 on:
-  schedule:
-    # Runs finish in ~3-13 min, well under the old 30-min cadence, so most of
-    # each window was idle wait rather than work. concurrency below already
-    # serializes runs (cancel-in-progress: false), so a shorter interval just
-    # means the next run starts sooner after the previous one finishes -
-    # never two running at once, never wasted work.
-    - cron: '*/15 * * * *'
+  # Cron trigger disabled 2026-09-23 at the owner's explicit request (it was
+  # burning through their token usage) - manual dispatch only from here on.
+  # To re-enable continuous autonomous runs, restore a `schedule:` block here
+  # (e.g. `- cron: '*/15 * * * *'`).
   workflow_dispatch:
 
 concurrency:
