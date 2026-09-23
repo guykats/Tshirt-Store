@@ -1333,6 +1333,66 @@ entirely) rather than removing the cap if it needs tuning.
   few-turn `pm-agent.yml` runs with a stable `epic_awaiting_breakdown`
   reason and no new commits should recognize this pattern immediately
   rather than re-diagnosing it from scratch.
+- **RESOLVED 2026-09-23: the deploy freeze (task 345) is fixed.** The owner
+  reported "it stop all automated schedual action in laravel", which traced
+  straight back to this same 7-week-old freeze rather than a new bug. Fixed
+  via a genuinely human-authenticated push from an interactive session
+  (commit `7714186`, "Fix deploy freeze + wire the long-blocked scheduler
+  crontab") — confirmed empirically: it triggered deploy run #102 within
+  seconds, the first deploy since 2026-08-01, whereas every autonomous
+  `claude[bot]` commit in between triggered zero runs. Run #102's
+  `migrate --force` step caught production's schema up on 7+ weeks of
+  accumulated migrations in one shot. The same commit also fixed the
+  long-documented `DB_DATABASE` gotcha in `pm-agent.yml` (below) since that
+  too needed a workflow-file edit no autonomous run could push. Tracked via
+  `database/migrations/2026_09_23_100000_resolve_deploy_freeze_blocked_task.php`
+  marking task 345 `done`.
+  - **New sub-gotcha discovered while fixing it: this Hostinger plan has no
+    `crontab` binary over SSH.** The same commit tried to wire the
+    long-blocked scheduler cron (`php artisan schedule:run` every minute —
+    without this, `bootstrap/app.php`'s `withSchedule()` does nothing in
+    production no matter how correct the app code is) directly into
+    `deploy.yml`'s post-deploy SSH step via `crontab -l | ... | crontab -`.
+    This broke deploy run #102's final step outright —
+    `bash: crontab: command not found` (exit 127) — because `set -e` aborts
+    the whole SSH script step on any command's failure, even one running
+    after other commands in the same step (`config:cache`/`route:cache`/
+    `view:cache`) already succeeded. Fixed in commit `4be9319` by guarding
+    it with `command -v crontab` and falling back to a clear log line
+    instead of failing the deploy. **The scheduler is still not actually
+    wired up on production** — this plan's cron has to be configured
+    through the hosting panel's own UI instead (e.g. Hostinger hPanel's Cron
+    Jobs section), pointed at
+    `cd <deploy path> && php artisan schedule:run`, run every minute. No
+    autonomous or interactive session can do this — it needs the owner to
+    log into hPanel directly.
+  - **The freeze is structural, not one-time-fixed, and WILL recur.** GitHub's
+    installation-token/`GITHUB_TOKEN` anti-recursion rule (no push-triggered
+    workflow run for commits authored by an installation token) is
+    unaffected by anything fixed here — the instant `pm-agent.yml`'s own
+    cron resumes pushing autonomous commits, those commits will again
+    silently fail to trigger `deploy.yml`, exactly as before. Verified this
+    segment that even an *interactive* session's own GitHub API integration
+    (not just `pm-agent.yml`'s in-workflow `secrets.GITHUB_TOKEN`) lacks
+    `actions:write` on this repo — `rerun_failed_jobs` and
+    `workflow_dispatch` both 403'd ("Resource not accessible by
+    integration") when tried from this session, so not even a human-driven
+    Claude Code session can dispatch or rerun a workflow run here, only push
+    commits (which happen to count as human-authored and do trigger
+    `push`). A durable fix still needs an explicit owner decision/action:
+    either grant `actions: write` in `pm-agent.yml`'s `permissions:` block
+    plus an explicit `gh workflow run deploy.yml` dispatch step after each
+    autonomous push, or add a PAT (`repo`+`workflow` scope) as a deploy
+    credential. Neither has been done — don't assume it has been just
+    because task 345 now reads `done`; task 345 tracked the one-time freeze,
+    not the structural recurrence risk.
+- **Re-check deploy freeze state (2026-09-23 ~07:36 UTC): first real deploy
+  since the freeze (run #102) hit an unrelated transient SSH connection
+  timeout on its very next run (#103, commit `4be9319`) —
+  `dial tcp ***:***: i/o timeout` failing before the script even started
+  executing, not a config/code issue. Confirms this is a live risk to watch
+  for (flaky reachability to the SSH host, not caused by anything in this
+  session's changes) rather than a regression to chase.
 
 ## Standing operating agreement with the project owner
 
