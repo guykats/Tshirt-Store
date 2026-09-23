@@ -91,4 +91,16 @@ jobs:
             # long-blocked (task 65/67/69/duplicate-cron-wiring) because no autonomous
             # run's installation token can push a change to .github/workflows/*.yml -
             # landing here now via a human-authenticated push.
-            (crontab -l 2>/dev/null | grep -v 'artisan schedule:run'; echo "* * * * * cd ${{ secrets.DEPLOY_PATH }} && php artisan schedule:run >> /dev/null 2>&1") | crontab -
+            #
+            # Guarded, not assumed: the first attempt at this (2026-09-23) broke the whole
+            # deploy - `bash: crontab: command not found` (exit 127) under `set -e` failed
+            # this entire step, even though config/route/view caching above had already
+            # succeeded. This host's plan apparently doesn't expose a raw `crontab` binary
+            # over SSH (common on shared/managed hosting, where cron is configured through
+            # the panel's own UI instead) - `command -v` first so a future deploy on a host
+            # that genuinely lacks it degrades to a clear log line, not a failed deploy.
+            if command -v crontab >/dev/null 2>&1; then
+              (crontab -l 2>/dev/null | grep -v 'artisan schedule:run'; echo "* * * * * cd ${{ secrets.DEPLOY_PATH }} && php artisan schedule:run >> /dev/null 2>&1") | crontab -
+            else
+              echo "crontab not available on this host - Laravel's scheduler needs to be wired up through the hosting panel's own Cron Jobs UI instead (e.g. Hostinger hPanel), pointed at: cd ${{ secrets.DEPLOY_PATH }} && php artisan schedule:run"
+            fi
